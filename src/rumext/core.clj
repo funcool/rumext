@@ -5,6 +5,7 @@
 ;; Copyright (c) 2016-2017 Andrey Antukh <niwi@niwi.nz>
 
 (ns rumext.core
+  (:refer-clojure :exclude [doseq])
   (:require [rum.core :as rum]
             [sablono.compiler :as s]))
 
@@ -50,3 +51,33 @@
   (let [[render doc mixins cname] (parse-defc args)]
     `(def ~cname ~doc (rumext.core/lazy-component rum/build-defcs ~render ~mixins ~(str cname)))))
 
+
+(.addMethod @(var s/compile-form) "letfn"
+            (fn [[_ bindings & body]]
+              `(letfn ~bindings ~@(butlast body) ~(s/compile-html (last body)))))
+
+(.addMethod @(var s/compile-form) "when"
+            (fn
+              [[_ bindings & body]]
+              `(when ~bindings ~@(for [x body] (s/compile-html x)))))
+
+(.addMethod @(var s/compile-form) "when-not"
+            (fn
+              [[_ bindings & body]]
+              `(when-not ~bindings ~@(for [x body] (s/compile-html x)))))
+
+(.addMethod @(var s/compile-form) "if-not"
+            (fn
+              [[_ bindings & body]]
+              `(if-not ~bindings ~@(for [x body] (s/compile-html x)))))
+
+(defmacro doseq
+  [[item coll] & body]
+  `(let [coll# ~coll
+         neue# (cljs.core/array)]
+     (loop [xs# coll#
+            idx# 0]
+       (when-some [~item (first xs#)]
+         (.push neue# ~(s/compile-html `(do ~@body)))
+         (recur (next xs#) (inc idx#))))
+     (seq neue#)))
