@@ -1,5 +1,5 @@
 (defproject funcool/rumext "1.0.0"
-  :description "A collection of macros and helpers for rum (used in uxbox)."
+  :description "A collection of macros and helpers for rum an sablono (used in uxbox)."
   :url "https://github.com/funcool/rumext"
 
   :license {:name "MPL 2.0"

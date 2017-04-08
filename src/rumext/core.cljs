@@ -4,7 +4,7 @@
 ;;
 ;; Copyright (c) 2016 Andrey Antukh <niwi@niwi.nz>
 
-(ns rumext
+(ns rumext.core
   (:require [sablono.core :refer-macros [html]]
             [sablono.server :as server]
             [rum.core :as rum]
