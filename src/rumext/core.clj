@@ -74,10 +74,10 @@
 (defmacro doseq
   [[item coll] & body]
   `(let [coll# ~coll
-         neue# (cljs.core/array)]
+         result# (cljs.core/array)]
      (loop [xs# coll#
             idx# 0]
        (when-some [~item (first xs#)]
-         (.push neue# ~(s/compile-html `(do ~@body)))
+         (.push result# ~(s/compile-html `(do ~@body)))
          (recur (next xs#) (inc idx#))))
-     (seq neue#)))
+     (seq result#)))
