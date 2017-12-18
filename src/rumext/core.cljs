@@ -6,7 +6,6 @@
 
 (ns rumext.core
   (:require [sablono.core :refer-macros [html]]
-            [sablono.server :as server]
             [rum.core :as rum]
             [lentes.core :as l]
             [goog.dom.forms :as gforms]))
@@ -37,5 +36,3 @@
 (def react rum/react)
 (def reactive rum/reactive)
 (def with-key rum/with-key)
-(def render-html server/render)
-(def render-static-html server/render-static)

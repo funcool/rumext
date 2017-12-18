@@ -1,4 +1,4 @@
-(defproject funcool/rumext "1.0.0"
+(defproject funcool/rumext "1.1.0"
   :description "A collection of macros and helpers for rum an sablono (used in uxbox)."
   :url "https://github.com/funcool/rumext"
 
