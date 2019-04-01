@@ -2,14 +2,19 @@
 ;; License, v. 2.0. If a copy of the MPL was not distributed with this
 ;; file, You can obtain one at http://mozilla.org/MPL/2.0/.
 ;;
-;; Copyright (c) 2016-2017 Andrey Antukh <niwi@niwi.nz>
+;; Copyright (c) 2016-2019 Andrey Antukh <niwi@niwi.nz>
 
 (ns rumext.core
-  (:refer-clojure :exclude [doseq])
   (:require [rum.core :as rum]
-            [sablono.compiler :as s]))
+            [hicada.compiler :as hc]))
 
-(defn- parse-defc
+(defmacro html
+  [body]
+  (let [opts {:create-element 'js/React.createElement
+              :array-children? false}]
+    (-> body (hicada.compiler/compile opts {} &env))))
+
+(defn parse-defc
   [args]
   (loop [r {}
          s 0
@@ -37,47 +42,16 @@
       4 (let [sym (:name r)
               args (:args r)
               func (if (map? v)
-                     `(fn ~args ~v ~(s/compile-html `(do ~@n)))
-                     `(fn ~args ~(s/compile-html `(do ~@(cons v n)))))]
+                     `(fn ~args ~v (html (do ~@n)))
+                     `(fn ~args (html (do ~@(cons v n)))))]
           [func (:doc r) (:mixins r) sym]))))
 
 (defmacro defc
   [& args]
   (let [[render doc mixins cname] (parse-defc args)]
-    `(def ~cname ~doc (rumext.core/lazy-component rum/build-defc ~render ~mixins ~(str cname)))))
+    `(def ~cname ~doc (rumext.core/component rum/build-defc ~render ~mixins ~(str cname)))))
 
 (defmacro defcs
   [& args]
   (let [[render doc mixins cname] (parse-defc args)]
-    `(def ~cname ~doc (rumext.core/lazy-component rum/build-defcs ~render ~mixins ~(str cname)))))
-
-
-(.addMethod @(var s/compile-form) "letfn"
-            (fn [[_ bindings & body]]
-              `(letfn ~bindings ~@(butlast body) ~(s/compile-html (last body)))))
-
-(.addMethod @(var s/compile-form) "when"
-            (fn
-              [[_ bindings & body]]
-              `(when ~bindings ~@(for [x body] (s/compile-html x)))))
-
-(.addMethod @(var s/compile-form) "when-not"
-            (fn
-              [[_ bindings & body]]
-              `(when-not ~bindings ~@(for [x body] (s/compile-html x)))))
-
-(.addMethod @(var s/compile-form) "if-not"
-            (fn
-              [[_ bindings & body]]
-              `(if-not ~bindings ~@(for [x body] (s/compile-html x)))))
-
-(defmacro doseq
-  [[item coll] & body]
-  `(let [coll# ~coll
-         result# (cljs.core/array)]
-     (loop [xs# coll#
-            idx# 0]
-       (when-some [~item (first xs#)]
-         (.push result# ~(s/compile-html `(do ~@body)))
-         (recur (next xs#) (inc idx#))))
-     (seq result#)))
+    `(def ~cname ~doc (rumext.core/component rum/build-defcs ~render ~mixins ~(str cname)))))
