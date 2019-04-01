@@ -14,7 +14,7 @@ components:
 (require '[rumext.core :refer-macros [defc defcs]]
          '[rum.core :as rum])
 
-(defc defc label 
+(defc label
   [text]
   [:div {:class "label"} text])
 ```
