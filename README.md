@@ -27,12 +27,11 @@ Add to deps.edn:
 funcool/rumext {:git/url "https://github.com/funcool/rumext.git", :sha "a5c1840779429e2d20a3a88497d5acf4055a1a5e"}
 ```
 
-
 ## Differences with rum
 
 On the first look, there are no notable differences with rum
 macros. The difference comes when mixins and lifecycle methods
-are involved; let's see a complete example.
+are involved; let's see a complete example:
 
 ```clojure
 (defcs local-state
@@ -63,12 +62,15 @@ a special syntax (only the common `defn` syntax).
 And finally, the body is compiled statically (never interprets at
 runtime) thanks to **hicada**.
 
-NOTE: the rumext `defc` and `defcs` are neither better nor worse that
-the ones provided by **rum**, everything that you can do with rumext
-macros you also can do with rum's macros. *Is just a different
-syntactic sugar that uses more familiar `defn` syntax for define
-components instead of creating a new one.
 
+## FAQ
+
+**Can I combine components defined with rum macros and rumext macros?**
+
+Absolutly, rumext only defines an alternative syntax but behind the
+scenes it uses the rum internals in order to create components. So
+after compilation, rum and rumext components they are practically
+identical.
 
 
 ## License ##
