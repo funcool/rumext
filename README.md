@@ -38,7 +38,8 @@ are involved; let's see a complete example:
   "A component docstring/description (optional)."
   {:mixins [(rum/local 0)]
    :init (fn [own props]
-           (println "Component initialized"))}
+           (println "Component initialized")
+           own)
   [state title]
   (let [*count (:rum/local state)]
     [:div
