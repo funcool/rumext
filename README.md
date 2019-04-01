@@ -19,7 +19,7 @@ components:
   [:div {:class "label"} text])
 ```
 
-## Using Rum
+## Using Rumext
 
 Add to deps.edn:
 
