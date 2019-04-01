@@ -41,7 +41,7 @@ are involved; let's see a complete example.
    :init (fn [own props]
            (println "Component initialized"))}
   [state title]
-    (let [*count (:rum/local state)]
+  (let [*count (:rum/local state)]
     [:div
      {:style {"-webkit-user-select" "none"
               "cursor" "pointer"}
