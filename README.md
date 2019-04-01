@@ -50,7 +50,7 @@ are involved; let's see a complete example:
   {:mixins [(rum/local 0)]
    :init (fn [own props]
            (println "Component initialized")
-           own)
+           own)}
   [state title]
   (let [*count (:rum/local state)]
     [:div
