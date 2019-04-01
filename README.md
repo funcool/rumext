@@ -5,9 +5,30 @@ An alternative component macros for
 [hicada](https://github.com/rauhs/hicada) as hiccup syntax compiler
 instead of [sablono](https://github.com/r0man/sablono).
 
-## Quick Start
+## Using rumext
 
-Let's see an example of how to use rumext macros fro define
+Add to deps.edn:
+
+```
+funcool/rumext {:git/url "https://github.com/funcool/rumext.git", :sha "a5c1840779429e2d20a3a88497d5acf4055a1a5e"}
+```
+
+## Differences with rum
+
+The main differences of rumext components with rum components are:
+
+- the syntax for defining components is practically identical to
+  `defn` (see examples below).
+- the component body is compiled statically (never interprets at
+  runtime thanks to **hicada**).
+- the react class is build lazily (no react class is build until first
+  call to the component). This allows reduce load time when you have a
+  lot of components but on the "current page" only a few of them are
+  used.
+
+## Defining a component
+
+Let's see an example of how to use rumext macros for define
 components:
 
 ```clojure
@@ -18,16 +39,6 @@ components:
   [text]
   [:div {:class "label"} text])
 ```
-
-## Using Rumext
-
-Add to deps.edn:
-
-```
-funcool/rumext {:git/url "https://github.com/funcool/rumext.git", :sha "a5c1840779429e2d20a3a88497d5acf4055a1a5e"}
-```
-
-## Differences with rum
 
 On the first look, there are no notable differences with rum
 macros. The difference comes when mixins and lifecycle methods
@@ -58,10 +69,7 @@ the clojurescript `defn`:
 
 This approach allows user redefine lifecycle without creating an
 ad-hoc mixin and also allow an easy way to use other mixins without
-a special syntax (only the common `defn` syntax).
-
-And finally, the body is compiled statically (never interprets at
-runtime) thanks to **hicada**.
+a special syntax.
 
 
 ## FAQ
@@ -69,9 +77,9 @@ runtime) thanks to **hicada**.
 **Can I combine components defined with rum macros and rumext macros?**
 
 Absolutly, rumext only defines an alternative syntax but behind the
-scenes it uses the rum internals in order to create components. So
-after compilation, rum and rumext components they are practically
-identical.
+scenes it uses the rum internals in order to create components and
+react classes. So after compilation, rum and rumext components are
+practically identical.
 
 
 ## License ##
