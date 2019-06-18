@@ -15,6 +15,10 @@
               :array-children? false}]
     (-> body (hicada.compiler/compile opts {} &env))))
 
+(defmethod hc/compile-form "letfn"
+  [[_ bindings & body]]
+  `(letfn ~bindings ~@(butlast body) ~(emitter (last body))))
+
 (defn parse-defc
   [args]
   (loop [r {}
