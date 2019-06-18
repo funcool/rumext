@@ -11,6 +11,7 @@
 (defmacro html
   [body]
   (let [opts {:create-element 'js/React.createElement
+              :rewrite-for? true
               :array-children? false}]
     (-> body (hicada.compiler/compile opts {} &env))))
 

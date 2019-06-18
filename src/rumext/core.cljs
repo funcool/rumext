@@ -17,3 +17,19 @@
   (let [ctor (delay (builder render mixins display-name))]
     (fn [& args]
       (apply @ctor args))))
+
+(defn local
+  ([]
+   (rum/local {} :rum/local))
+  ([initial]
+   (rum/local initial :rum/local))
+  ([initial key]
+   (rum/local initial key)))
+
+(def mount rum/mount)
+(def static rum/static)
+(def ref-node rum/ref-node)
+(def dom-node rum/dom-node)
+(def react rum/react)
+(def reactive rum/reactive)
+(def with-key rum/with-key)
