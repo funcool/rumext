@@ -19,6 +19,14 @@
   [[_ bindings & body]]
   `(letfn ~bindings ~@(butlast body) ~(hc/emitter (last body))))
 
+(defmethod hc/compile-form "when-let"
+  [[_ bindings & body]]
+  `(when-let ~bindings ~@(butlast body) ~(hc/emitter (last body))))
+
+(defmethod hc/compile-form "if-let"
+  [[_ bindings & body]]
+  `(if-let ~bindings ~@(doall (for [x body] (hc/emitter x)))))
+
 (defn parse-defc
   [args]
   (loop [r {}
