@@ -10,7 +10,7 @@ instead of [sablono](https://github.com/r0man/sablono).
 Add to deps.edn:
 
 ```
-funcool/rumext {:git/url "https://github.com/funcool/rumext.git", :sha "a5c1840779429e2d20a3a88497d5acf4055a1a5e"}
+funcool/rumext {:git/url "https://github.com/funcool/rumext.git", :sha "fc554aacd9ea2ea5b72f93b5bcc7cd1002c54064"}
 ```
 
 ## Differences with rum
