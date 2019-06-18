@@ -1,16 +1,15 @@
-{:deps {rum/rum {:mvn/version "0.11.3"
-                 :exclusions [cljsjs/react
-                              cljsjs/react-dom]}
-        cljsjs/react {:mvn/version "16.8.3-0"}
-        cljsjs/react-dom {:mvn/version "16.8.3-0"}
+{:deps {rum/rum {:mvn/version "0.11.3" :exclusions [cljsjs/react cljsjs/react-dom]}
         hicada/hicada {:mvn/version "0.1.8"}}
- :paths ["src" "assets"]
+ :paths ["src"]
  :aliases {:dev {:extra-paths ["examples" "target"]
                  :extra-deps {com.bhauman/figwheel-main {:mvn/version "0.2.0"}
                               com.bhauman/rebel-readline-cljs {:mvn/version "0.1.4"}
                               com.bhauman/rebel-readline {:mvn/version "0.1.4"}
                               org.clojure/clojurescript {:mvn/version "1.10.520"}
-                              org.clojure/clojure {:mvn/version "1.10.1"}}}
+                              org.clojure/clojure {:mvn/version "1.10.1"}
+                              cljsjs/react {:mvn/version "16.8.3-0"}
+                              cljsjs/react-dom {:mvn/version "16.8.3-0"}}}
+
 
            :ancient {:main-opts ["-m" "deps-ancient.deps-ancient"]
                      :extra-deps {deps-ancient {:mvn/version "RELEASE"}}}
