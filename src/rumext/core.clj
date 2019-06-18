@@ -17,7 +17,7 @@
 
 (defmethod hc/compile-form "letfn"
   [[_ bindings & body]]
-  `(letfn ~bindings ~@(butlast body) ~(emitter (last body))))
+  `(letfn ~bindings ~@(butlast body) ~(hc/emitter (last body))))
 
 (defn parse-defc
   [args]
