@@ -3,7 +3,7 @@
 
 (def *clock (atom (.getTime (js/Date.))))
 (def *color (atom "#FA8D97"))
-(def *speed (atom 150))
+(def *speed (atom 2000))
 
 ;; Start clock ticking
 (defn tick []

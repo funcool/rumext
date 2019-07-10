@@ -9,7 +9,7 @@
 
 (enable-console-print!)
 
-(binary-clock/mount! (util/el "binary-clock"))
+;; (binary-clock/mount! (util/el "binary-clock"))
 (timer-static/mount! (util/el "timer-static"))
-(local-state/mount! (util/el "local-state"))
+;; (local-state/mount! (util/el "local-state"))
 
