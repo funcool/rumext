@@ -4,14 +4,23 @@
 
 (defc timer-static
   {:mixins [rum/reactive]
+   :init (fn [state]
+           (prn "init" state)
+           state)
    :derive-state (fn [state]
                    (prn "derive-state")
                    state)
    :did-mount (fn [state]
                 (prn "did-mount")
                 state)
+   :should-update (fn [lstate nstate]
+                    (prn "should-update" lstate nstate)
+                    true)
+   :make-snapshot (fn [state]
+                    (prn "make-snapshot")
+                    "foobar")
    :did-update (fn [state snapshot]
-                 (prn "did-update")
+                 (prn "did-update" snapshot)
                  state)}
   [label ts]
   (prn "render")
