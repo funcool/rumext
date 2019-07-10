@@ -1,8 +1,6 @@
 (ns rumext.examples.local-state
-  (:require [rum.core :as rum]
-            [rumext.core :refer-macros [defcs]]
+  (:require [rumext.core :as rum :refer-macros [defcs]]
             [rumext.examples.util :as util]))
-
 
 ;; Local component state
 

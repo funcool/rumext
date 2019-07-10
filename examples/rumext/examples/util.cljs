@@ -1,10 +1,16 @@
 (ns rumext.examples.util
-  (:require [rumext.core :refer-macros [defc defcs]]
-            [rum.core :as rum]))
+  (:require [rumext.core :as rum :refer-macros [defc defcs]]))
 
-(def *clock (atom 0))
+(def *clock (atom (.getTime (js/Date.))))
 (def *color (atom "#FA8D97"))
 (def *speed (atom 150))
+
+;; Start clock ticking
+(defn tick []
+  (reset! *clock (.getTime (js/Date.))))
+
+(defonce sem (js/setInterval tick @*speed))
+
 
 (defn format-time [ts]
   (-> ts (js/Date.) (.toISOString) (subs 11 23)))

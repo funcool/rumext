@@ -13,8 +13,3 @@
 (timer-static/mount! (util/el "timer-static"))
 (local-state/mount! (util/el "local-state"))
 
-;; Start clock ticking
-(defn tick []
-  (reset! util/*clock (.getTime (js/Date.))))
-
-(defonce sem (js/setInterval tick @util/*speed))

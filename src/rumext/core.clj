@@ -5,8 +5,7 @@
 ;; Copyright (c) 2016-2019 Andrey Antukh <niwi@niwi.nz>
 
 (ns rumext.core
-  (:require [rum.core :as rum]
-            [hicada.compiler :as hc]))
+  (:require [hicada.compiler :as hc]))
 
 (defmacro html
   [body]
@@ -36,7 +35,7 @@
     (case s
       0 (if (symbol? v)
           (recur (assoc r :name v) (inc s) (first n) (rest n))
-          (throw (ex-info "Invalid" {})))
+          (throw (ex-info "Invalid macro definition: expected component name." {})))
       1 (if (string? v)
           (recur (assoc r :doc v) (inc s) (first n) (rest n))
           (recur r (inc s) v n))
@@ -51,7 +50,7 @@
           (recur r (inc s) v n))
       3 (if (vector? v)
           (recur (assoc r :args v) (inc s) (first n) (rest n))
-          (throw (ex-info "Invalid" {})))
+          (throw (ex-info "Invalid macro definition: expected component args vector" {})))
       4 (let [sym (:name r)
               args (:args r)
               func (if (map? v)
@@ -62,9 +61,11 @@
 (defmacro defc
   [& args]
   (let [[render doc mixins cname] (parse-defc args)]
-    `(def ~cname ~doc (rumext.core/component rum/build-defc ~render ~mixins ~(str cname)))))
+    (if (empty? mixins)
+      `(def ~cname ~doc (rumext.core/build-fn-ctor ~render ~(str cname)))
+      `(def ~cname ~doc (rumext.core/build-lazy-ctor rumext.core/build-defc ~render ~mixins ~(str cname))))))
 
 (defmacro defcs
   [& args]
   (let [[render doc mixins cname] (parse-defc args)]
-    `(def ~cname ~doc (rumext.core/component rum/build-defcs ~render ~mixins ~(str cname)))))
+    `(def ~cname ~doc (rumext.core/build-lazy-ctor rumext.core/build-defcs ~render ~mixins ~(str cname)))))
