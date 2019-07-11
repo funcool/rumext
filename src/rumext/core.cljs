@@ -38,9 +38,9 @@
         did-mount      (collect* [:did-mount                ;; state -> state
                                   :after-render] mixins)    ;; state -> state
         should-update  (collect   :should-update mixins)    ;; old-state state -> boolean
-        did-update     (collect* [:did-update               ;; state -> state
+        did-update     (collect* [:did-update               ;; state snapshot -> state
                                   :after-render] mixins)    ;; state -> state
-        make-snapshot  (collect :make-snapshot mixins)      ;; state -> state
+        make-snapshot  (collect :make-snapshot mixins)      ;; state -> snapshot
         did-catch      (collect   :did-catch mixins)        ;; state error info -> state
         will-unmount   (collect   :will-unmount mixins)     ;; state -> state
         class-props    (reduce merge (collect :class-properties mixins))  ;; custom prototype properties and methods
@@ -55,6 +55,11 @@
                              (.call js/React.Component this props))))
         _              (goog/inherits ctor js/React.Component)
         prototype      (gobj/get ctor "prototype")]
+
+    (extend! prototype class-props)
+    (extend! ctor static-props)
+
+    (gobj/set ctor "displayName" display-name)
 
     (gobj/set ctor "getDerivedStateFromProps"
               (fn [props state]
@@ -77,8 +82,8 @@
       (gobj/set prototype "shouldComponentUpdate"
                 (fn [next-props next-state]
                   (this-as this
-                    (let [lstate (get-local-state this)
-                          nstate (gobj/get next-state ":rumext.core/state")]
+                    (let [lstate @(get-local-state this)
+                          nstate @(gobj/get next-state ":rumext.core/state")]
                       (or (some #(% lstate nstate) should-update) false))))))
 
     (gobj/set prototype "render"
@@ -119,9 +124,6 @@
                       (vswap! lstate call-all will-unmount))
                     (gobj/set this ":rumext.core/unmounted?" true)))))
 
-    (extend! prototype class-props)
-    (extend! ctor static-props)
-    (gobj/set ctor "displayName" display-name)
     ctor))
 
 (defn build-class-ctor
@@ -129,20 +131,14 @@
   (let [class (build-class render mixins display-name)
         keyfn (first (collect :key-fn mixins))
         ctor  (if (some? keyfn)
-                (fn [args]
-                  (let [props #js {":rumext.core/args" args
-                                   "key" (apply keyfn args)}]
-                    (js/React.createElement class props)))
-                (fn [args]
-                  (let [props #js {":rumext.core/args" args}]
-                    (js/React.createElement class props))))]
+                #(js/React.createElement class #js {":rumext.core/args" %1
+                                                    "key" (apply keyfn %1)})
+                #(js/React.createElement class #js {":rumext.core/args" %1}))]
     (with-meta ctor {::class class})))
 
 (defn build-fn-ctor
   [render-body display-name]
-  (let [class (fn [props]
-                (prn "build-fn-ctor" props)
-                (apply render-body (gobj/get props ":rumext.core/args")))
+  (let [class (fn [props] (apply render-body (gobj/get props ":rumext.core/args")))
         _     (gobj/set class "displayName" display-name)
         ctor  (fn [& args] (js/React.createElement class #js {":rumext.core/args" args}))]
     (with-meta ctor {::class class})))
@@ -255,15 +251,24 @@
   [state]
   (js/ReactDOM.findDOMNode (::react-component state)))
 
-(defn ref
+(defn create-ref
+  []
+  (js/React.createRef))
+
+(defn ref-val
   "Given state and ref handle, returns React component."
-  [state key]
-  (-> state ::react-component (gobj/get "refs") (gobj/get (name key))))
+  [ref]
+  (gobj/get ref "current"))
 
 (defn ref-node
   "Given state and ref handle, returns DOM node associated with ref."
-  [state key]
-  (js/ReactDOM.findDOMNode (ref state (name key))))
+  ([ref]
+   (js/ReactDOM.findDOMNode (ref-val ref)))
+  ([state key]
+   (let [ref (-> state ::react-component (gobj/get "refs") (gobj/get (name key)))]
+     (js/ReactDOM.findDOMNode ref))))
+
+
 
 ;; static mixin
 
@@ -310,10 +315,10 @@
   ([initial key]
    {:init
     (fn [state props]
-      (let [local-state (atom initial)
-            component   (::react-component state)]
-        (add-watch local-state key #(request-render component))
-        (assoc state key local-state)))}))
+      (let [lstate (atom initial)
+            component (::react-component state)]
+        (add-watch lstate key #(request-render component))
+        (assoc state key lstate)))}))
 
 
 ;; reactive mixin
@@ -342,7 +347,7 @@
          (let [comp             (::react-component state)
                old-reactions    (::reactions state #{})
                [dom next-state] (render-fn state)
-               new-reactions    @*reactions*
+               new-reactions    (deref *reactions*)
                key              (::reactions-key state)]
            (doseq [ref old-reactions]
              (when-not (contains? new-reactions ref)

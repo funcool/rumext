@@ -69,3 +69,8 @@
   [& args]
   (let [[render doc mixins cname] (parse-defc args)]
     `(def ~cname ~doc (rumext.core/build-lazy-ctor rumext.core/build-defcs ~render ~mixins ~(str cname)))))
+
+(defmacro defcc
+  [& args]
+  (let [[render doc mixins cname] (parse-defc args)]
+    `(def ~cname ~doc (rumext.core/build-lazy-ctor rumext.core/build-defcc ~render ~mixins ~(str cname)))))

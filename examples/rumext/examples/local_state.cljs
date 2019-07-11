@@ -7,7 +7,7 @@
 (defcs local-state
   {:mixins [(rum/local 0)]}
   [state title]
-  (let [*count (:rum/local state)]
+  (let [*count (::rum/local state)]
     [:div
      {:style {"-webkit-user-select" "none"
               "cursor" "pointer"}
