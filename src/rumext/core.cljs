@@ -223,11 +223,11 @@
   "Adds React key to element.
 
    ```
-   (rum/defc label [text] [:div text])
+   (rmx/defc label [text] [:div text])
 
    (-> (label)
-       (rum/with-key \"abc\")
-       (rum/mount js/document.body))
+       (rmx/with-key \"abc\")
+       (rmx/mount js/document.body))
    ```"
   [element key]
   (js/React.cloneElement element #js { "key" key } nil))
@@ -236,11 +236,11 @@
   "Adds React ref (string or callback) to element.
 
    ```
-   (rum/defc label [text] [:div text])
+   (rmx/defc label [text] [:div text])
 
    (-> (label)
-       (rum/with-ref \"abc\")
-       (rum/mount js/document.body))
+       (rmx/with-ref \"abc\")
+       (rmx/mount js/document.body))
    ```"
   [element ref]
   (js/React.cloneElement element #js { "ref" ref } nil))
@@ -277,17 +277,17 @@
   changed. Does equality check (`=`) on all arguments.
 
    ```
-   (rum/defc label < rum/static
+   (rmx/defc label < rmx/static
      [text]
      [:div text])
 
-   (rum/mount (label \"abc\") js/document.body)
+   (rmx/mount (label \"abc\") js/document.body)
 
    ;; def != abc, will re-render
-   (rum/mount (label \"def\") js/document.body)
+   (rmx/mount (label \"def\") js/document.body)
 
    ;; def == def, won’t re-render
-   (rum/mount (label \"def\") js/document.body)
+   (rmx/mount (label \"def\") js/document.body)
    ```"
   {:should-update (fn [old-state new-state]
                     (not= (::args old-state) (::args new-state)))})
@@ -302,13 +302,13 @@
   user-provided key or under `:rumext.core/local` by default.
 
    ```
-   (rum/defcs counter < (rum/local 0 :cnt)
+   (rmx/defcs counter < (rmx/local 0 :cnt)
      [state label]
      (let [*cnt (:cnt state)]
        [:div {:on-click (fn [_] (swap! *cnt inc))}
          label @*cnt]))
 
-   (rum/mount (counter \"Click count: \"))
+   (rmx/mount (counter \"Click count: \"))
    ```"
   ([] (local {} ::local))
   ([initial] (local initial ::local))
@@ -329,12 +329,12 @@
   "Mixin. Works in conjunction with [[react]].
 
    ```
-   (rum/defc comp < rum/reactive
+   (rmx/defc comp < rmx/reactive
      [*counter]
-     [:div (rum/react counter)])
+     [:div (rmx/react counter)])
 
    (def *counter (atom 0))
-   (rum/mount (comp *counter) js/document.body)
+   (rmx/mount (comp *counter) js/document.body)
    (swap! *counter inc) ;; will force comp to re-render
    ```"
   {:init

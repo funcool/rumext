@@ -1,5 +1,5 @@
 (ns rumext.examples.util
-  (:require [rumext.core :as rum :refer-macros [defc defcs]]))
+  (:require [rumext.core :as rmx :refer-macros [defc defcs]]))
 
 (def *clock (atom (.getTime (js/Date.))))
 (def *color (atom "#FA8D97"))
@@ -22,8 +22,8 @@
   [period]
   {:did-mount
    (fn [state]
-     (let [rcomp (::rum/react-component state)
-           sem (js/setInterval #(rum/request-render rcomp) period)]
+     (let [rcomp (::rmx/react-component state)
+           sem (js/setInterval #(rmx/request-render rcomp) period)]
        (assoc state ::interval sem)))
    :will-unmount
    (fn [state]
@@ -38,26 +38,26 @@
 
 ;; Generic board utils
 
-;; (def ^:const board-width 19)
-;; (def ^:const board-height 10)
+(def ^:const board-width 19)
+(def ^:const board-height 10)
 
-;; (defn prime?
-;;   [i]
-;;   (and (>= i 2)
-;;        (empty? (filter #(= 0 (mod i %)) (range 2 i)))))
+(defn prime?
+  [i]
+  (and (>= i 2)
+       (empty? (filter #(= 0 (mod i %)) (range 2 i)))))
 
-;; (defn initial-board
-;;   []
-;;   (->> (map prime? (range 0 (* board-width board-height)))
-;;        (partition board-width)
-;;        (mapv vec)))
+(defn initial-board
+  []
+  (->> (map prime? (range 0 (* board-width board-height)))
+       (partition board-width)
+       (mapv vec)))
 
-;; (defc board-stats
-;;   {:mixins [rum/reactive]}
-;;   [*board *renders]
-;;   [:div.stats
-;;    "Renders: "       (rum/react *renders)
-;;    [:br]
-;;    "Board watches: " (watches-count *board)
-;;    [:br]
-;;    "Color watches: " (watches-count *color) ])
+(defc board-stats
+  {:mixins [rmx/reactive]}
+  [*board *renders]
+  [:div.stats
+   "Renders: "       (rmx/react *renders)
+   [:br]
+   "Board watches: " (watches-count *board)
+   [:br]
+   "Color watches: " (watches-count *color) ])

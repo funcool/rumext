@@ -1,20 +1,20 @@
 (ns rumext.examples.controls
-  (:require [rumext.core :as rum]
+  (:require [rumext.core :as rmx]
             [rumext.examples.util :as util]))
 
 
 ;; generic “atom editor” component
-(rum/defc input
-  {:mixins [rum/reactive]}
+(rmx/defc input
+  {:mixins [rmx/reactive]}
   [ref]
   [:input {:type "text"
-           :value (rum/react ref)
+           :value (rmx/react ref)
            :style {:width 100}
            :on-change #(reset! ref (.. % -target -value))}])
 
 
 ;; Raw top-level component, everything interesting is happening inside
-(rum/defc controls
+(rmx/defc controls
   []
   [:dl
    [:dt "Color: "]
@@ -33,5 +33,5 @@
 
 
 (defn mount! [el]
-  (rum/mount (controls) el))
+  (rmx/mount (controls) el))
 

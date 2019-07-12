@@ -8,6 +8,7 @@
             [rumext.examples.refs :as refs]
             [rumext.examples.controls :as controls]
             [rumext.examples.errors :as errors]
+            [rumext.examples.board-reactive :as board-reactive]
             ))
 
 (enable-console-print!)
@@ -17,7 +18,10 @@
 (local-state/mount! (util/el "local-state"))
 (refs/mount! (util/el "refs"))
 (controls/mount! (util/el "controls"))
+(board-reactive/mount! (util/el "board-reactive"))
 ;; (errors/mount! (util/el "errors"))
+
+
 
 
 
