@@ -1,24 +1,30 @@
 (ns rumext.examples.util
-  (:require [rumext.core :refer-macros [defc defcs]]
-            [rum.core :as rum]))
+  (:require [rumext.core :as rmx :refer-macros [defc defcs]]))
 
-(def *clock (atom 0))
+(def *clock (atom (.getTime (js/Date.))))
 (def *color (atom "#FA8D97"))
 (def *speed (atom 150))
+
+;; Start clock ticking
+(defn tick []
+  (reset! *clock (.getTime (js/Date.))))
+
+(defonce sem (js/setInterval tick @*speed))
+
 
 (defn format-time [ts]
   (-> ts (js/Date.) (.toISOString) (subs 11 23)))
 
-
 (defn el [id]
   (js/document.getElementById id))
 
-(defn periodic-refresh [period]
+(defn periodic-refresh
+  [period]
   {:did-mount
    (fn [state]
-     (let [react-comp (:rum/react-component state)
-           interval   (js/setInterval #(rum/request-render react-comp) period)]
-       (assoc state ::interval interval)))
+     (let [rcomp (::rmx/react-component state)
+           sem (js/setInterval #(rmx/request-render rcomp) period)]
+       (assoc state ::interval sem)))
    :will-unmount
    (fn [state]
      (js/clearInterval (::interval state)))})
@@ -47,10 +53,10 @@
        (mapv vec)))
 
 (defc board-stats
-  {:mixins [rum/reactive]}
+  {:mixins [rmx/reactive]}
   [*board *renders]
   [:div.stats
-   "Renders: "       (rum/react *renders)
+   "Renders: "       (rmx/react *renders)
    [:br]
    "Board watches: " (watches-count *board)
    [:br]

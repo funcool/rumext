@@ -1,10 +1,10 @@
 (require '[clojure.java.shell :as shell])
 (require '[figwheel.main.api :as figwheel])
 (require '[cljs.build.api :as api])
-(require '[rebel-readline.core]
-         '[rebel-readline.clojure.main]
-         '[rebel-readline.clojure.line-reader]
-         '[rebel-readline.clojure.service.local])
+;; (require '[rebel-readline.core]
+;;          '[rebel-readline.clojure.main]
+;;          '[rebel-readline.clojure.line-reader]
+;;          '[rebel-readline.clojure.service.local])
 
 
 (defmulti task first)
@@ -28,29 +28,44 @@
 ;;                    :multithread? false})
 ;;     (System/exit 1)))
 
-(defmethod task "repl"
-  [args]
-  (rebel-readline.core/with-line-reader
-    (rebel-readline.clojure.line-reader/create
-     (rebel-readline.clojure.service.local/create))
-    (clojure.main/repl
-     :prompt (fn []) ;; prompt is handled by line-reader
-     :read (rebel-readline.clojure.main/create-repl-read))))
+;; (defmethod task "repl"
+;;   [args]
+;;   (rebel-readline.core/with-line-reader
+;;     (rebel-readline.clojure.line-reader/create
+;;      (rebel-readline.clojure.service.local/create))
+;;     (clojure.main/repl
+;;      :prompt (fn []) ;; prompt is handled by line-reader
+;;      :read (rebel-readline.clojure.main/create-repl-read))))3
 
-(def options
+;; (def options
+;;   {:main 'rumext.examples.core
+;;    :output-to "out/main.js"
+;;    :output-dir "out"
+;;    :optimizations :none
+;;    :pretty-print true
+;;    :language-in  :ecmascript5
+;;    :language-out :ecmascript5
+;;    :verbose true})
+
+(def build-options
   {:main 'rumext.examples.core
-   :output-to "out/main.js"
-   :output-dir "out"
-   :optimizations :none
+   :output-to "target/public/main.js"
+   :output-dir "target/public/main"
    :pretty-print true
-   :language-in  :ecmascript5
-   :language-out :ecmascript5
+   :source-map true
    :verbose true})
+
+(def figwheel-options
+  {:open-url false
+   :load-warninged-code true
+   :auto-testing false
+   :ring-server-options {:port 9500 :host "0.0.0.0"}
+   :watch-dirs ["src" "examples"]})
 
 (defn build
   [optimizations]
-  (api/build (api/inputs "src" "test")
-             (cond->  (assoc options :optimizations optimizations)
+  (api/build (api/inputs "src" "examples")
+             (cond->  (assoc build-options :optimizations optimizations)
                (= optimizations :none) (assoc :source-map true))))
 
 (defmethod task "build"
@@ -62,51 +77,11 @@
     (do (println "Unknown argument to test task:" type)
         (System/exit 1))))
 
-;; (defmethod task "test"
-;;   [[_ type]]
-;;   (letfn [(run-tests []
-;;             (let [{:keys [out err]} (shell/sh "node" "out/tests.js")]
-;;               (println out err)))
-
-;;           (test-once []
-;;             (build :none)
-;;             (run-tests)
-;;             (shutdown-agents))
-
-;;           (test-watch []
-;;             (println "Start watch loop...")
-;;             (try
-;;               (api/watch (api/inputs "src" "test")
-;;                          (assoc options
-;;                                 :parallel-build false
-;;                                 :watch-fn run-tests
-;;                                 :cache-analysis false
-;;                                 :optimizations :none
-;;                                 :source-map false))
-;;               (catch Exception e
-;;                 (println "ERROR:" e)
-;;                 (Thread/sleep 2000)
-;;                 (test-watch))))]
-
-;;     (case type
-;;       (nil "once") (test-once)
-;;       "watch"      (test-watch)
-;;       (do (println "Unknown argument to test task:" type)
-;;           (System/exit 1)))))
-
 (defmethod task "figwheel"
   [args]
   (figwheel/start
-   {:id "dev"
-    :options {:main 'rumext.examples.core
-              :output-to "target/public/main.js"
-              :output-dir "target/public/main"
-              :pretty-print true
-              :source-map true
-              }
-    :config {:open-url false
-             :auto-testing false
-             :watch-dirs ["src" "examples"]}}))
+   figwheel-options
+   {:id "dev" :options build-options}))
 
 ;;; Build script entrypoint. This should be the last expression.
 

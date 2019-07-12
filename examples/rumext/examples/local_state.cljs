@@ -1,15 +1,13 @@
 (ns rumext.examples.local-state
-  (:require [rum.core :as rum]
-            [rumext.core :refer-macros [defcs]]
+  (:require [rumext.core :as rmx]
             [rumext.examples.util :as util]))
-
 
 ;; Local component state
 
-(defcs local-state
-  {:mixins [(rum/local 0)]}
+(rmx/defcs local-state
+  {:mixins [(rmx/local 0)]}
   [state title]
-  (let [*count (:rum/local state)]
+  (let [*count (::rmx/local state)]
     [:div
      {:style {"-webkit-user-select" "none"
               "cursor" "pointer"}
@@ -17,4 +15,4 @@
      title ": " @*count]))
 
 (defn mount! [el]
-  (rum/mount (local-state "Clicks count") el))
+  (rmx/mount (local-state "Clicks count") el))

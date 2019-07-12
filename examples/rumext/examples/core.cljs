@@ -5,6 +5,11 @@
             [rumext.examples.binary-clock :as binary-clock]
             [rumext.examples.timer-static :as timer-static]
             [rumext.examples.local-state :as local-state]
+            [rumext.examples.refs :as refs]
+            [rumext.examples.controls :as controls]
+            [rumext.examples.errors :as errors]
+            [rumext.examples.board-reactive :as board-reactive]
+            [rumext.examples.portals :as portals]
             ))
 
 (enable-console-print!)
@@ -12,9 +17,13 @@
 (binary-clock/mount! (util/el "binary-clock"))
 (timer-static/mount! (util/el "timer-static"))
 (local-state/mount! (util/el "local-state"))
+(refs/mount! (util/el "refs"))
+(controls/mount! (util/el "controls"))
+(board-reactive/mount! (util/el "board-reactive"))
+(portals/mount! (util/el "portals"))
+;; (errors/mount! (util/el "errors"))
 
-;; Start clock ticking
-(defn tick []
-  (reset! util/*clock (.getTime (js/Date.))))
 
-(defonce sem (js/setInterval tick @util/*speed))
+
+
+
