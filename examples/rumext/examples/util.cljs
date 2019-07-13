@@ -54,7 +54,7 @@
 
 (defc board-stats
   {:mixins [rmx/reactive]}
-  [*board *renders]
+  [[*board *renders]]
   [:div.stats
    "Renders: "       (rmx/react *renders)
    [:br]

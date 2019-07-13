@@ -6,16 +6,20 @@
 
 (defc render-count
   {:mixins [rmx/reactive]}
-  [ref]
-  [:div.stats "Renders: " (rmx/react ref)])
+  []
+  [:div.stats "Renders: " (rmx/react *bclock-renders)])
 
 (rmx/defc bit
-  {:mixins [rmx/static]}
-  [n bit]
-  (swap! *bclock-renders inc)
-  (if (bit-test n bit)
-    [:td.bclock-bit {:style {:background-color @util/*color}}]
-    [:td.bclock-bit {}]))
+  {:mixins [rmx/static rmx/reactive]
+   :after-render
+   (fn [state]
+     (swap! *bclock-renders inc)
+     state)}
+  [[n b]]
+  (let [color (rmx/react util/*color)]
+    (if (bit-test n b)
+      [:td.bclock-bit {:style {:background-color color}}]
+      [:td.bclock-bit {}])))
 
 (rmx/defc binary-clock
   {:mixins [rmx/reactive]}
@@ -36,13 +40,13 @@
         msl  (mod  msec 10)]
     [:table.bclock
      [:tbody
-      [:tr [:td] (bit hl 3) [:th] [:td]  (bit ml 3) [:th] [:td] (bit sl 3) [:th] (bit msh 3) (bit msm 3) (bit msl 3)
+      [:tr [:td] (bit [hl 3]) [:th] [:td]  (bit [ml 3]) [:th] [:td] (bit [sl 3]) [:th] (bit [msh 3]) (bit [msm 3]) (bit [msl 3])
        ]
-      [:tr [:td]      (bit hl 2) [:th] (bit mh 2) (bit ml 2) [:th] (bit sh 2) (bit sl 2) [:th] (bit msh 2) (bit msm 2) (bit msl 2)]
-      [:tr (bit hh 1) (bit hl 1) [:th] (bit mh 1) (bit ml 1) [:th] (bit sh 1) (bit sl 1) [:th] (bit msh 1) (bit msm 1) (bit msl 1)]
-      [:tr (bit hh 0) (bit hl 0) [:th] (bit mh 0) (bit ml 0) [:th] (bit sh 0) (bit sl 0) [:th] (bit msh 0) (bit msm 0) (bit msl 0)]
+      [:tr [:td] (bit [hl 2]) [:th] (bit [mh 2]) (bit [ml 2]) [:th] (bit [sh 2]) (bit [sl 2]) [:th] (bit [msh 2]) (bit [msm 2]) (bit [msl 2])]
+      [:tr (bit [hh 1]) (bit [hl 1]) [:th] (bit [mh 1]) (bit [ml 1]) [:th] (bit [sh 1]) (bit [sl 1]) [:th] (bit [msh 1]) (bit [msm 1]) (bit [msl 1])]
+      [:tr (bit [hh 0]) (bit [hl 0]) [:th] (bit [mh 0]) (bit [ml 0]) [:th] (bit [sh 0]) (bit [sl 0]) [:th] (bit [msh 0]) (bit [msm 0]) (bit [msl 0])]
       [:tr [:th hh]   [:th hl]   [:th] [:th mh]   [:th ml]   [:th] [:th sh]   [:th sl]   [:th] [:th msh]   [:th msm]   [:th msl]]
-      [:tr [:th {:col-span 8} (render-count *bclock-renders)]]]]))
+      [:tr [:th {:col-span 8} (render-count)]]]]))
 
 (defn mount! [el]
   (rmx/mount (binary-clock) el))

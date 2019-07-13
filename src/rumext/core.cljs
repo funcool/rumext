@@ -48,8 +48,8 @@
 
         ctor           (fn [props]
                          (this-as this
-                           (let [args  (gobj/get props ":rumext.core/args")
-                                 lstate (-> {::args args ::react-component this}
+                           (let [lprops (gobj/get props ":rumext.core/props")
+                                 lstate (-> {::props lprops ::react-component this}
                                             (call-all init props))]
                              (gobj/set this "state" #js {":rumext.core/state" (volatile! lstate)})
                              (.call js/React.Component this props))))
@@ -64,12 +64,20 @@
     (gobj/set ctor "getDerivedStateFromProps"
               (fn [props state]
                 (let [lstate  @(gobj/get state ":rumext.core/state")
-                      nargs   (gobj/get props ":rumext.core/args")
-                      nstate  (merge lstate {::args nargs})
+                      nprops   (gobj/get props ":rumext.core/props")
+                      nstate  (merge lstate {::props nprops})
                       nstate  (reduce #(%2 %1) nstate derive-state)]
                   ;; allocate new volatile
                   ;; so that we can access both old and new states in shouldComponentUpdate
                   #js {":rumext.core/state" (volatile! nstate)})))
+
+    (gobj/set prototype "render"
+              (fn []
+                (this-as this
+                  (let [lstate (get-local-state this)
+                        [dom nstate] (wrapped-render @lstate)]
+                    (vreset! lstate nstate)
+                    dom))))
 
     (when-not (empty? did-mount)
       (gobj/set prototype "componentDidMount"
@@ -85,14 +93,6 @@
                     (let [lstate @(get-local-state this)
                           nstate @(gobj/get next-state ":rumext.core/state")]
                       (or (some #(% lstate nstate) should-update) false))))))
-
-    (gobj/set prototype "render"
-              (fn []
-                (this-as this
-                  (let [lstate (get-local-state this)
-                        [dom nstate] (wrapped-render @lstate)]
-                    (vreset! lstate nstate)
-                    dom))))
 
     (when-not (empty? make-snapshot)
       (gobj/set prototype "getSnapshotBeforeUpdate"
@@ -129,36 +129,34 @@
 (defn build-class-ctor
   [render mixins display-name]
   (let [class (build-class render mixins display-name)
-        keyfn (first (collect :key-fn mixins))
-        ctor  (if (some? keyfn)
-                #(js/React.createElement class #js {":rumext.core/args" %1
-                                                    "key" (apply keyfn %1)})
-                #(js/React.createElement class #js {":rumext.core/args" %1}))]
-    (with-meta ctor {::class class})))
+        keyfn (first (collect :key-fn mixins))]
+    (if (some? keyfn)
+      #(js/React.createElement class #js {":rumext.core/props" %1 "key" (keyfn %1)})
+      #(js/React.createElement class #js {":rumext.core/props" %1}))))
 
 (defn build-fn-ctor
   [render-body display-name]
-  (let [class (fn [props] (apply render-body (gobj/get props ":rumext.core/args")))
-        _     (gobj/set class "displayName" display-name)
-        ctor  (fn [& args] (js/React.createElement class #js {":rumext.core/args" args}))]
-    (with-meta ctor {::class class})))
+  (let [klass (fn [props] (render-body (gobj/get props ":rumext.core/props")))]
+    (gobj/set klass "displayName" display-name)
+    (fn [props]
+      (js/React.createElement klass #js {":rumext.core/props" props}))))
 
 (defn build-lazy-ctor
   [builder render mixins display-name]
   (let [ctor (delay (builder render mixins display-name))]
-    (fn [& args] (@ctor args))))
+    (fn [props] (@ctor props))))
 
 (defn build-defc
   [render-body mixins display-name]
-  (let [render (fn [state] [(apply render-body (::args state)) state])]
+  (let [render (fn [state] [(render-body (::props state)) state])]
     (build-class-ctor render mixins display-name)))
 
 (defn build-defcs [render-body mixins display-name]
-  (let [render (fn [state] [(apply render-body state (::args state)) state])]
+  (let [render (fn [state] [(render-body state (::props state)) state])]
     (build-class-ctor render mixins display-name)))
 
 (defn build-defcc [render-body mixins display-name]
-  (let [render (fn [state] [(apply render-body (::react-component state) (::args state)) state])]
+  (let [render (fn [state] [(render-body (::react-component state) (::props state)) state])]
     (build-class-ctor render mixins display-name)))
 
 ;; render queue
@@ -290,7 +288,7 @@
    (rmx/mount (label \"def\") js/document.body)
    ```"
   {:should-update (fn [old-state new-state]
-                    (not= (::args old-state) (::args new-state)))})
+                    (not= (::props old-state) (::props new-state)))})
 
 
 ;; local mixin

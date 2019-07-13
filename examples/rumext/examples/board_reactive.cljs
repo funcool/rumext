@@ -13,7 +13,7 @@
    :did-update (fn [state]
                  (swap! *board-renders inc)
                  state)}
-  [x y]
+  [[x y]]
   (let [celref (l/derive (l/in [y x]) *board)]
     ;; each cell subscribes to its own cursor inside a board
     ;; note that subscription to color is conditional:
@@ -31,9 +31,9 @@
      [:div.art-row {:key y}
       (for [x (range 0 util/board-width)]
         ;; this is how one can specify React key for component
-        (-> (cell x y)
+        (-> (cell [x y])
             (rmx/with-key [x y])))])
-   (util/board-stats *board *board-renders)])
+   (util/board-stats [*board *board-renders])])
 
 
 (defn mount! [el]

@@ -23,12 +23,14 @@ This is the list of the main differences that rumext introduces (vs rum):
   call to the component). This allows reduce load time when you have a
   lot of components but on the "current page" only a few of them are
   used.
+- don't use varargs on components (better performance)
 - uses new react lifecyle methods (all deprecated lifecyles are
   removed).
 - does not includes the cursors and derived-atoms; that stuff is
   delegated to third party libraries like
   [lentes](https://github.com/funcool/lentes).
 - no server-side rendering
+
 
 **WARNING**: this is not intended for general use, it is mainly
 implemented to be used in [uxbox](https://github.com/uxbox/uxbox) and
@@ -56,12 +58,12 @@ are involved; let's see a complete example:
 ```clojure
 (defcs local-state
   "A component docstring/description (optional)."
-  {:mixins [(rum/local 0)]
+  {:mixins [(rmt/local 0)]
    :init (fn [own props]
            (println "Component initialized")
            own)}
   [state title]
-  (let [*count (:rum/local state)]
+  (let [*count (::rmt/local state)]
     [:div
      {:style {"-webkit-user-select" "none"
               "cursor" "pointer"}
@@ -81,18 +83,6 @@ ad-hoc mixin and also allow an easy way to use other mixins without
 a special syntax.
 
 
-## FAQ
-
-**Can I combine components defined with rum macros and rumext macros?**
-
-Absolutly, rumext only defines an alternative syntax but behind the
-scenes it uses the rum internals in order to create components and
-react classes. So after compilation, rum and rumext components are
-practically identical.
-
-
 ## License ##
 
-``` This Source Code Form is subject to the terms of the Mozilla
-Public License, v. 2.0. If a copy of the MPL was not distributed with
-this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+Licensed under Eclipse Public License (see [LICENSE](LICENSE)).

@@ -52,6 +52,8 @@
    :output-to "target/public/main.js"
    :output-dir "target/public/main"
    :pretty-print true
+   :static-fns false
+   :fn-invoke-direct false
    :source-map true
    :verbose true})
 
