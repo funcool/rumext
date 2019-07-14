@@ -26,6 +26,10 @@
   [[_ bindings & body]]
   `(if-let ~bindings ~@(doall (for [x body] (hc/emitter x)))))
 
+(defmethod hc/compile-form "fn"
+  [[_ params & body]]
+  `(fn ~params ~@(butlast body) ~(hc/emitter (last body))))
+
 (defn parse-defc
   [args]
   (loop [r {}
@@ -57,6 +61,22 @@
                      `(fn ~args ~v (html (do ~@n)))
                      `(fn ~args (html (do ~@(cons v n)))))]
           [func (:doc r) (:mixins r) sym]))))
+
+(defn parse-def
+  [& {:keys [render mixins desc]
+      :or {mixins [] desc ""}
+      :as params}]
+  (let [spec (dissoc params :mixins :render :desc)
+        mixins (if (empty? spec)
+                 mixins
+                 (conj mixins spec))]
+    [`(html ~render) desc mixins]))
+
+(defmacro def
+  [cname & args]
+  (let [[render doc mixins] (apply parse-def args)]
+    `(def ~cname ~doc (rumext.core/build-lazy-ctor
+                       rumext.core/build-defcs ~render ~mixins ~(str cname)))))
 
 (defmacro defc
   [& args]

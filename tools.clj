@@ -28,14 +28,14 @@
 ;;                    :multithread? false})
 ;;     (System/exit 1)))
 
-;; (defmethod task "repl"
-;;   [args]
-;;   (rebel-readline.core/with-line-reader
-;;     (rebel-readline.clojure.line-reader/create
-;;      (rebel-readline.clojure.service.local/create))
-;;     (clojure.main/repl
-;;      :prompt (fn []) ;; prompt is handled by line-reader
-;;      :read (rebel-readline.clojure.main/create-repl-read))))3
+(defmethod task "repl"
+  [args]
+  (rebel-readline.core/with-line-reader
+    (rebel-readline.clojure.line-reader/create
+     (rebel-readline.clojure.service.local/create))
+    (clojure.main/repl
+     :prompt (fn []) ;; prompt is handled by line-reader
+     :read (rebel-readline.clojure.main/create-repl-read))))3
 
 ;; (def options
 ;;   {:main 'rumext.examples.core
