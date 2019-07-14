@@ -50,7 +50,7 @@
                          (this-as this
                            (let [lprops (gobj/get props ":rumext.core/props")
                                  lstate (-> {::props lprops ::react-component this}
-                                            (call-all init props))]
+                                            (call-all init lprops))]
                              (gobj/set this "state" #js {":rumext.core/state" (volatile! lstate)})
                              (.call js/React.Component this props))))
         _              (goog/inherits ctor js/React.Component)
