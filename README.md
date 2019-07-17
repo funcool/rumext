@@ -7,7 +7,7 @@ This is a friendly fork of [rum](https://github.com/tonsky/rum).
 Add to deps.edn:
 
 ```
-funcool/rumext {:git/url "https://github.com/funcool/rumext.git", 
+funcool/rumext {:git/url "https://github.com/funcool/rumext.git",
                 :sha "4d6a5f263f2fc37eae6756f5745838c6d946353e"}
 ```
 
@@ -15,8 +15,16 @@ funcool/rumext {:git/url "https://github.com/funcool/rumext.git",
 
 This is the list of the main differences that rumext introduces (vs rum):
 
-- the syntax for defining components is identical to `defn`;
-  rum has it's own syntax (see examples below).
+- clear distintion between class based components and functional
+  (function based components).
+- functional components uses React Hooks behind the scenes for provide
+  **local state**, **pure components** and **reactive** (rerender
+  component on atom change).
+- a clojurescript friendly abstractions for React Hooks (look on
+  `src/rumext/func.cljs` file).
+- more idiomatic macro for define class based components, that allows
+  include lifecycle methods directly (without need to create an ad-hoc
+  mixin).
 - the component body is compiled statically (never interprets at
   runtime thanks to **hicada**).
 - the react class is build lazily (no react class is build until first
@@ -38,49 +46,111 @@ released as separated project for conveniendce. Don't expect
 compromise for backward compatibility.
 
 
-## Defining a component
+## Class Components
 
-Let's see an example of how to use rumext macros for define
-components:
 
-```clojure
-(require '[rumext.core as rmt :refer-macros [defc defcs]])
+### Defining a Class Component
 
-(defc label
-  [text]
-  [:div {:class "label"} text])
-```
-
-On the first look, there are no notable differences with rum
-macros. The difference comes when mixins and lifecycle methods
-are involved; let's see a complete example:
+Let's see an example of how to use rumext macros for define class
+based components.
 
 ```clojure
-(defcs local-state
-  "A component docstring/description (optional)."
-  {:mixins [(rmt/local 0)]
-   :init (fn [own props]
-           (println "Component initialized")
-           own)}
-  [state title]
-  (let [*count (::rmt/local state)]
-    [:div
-     {:style {"-webkit-user-select" "none"
-              "cursor" "pointer"}
-      :on-click (fn [_] (swap! *count inc)) }
-     title ": " @*count]))
+(require '[rumext.core as mx])
+
+(mx/def local-state
+  :desc "A component docstring/description (optional)."
+  :mixins [(rmt/local 0)]
+  :init
+  (fn [own props]
+    (println "Component initialized")
+    own)
+
+  :render
+  (fn [own {:keys [title] :as props}]
+    (let [*count (::rmt/local state)]
+      [:div {:on-click #(swap! *count inc)}
+        [:span title ": " @*count]])))
 ```
 
-As you can observe, rumext `defcs` macro is practically identical to
-the clojurescript `defn`:
+This example uses the `mx/local` mixin that provides a local mutable stat
+to the component.
 
-- it has an optional docstring
-- it uses metadata syntax to provide additional lifecycle methods
-- it uses `:mixins` entry on metadata to provide additional mixins
 
-This approach allows user redefine lifecycle without creating an
-ad-hoc mixin and also allow an easy way to use other mixins without
-a special syntax.
+### Reactive Component
+
+You need to use the `mx/reactive` mixin and `mx/react` (instead of
+deref) for deref the atom. Let's see an example:
+
+```clojure
+(def count (atom 0))
+
+(mx/def counter
+  :mixins [mx/reactive]
+  :render
+  (fn [own props]
+    [:div {:on-click #(swap! count inc)}
+      [:span "Clicks: " (mx/react count)]]))
+
+(mx/mount (counter) js/document.body)
+```
+
+### Pure Component
+
+If you have a component that only accepts immutable data structures,
+you can use the `mx/static` mixin for avoid unnecesary renders if
+arguments does not change between them.
+
+
+```clojure
+(rum/def title
+  :mixins [mx/static]
+  :render
+  (fn [_ {:props [name]}]
+    [:div {:class "label"} name]))
+```
+
+So if we manuall trigger the component mounting, we will obtain:
+
+```clojure
+(mx/mount (title "ciri") body)   ;; first render
+(mx/mount (title "ciri") body)   ;; second render: don't be rendered
+(mx/mount (title "geralt") body) ;; third render: re-render
+(mx/mount (title "geralt") body) ;; forth render:  don't be rendered
+```
+
+### Lifecycle Methods
+
+
+Here’s a full list of lifecycle methods supported by rumext:
+
+```clojure
+:init           ;; state, props     => state (called once, on component constructor)
+:did-catch      ;; state, err, inf  => state (like try/catch for components)
+:did-mount      ;; state            => state
+:did-update     ;; state, snapshot  => state
+:after-render   ;; state            => state (did-mount and did-update alias)
+:should-update  ;; old-state, state => bool  (the shouldComponentUpdate)
+:will-unmount   ;; state            => state
+:derive-state   ;; state            => state (similar to legacy will-update and will-mount)
+:make-snapshot  ;; state            => snapshot
+```
+
+A mixin is a map with a combination of this methods. And a component
+can have as many mixins as you need.
+
+If you don't understand some methods, refer to react documentation:
+https://reactjs.org/docs/react-component.html
+
+
+## Functional Components
+
+Functional components are defined using functions, and exposes a
+limited set of functionalities supported by class based tanks to the
+combination of **React Hooks** and high-order components.
+
+Let's see a example of how to define a component:
+
+TODO
 
 
 ## License ##

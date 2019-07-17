@@ -11,7 +11,6 @@
      [:span {:style {:color @util/*color}}
       (util/format-time ts)]]))
 
-
 (defn mount! [el]
   (let [comp (mx/html [:& timer {}])]
     (mx/mount comp el)))
