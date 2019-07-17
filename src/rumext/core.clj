@@ -7,12 +7,37 @@
 (ns rumext.core
   (:require [hicada.compiler :as hc]))
 
+(defn- to-js-map
+  "Convert a map into a JavaScript object."
+  [m]
+  (when-not (empty? m)
+    (let [key-strs (mapv hc/to-js (keys m))
+          non-str (remove string? key-strs)
+          _ (assert (empty? non-str)
+                    (str "Hicada: Props can't be dynamic:"
+                         (pr-str non-str) "in: " (pr-str m)))
+          kvs-str (->> (mapv #(-> (str \' % "':~{}")) key-strs)
+                       (interpose ",")
+                       (apply str))]
+      (vary-meta
+        (list* 'js* (str "{" kvs-str "}") (mapv identity (vals m)))
+        assoc :tag 'object))))
+
+(def handlers
+  {:& (fn
+        ([_ klass]
+         [klass {} nil])
+        ([_ klass attrs & children]
+         (if (map? attrs)
+           [klass (to-js-map attrs) children]
+           [klass {} (cons attrs children)])))})
+
 (defmacro html
   [body]
   (let [opts {:create-element 'js/React.createElement
               :rewrite-for? true
               :array-children? false}]
-    (-> body (hicada.compiler/compile opts {} &env))))
+    (-> body (hicada.compiler/compile opts handlers &env))))
 
 (defmethod hc/compile-form "letfn"
   [[_ bindings & body]]

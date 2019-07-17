@@ -101,7 +101,7 @@
                          (call-all lstate make-snapshot)))))
 
     (when-not (empty? did-update)
-      (unchecked-set "componentDidUpdate"
+      (unchecked-set prototype "componentDidUpdate"
                      (fn [_ _ snapshot]
                        (this-as this
                          (let [lstate (get-local-state this)]

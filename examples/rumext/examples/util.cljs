@@ -1,9 +1,10 @@
 (ns rumext.examples.util
-  (:require [rumext.core :as rmx :refer-macros [defc defcs]]))
+  (:require [rumext.core :as rmx :refer-macros [defc defcs]]
+            [goog.dom :as dom]))
 
-(def *clock (atom (.getTime (js/Date.))))
-(def *color (atom "#FA8D97"))
-(def *speed (atom 150))
+(defonce *clock (atom (.getTime (js/Date.))))
+(defonce *color (atom "#FA8D97"))
+(defonce *speed (atom 150))
 
 ;; Start clock ticking
 (defn tick []
@@ -11,12 +12,11 @@
 
 (defonce sem (js/setInterval tick @*speed))
 
-
 (defn format-time [ts]
   (-> ts (js/Date.) (.toISOString) (subs 11 23)))
 
 (defn el [id]
-  (js/document.getElementById id))
+  (dom/getElement id))
 
 (defn periodic-refresh
   [period]

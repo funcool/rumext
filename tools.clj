@@ -51,11 +51,10 @@
 (def build-options
   {:main 'rumext.examples.core
    :output-to "target/public/main.js"
+   :source-map "target/public/main.js.map"
    :output-dir "target/public/main"
-   :pretty-print true
-   :static-fns false
-   :fn-invoke-direct false
-   :source-map true
+   :pretty-print false
+   :pseudo-names false
    :verbose true})
 
 (def figwheel-options
@@ -84,7 +83,7 @@
   [args]
   (figwheel/start
    figwheel-options
-   {:id "dev" :options build-options}))
+   {:id "dev" :options (assoc build-options :source-map true)}))
 
 ;;; Build script entrypoint. This should be the last expression.
 

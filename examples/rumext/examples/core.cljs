@@ -4,6 +4,7 @@
             [rumext.examples.util :as util]
             [rumext.examples.binary-clock :as binary-clock]
             [rumext.examples.timer-static :as timer-static]
+            [rumext.examples.timer-reactive :as timer-reactive]
             [rumext.examples.local-state :as local-state]
             [rumext.examples.refs :as refs]
             [rumext.examples.controls :as controls]
@@ -16,6 +17,7 @@
 
 (binary-clock/mount! (util/el "binary-clock"))
 (timer-static/mount! (util/el "timer-static"))
+(timer-reactive/mount! (util/el "timer-reactive"))
 (local-state/mount! (util/el "local-state"))
 (refs/mount! (util/el "refs"))
 (controls/mount! (util/el "controls"))
