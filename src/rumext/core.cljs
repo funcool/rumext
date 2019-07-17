@@ -131,8 +131,8 @@
   (let [class (build-class render mixins display-name)
         keyfn (first (collect :key-fn mixins))]
     (if (some? keyfn)
-      (fn [& args] (js/React.createElement class #js {":rumext.core/props" args "key" (keyfn args)}))
-      (fn [& args] (js/React.createElement class #js {":rumext.core/props" args})))))
+      (fn [args] (js/React.createElement class #js {":rumext.core/props" args "key" (keyfn args)}))
+      (fn [args] (js/React.createElement class #js {":rumext.core/props" args})))))
 
 (defn build-elem-ctor
   [render-body mixins display-name]
@@ -153,7 +153,7 @@
 (defn build-lazy-ctor
   [builder render mixins display-name]
   (let [ctor (delay (builder render mixins display-name))]
-    (fn [props] (@ctor props))))
+    (fn [& args] (@ctor args))))
 
 (defn build-defc
   [render-body mixins display-name]
