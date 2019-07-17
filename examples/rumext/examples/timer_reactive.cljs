@@ -3,14 +3,13 @@
             [rumext.func :as mxf]
             [rumext.examples.util :as util]))
 
-(def timer
-  (mxf/reactive
-   (mxf/fnc timer-reactive
-     [props]
-     (let [ts (mxf/react util/*clock)]
-       [:div "Reactive" ": "
-        [:span {:style {:color @util/*color}}
-         (util/format-time ts)]]))))
+(mxf/defnc timer
+  {:wrap [mxf/reactive]}
+  [props]
+  (let [ts (mxf/react util/*clock)]
+    [:div "Reactive" ": "
+     [:span {:style {:color @util/*color}}
+      (util/format-time ts)]]))
 
 
 (defn mount! [el]

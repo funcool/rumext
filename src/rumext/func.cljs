@@ -18,12 +18,15 @@
     (into {} (for [k (.keys js/Object props)] [(keyword k) (unchecked-get props k)]))))
 
 (defn build-fn-ctor
-  [render display-name]
+  [render display-name metatada]
   (let [factory (fn [props]
                   (let [props (wrap-props props)]
                     (render props)))]
     (unchecked-set factory "displayName" display-name)
-    factory))
+    (prn "build-fn-ctor" display-name metatada)
+    (if-let [wrap (seq (:wrap metatada []))]
+      (reduce #(%2 %1) factory wrap)
+      factory)))
 
 ;; --- Hooks
 
@@ -119,7 +122,6 @@
             (add-watch ref key trigger-render)))
 
         (reset! reactions-ref new-reactions)
-
         dom))))
 
 (defn reactive
