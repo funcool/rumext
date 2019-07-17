@@ -1,30 +1,33 @@
 (ns rumext.examples.binary-clock
-  (:require [rumext.core :as rmx :refer-macros [defc defcs]]
+  (:require [rumext.core :as mx :refer-macros [defc defcs]]
             [rumext.examples.util :as util]))
 
 (def *bclock-renders (atom 0))
 
-(defc render-count
-  {:mixins [rmx/reactive]}
-  []
-  [:div.stats "Renders: " (rmx/react *bclock-renders)])
+(mx/def render-count
+  :mixins [mx/reactive]
+  :render
+  (fn [own props]
+    [:div.stats "Renders: " (mx/react *bclock-renders)]))
 
-(rmx/defc bit
-  {:mixins [rmx/static rmx/reactive]
-   :after-render
-   (fn [state]
-     (swap! *bclock-renders inc)
-     state)}
-  [[n b]]
-  (let [color (rmx/react util/*color)]
-    (if (bit-test n b)
-      [:td.bclock-bit {:style {:background-color color}}]
-      [:td.bclock-bit {}])))
+(mx/def bit
+  :mixins [mx/static mx/reactive]
+  :after-render
+  (fn [state]
+    (swap! *bclock-renders inc)
+    state)
 
-(rmx/defc binary-clock
-  {:mixins [rmx/reactive]}
+  :render
+  (fn [own [n b]]
+    (let [color (mx/react util/*color)]
+      (if (bit-test n b)
+        [:td.bclock-bit {:style {:background-color color}}]
+        [:td.bclock-bit {}]))))
+
+(mx/defc binary-clock
+  {:mixins [mx/reactive]}
   []
-  (let [ts   (rmx/react util/*clock)
+  (let [ts   (mx/react util/*clock)
         msec (mod ts 1000)
         sec  (mod (quot ts 1000) 60)
         min  (mod (quot ts 60000) 60)
@@ -49,4 +52,4 @@
       [:tr [:th {:col-span 8} (render-count)]]]]))
 
 (defn mount! [el]
-  (rmx/mount (binary-clock) el))
+  (mx/mount (binary-clock) el))

@@ -1,10 +1,11 @@
 (require '[clojure.java.shell :as shell])
 (require '[figwheel.main.api :as figwheel])
 (require '[cljs.build.api :as api])
-;; (require '[rebel-readline.core]
-;;          '[rebel-readline.clojure.main]
-;;          '[rebel-readline.clojure.line-reader]
-;;          '[rebel-readline.clojure.service.local])
+
+(require '[rebel-readline.core]
+         '[rebel-readline.clojure.main]
+         '[rebel-readline.clojure.line-reader]
+         '[rebel-readline.clojure.service.local])
 
 
 (defmulti task first)

@@ -48,87 +48,96 @@
 
         ctor           (fn [props]
                          (this-as this
-                           (let [lprops (gobj/get props ":rumext.core/props")
+                           (let [lprops (unchecked-get props ":rumext.core/props")
                                  lstate (-> {::props lprops ::react-component this}
                                             (call-all init lprops))]
-                             (gobj/set this "state" #js {":rumext.core/state" (volatile! lstate)})
+                             (unchecked-set this "state" #js {":rumext.core/state" (volatile! lstate)})
                              (.call js/React.Component this props))))
         _              (goog/inherits ctor js/React.Component)
-        prototype      (gobj/get ctor "prototype")]
+        prototype      (unchecked-get ctor "prototype")]
 
     (extend! prototype class-props)
     (extend! ctor static-props)
 
-    (gobj/set ctor "displayName" display-name)
+    (unchecked-set ctor "displayName" display-name)
 
-    (gobj/set ctor "getDerivedStateFromProps"
-              (fn [props state]
-                (let [lstate  @(gobj/get state ":rumext.core/state")
-                      nprops   (gobj/get props ":rumext.core/props")
-                      nstate  (merge lstate {::props nprops})
-                      nstate  (reduce #(%2 %1) nstate derive-state)]
-                  ;; allocate new volatile
-                  ;; so that we can access both old and new states in shouldComponentUpdate
-                  #js {":rumext.core/state" (volatile! nstate)})))
+    (unchecked-set ctor "getDerivedStateFromProps"
+                   (fn [props state]
+                     (let [lstate  @(gobj/get state ":rumext.core/state")
+                           nprops   (gobj/get props ":rumext.core/props")
+                           nstate  (merge lstate {::props nprops})
+                           nstate  (reduce #(%2 %1) nstate derive-state)]
+                       ;; allocate new volatile
+                       ;; so that we can access both old and new states in shouldComponentUpdate
+                       #js {":rumext.core/state" (volatile! nstate)})))
 
-    (gobj/set prototype "render"
-              (fn []
-                (this-as this
-                  (let [lstate (get-local-state this)
-                        [dom nstate] (wrapped-render @lstate)]
-                    (vreset! lstate nstate)
-                    dom))))
+    (unchecked-set prototype "render"
+                   (fn []
+                     (this-as this
+                       (let [lstate (get-local-state this)
+                             [dom nstate] (wrapped-render @lstate)]
+                         (vreset! lstate nstate)
+                         dom))))
 
     (when-not (empty? did-mount)
-      (gobj/set prototype "componentDidMount"
-                (fn []
-                  (this-as this
-                    (let [lstate (get-local-state this)]
-                      (vswap! lstate call-all did-mount))))))
+      (unchecked-set prototype "componentDidMount"
+                     (fn []
+                       (this-as this
+                         (let [lstate (get-local-state this)]
+                           (vswap! lstate call-all did-mount))))))
 
     (when-not (empty? should-update)
-      (gobj/set prototype "shouldComponentUpdate"
-                (fn [next-props next-state]
-                  (this-as this
-                    (let [lstate @(get-local-state this)
-                          nstate @(gobj/get next-state ":rumext.core/state")]
-                      (or (some #(% lstate nstate) should-update) false))))))
+      (unchecked-set prototype "shouldComponentUpdate"
+                     (fn [next-props next-state]
+                       (this-as this
+                         (let [lstate @(get-local-state this)
+                               nstate @(gobj/get next-state ":rumext.core/state")]
+                           (or (some #(% lstate nstate) should-update) false))))))
 
     (when-not (empty? make-snapshot)
-      (gobj/set prototype "getSnapshotBeforeUpdate"
-                (fn [prev-props prev-state]
-                  (let [lstate  @(gobj/get prev-state ":rumext.core/state")]
-                    (call-all lstate make-snapshot)))))
+      (unchecked-set prototype "getSnapshotBeforeUpdate"
+                     (fn [prev-props prev-state]
+                       (let [lstate  @(gobj/get prev-state ":rumext.core/state")]
+                         (call-all lstate make-snapshot)))))
 
     (when-not (empty? did-update)
-      (gobj/set prototype "componentDidUpdate"
-                (fn [_ _ snapshot]
-                  (this-as this
-                    (let [lstate (get-local-state this)]
-                      (vswap! lstate call-all did-update snapshot))))))
+      (unchecked-set "componentDidUpdate"
+                     (fn [_ _ snapshot]
+                       (this-as this
+                         (let [lstate (get-local-state this)]
+                           (vswap! lstate call-all did-update snapshot))))))
 
     (when-not (empty? did-catch)
-      (gobj/set prototype "componentDidCatch"
-                (fn [error info]
-                  (this-as this
-                    (let [lstate (get-local-state this)]
-                      (vswap! lstate call-all did-catch error
-                              {::component-stack (gobj/get info "componentStack")})
-                      (.forceUpdate this))))))
+      (unchecked-set prototype "componentDidCatch"
+                     (fn [error info]
+                       (this-as this
+                         (let [lstate (get-local-state this)]
+                           (vswap! lstate call-all did-catch error
+                                   {::component-stack (gobj/get info "componentStack")})
+                           (.forceUpdate this))))))
 
-    (gobj/set prototype "componentWillUnmount"
-              (fn []
-                (this-as this
-                  (let [lstate (get-local-state this)]
-                    (when-not (empty? will-unmount)
-                      (vswap! lstate call-all will-unmount))
-                    (gobj/set this ":rumext.core/unmounted?" true)))))
+    (unchecked-set prototype "componentWillUnmount"
+                   (fn []
+                     (this-as this
+                       (let [lstate (get-local-state this)]
+                         (when-not (empty? will-unmount)
+                           (vswap! lstate call-all will-unmount))
+                         (gobj/set this ":rumext.core/unmounted?" true)))))
 
     ctor))
 
-(defn build-class-ctor
+(defn build-legacy-elem-ctor
   [render mixins display-name]
   (let [class (build-class render mixins display-name)
+        keyfn (first (collect :key-fn mixins))]
+    (if (some? keyfn)
+      (fn [& args] (js/React.createElement class #js {":rumext.core/props" args "key" (keyfn args)}))
+      (fn [& args] (js/React.createElement class #js {":rumext.core/props" args})))))
+
+(defn build-elem-ctor
+  [render-body mixins display-name]
+  (let [render (fn [state] [(render-body state (::props state)) state])
+        class (build-class render mixins display-name)
         keyfn (first (collect :key-fn mixins))]
     (if (some? keyfn)
       #(js/React.createElement class #js {":rumext.core/props" %1 "key" (keyfn %1)})
@@ -136,10 +145,10 @@
 
 (defn build-fn-ctor
   [render-body display-name]
-  (let [klass (fn [props] (render-body (gobj/get props ":rumext.core/props")))]
+  (let [klass (fn [props] (apply render-body (gobj/get props ":rumext.core/props")))]
     (gobj/set klass "displayName" display-name)
-    (fn [props]
-      (js/React.createElement klass #js {":rumext.core/props" props}))))
+    (fn [& args]
+      (js/React.createElement klass #js {":rumext.core/props" args}))))
 
 (defn build-lazy-ctor
   [builder render mixins display-name]
@@ -148,16 +157,16 @@
 
 (defn build-defc
   [render-body mixins display-name]
-  (let [render (fn [state] [(render-body (::props state)) state])]
-    (build-class-ctor render mixins display-name)))
+  (let [render (fn [state] [(apply render-body (::props state)) state])]
+    (build-legacy-elem-ctor render mixins display-name)))
 
 (defn build-defcs [render-body mixins display-name]
-  (let [render (fn [state] [(render-body state (::props state)) state])]
-    (build-class-ctor render mixins display-name)))
+  (let [render (fn [state] [(apply render-body state (::props state)) state])]
+    (build-legacy-elem-ctor render mixins display-name)))
 
 (defn build-defcc [render-body mixins display-name]
-  (let [render (fn [state] [(render-body (::react-component state) (::props state)) state])]
-    (build-class-ctor render mixins display-name)))
+  (let [render (fn [state] [(apply render-body (::react-component state) (::props state)) state])]
+    (build-legacy-elem-ctor render mixins display-name)))
 
 ;; render queue
 
@@ -265,7 +274,6 @@
   ([state key]
    (let [ref (-> state ::react-component (gobj/get "refs") (gobj/get (name key)))]
      (js/ReactDOM.findDOMNode ref))))
-
 
 
 ;; static mixin
