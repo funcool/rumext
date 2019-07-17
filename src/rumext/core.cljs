@@ -131,7 +131,7 @@
   (let [ctor (delay (builder render mixins display-name))]
     (fn [props] (@ctor props))))
 
-(defn build-elem-ctor
+(defn build-def
   [render-body mixins display-name]
   (let [render (fn [state] [(render-body state (::props state)) state])
         class (build-class render mixins display-name)
@@ -152,7 +152,8 @@
   (let [ctor (delay (builder render mixins display-name))]
     (fn [& args] (@ctor args))))
 
-(defn build-legacy-elem-ctor
+(defn- build-legacy-elem-ctor
+  "The common code used by build-defc, -defcs and -defcc."
   [render mixins display-name]
   (let [class (build-class render mixins display-name)
         keyfn (first (collect :key-fn mixins))]
