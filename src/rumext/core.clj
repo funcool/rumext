@@ -107,15 +107,15 @@
   [& args]
   (let [[render doc mixins cname] (parse-defc args)]
     (if (empty? mixins)
-      `(def ~cname ~doc (rumext.core/build-fn-ctor ~render ~(str cname)))
-      `(def ~cname ~doc (rumext.core/build-lazy-ctor rumext.core/build-defc ~render ~mixins ~(str cname))))))
+      `(def ~cname ~doc (rumext.core/build-legacy-fn-ctor ~render ~(str cname)))
+      `(def ~cname ~doc (rumext.core/build-legacy-lazy-ctor rumext.core/build-defc ~render ~mixins ~(str cname))))))
 
 (defmacro defcs
   [& args]
   (let [[render doc mixins cname] (parse-defc args)]
-    `(def ~cname ~doc (rumext.core/build-lazy-ctor rumext.core/build-defcs ~render ~mixins ~(str cname)))))
+    `(def ~cname ~doc (rumext.core/build-legacy-lazy-ctor rumext.core/build-defcs ~render ~mixins ~(str cname)))))
 
 (defmacro defcc
   [& args]
   (let [[render doc mixins cname] (parse-defc args)]
-    `(def ~cname ~doc (rumext.core/build-lazy-ctor rumext.core/build-defcc ~render ~mixins ~(str cname)))))
+    `(def ~cname ~doc (rumext.core/build-legacy-lazy-ctor rumext.core/build-defcc ~render ~mixins ~(str cname)))))

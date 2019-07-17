@@ -126,13 +126,10 @@
 
     ctor))
 
-(defn build-legacy-elem-ctor
-  [render mixins display-name]
-  (let [class (build-class render mixins display-name)
-        keyfn (first (collect :key-fn mixins))]
-    (if (some? keyfn)
-      (fn [args] (js/React.createElement class #js {":rumext.core/props" args "key" (keyfn args)}))
-      (fn [args] (js/React.createElement class #js {":rumext.core/props" args})))))
+(defn build-lazy-ctor
+  [builder render mixins display-name]
+  (let [ctor (delay (builder render mixins display-name))]
+    (fn [props] (@ctor props))))
 
 (defn build-elem-ctor
   [render-body mixins display-name]
@@ -143,17 +140,25 @@
       #(js/React.createElement class #js {":rumext.core/props" %1 "key" (keyfn %1)})
       #(js/React.createElement class #js {":rumext.core/props" %1}))))
 
-(defn build-fn-ctor
+(defn build-legacy-fn-ctor
   [render-body display-name]
   (let [klass (fn [props] (apply render-body (gobj/get props ":rumext.core/props")))]
     (gobj/set klass "displayName" display-name)
     (fn [& args]
       (js/React.createElement klass #js {":rumext.core/props" args}))))
 
-(defn build-lazy-ctor
+(defn build-legacy-lazy-ctor
   [builder render mixins display-name]
   (let [ctor (delay (builder render mixins display-name))]
     (fn [& args] (@ctor args))))
+
+(defn build-legacy-elem-ctor
+  [render mixins display-name]
+  (let [class (build-class render mixins display-name)
+        keyfn (first (collect :key-fn mixins))]
+    (if (some? keyfn)
+      #(js/React.createElement class #js {":rumext.core/props" %1 "key" (apply keyfn %1)})
+      #(js/React.createElement class #js {":rumext.core/props" %1}))))
 
 (defn build-defc
   [render-body mixins display-name]
