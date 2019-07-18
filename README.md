@@ -13,13 +13,12 @@ funcool/rumext {:git/url "https://github.com/funcool/rumext.git",
 
 ## Differences with rum
 
-This is the list of the main differences that rumext introduces (vs rum):
+This is the list of the main differences that rumext introduces vs rum:
 
-- clear distintion between class based components and functional
-  (function based components).
-- functional components uses React Hooks behind the scenes for provide
-  **local state**, **pure components** and **reactive** (rerender
-  component on atom change).
+- clear distintion between class components and function components.
+- function components uses React Hooks behind the scenes for provide
+  **local state**, **pure components** and **reactivity** (the ability
+  of rerender component on atom change).
 - a clojurescript friendly abstractions for React Hooks (look on
   `src/rumext/func.cljs` file).
 - more idiomatic macro for define class based components, that allows
@@ -142,11 +141,12 @@ If you don't understand some methods, refer to react documentation:
 https://reactjs.org/docs/react-component.html
 
 
-## Functional Components
+## Function Components
 
-Functional components are defined using functions, and exposes a
-limited set of functionalities supported by class based tanks to the
-combination of **React Hooks** and higher-order components.
+Function components as it's name says, are defined using plain
+functions. Rumext exposes a lightweigh macro over a `fn` that convert
+props from js-object to cljs map (shallow) and exposes a facility for
+docorate (wrap) with other higher-order components.
 
 Let's see a example of how to define a component:
 
@@ -159,11 +159,9 @@ Let's see a example of how to define a component:
     [:div {:class "label"} name]))
 ```
 
-The `fnc` is a macro for define a lighweight macro for define a
-function based component (much in the same way as `fn` macro for
-define functions in ClojureScript).
-
-There are alsoe `defnc` macro that behaves in the similar way to the `defn`:
+The `fnc` is a `fn` analogous macro for creating function
+components. There are also `defnc` macro that behaves in the similar
+way to the `defn`:
 
 ```clojure
 (mxf/defnc title
@@ -173,14 +171,14 @@ There are alsoe `defnc` macro that behaves in the similar way to the `defn`:
 
 ### Higher-Order Components
 
-The function based components instead of mixins, that is common
-concept on object oriented programming, you have higher-order
-components (components that wraps components) and rumext exposes two:
+This is the way you have to extend/add additional functionality to a
+function component. Rumext exposes two:
 
 - `mxf/reactive`: same functionality as `mx/reactive` in class based components.
 - `mxf/memo`: same functionality as `mx/static` in class based components.
 
-And you can use them in two ways. The traditional one:
+And you can use them in two ways, the traditional one that consists in direct
+wrapping a component with an other:
 
 ```clojure
 (def title
@@ -189,7 +187,8 @@ And you can use them in two ways. The traditional one:
       [:div {:class "label"} name])))
 ```
 
-Or using a special metadata:
+Or using a special metadata syntax, that does the same thing but with
+less call ceremony:
 
 ```clojure
 (mx/defnc title
@@ -198,12 +197,16 @@ Or using a special metadata:
   [:div {:class "label"} (:name props)])
 ```
 
+NOTE: The `mxf/reactive` higher-order component behind the scenes uses
+**React Hooks** as internal primitives for implement the same behavior
+as the `mx/reactive` mixin on class components.
 
-### Hooks
+
+### Hooks (React Hooks)
 
 React hooks is a basic primitive that React exposes for add state and
 side-effects to functional components. Rumext exposes right now only
-thre hooks with a ClojureScript based api.
+three hooks with a ClojureScript based api.
 
 #### useState
 
