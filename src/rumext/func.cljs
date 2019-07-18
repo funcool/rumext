@@ -23,7 +23,6 @@
                   (let [props (wrap-props props)]
                     (render props)))]
     (unchecked-set factory "displayName" display-name)
-    (prn "build-fn-ctor" display-name metatada)
     (if-let [wrap (seq (:wrap metatada []))]
       (reduce #(%2 %1) factory wrap)
       factory)))
