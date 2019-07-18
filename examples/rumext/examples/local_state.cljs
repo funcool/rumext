@@ -1,13 +1,12 @@
 (ns rumext.examples.local-state
-  (:require [rumext.core :as mx]
-            [rumext.func :as mf]
+  (:require [rumext.alpha :as mf]
             [rumext.examples.util :as util]))
 
-(mx/def local-state
-  :mixins [(mx/local 0)]
+(mf/def local-state
+  :mixins [(mf/local 0)]
   :render
   (fn [own {:keys [title] :as props}]
-    (let [count (::mx/local own)]
+    (let [count (::mf/local own)]
       [:div
        {:style {"-webkit-user-select" "none"
                 "cursor" "pointer"}
@@ -24,7 +23,7 @@
      title ": " @count]))
 
 (defn mount! [el1 el2]
-  (mx/mount (local-state {:title "Clicks count"}) el1)
-  (mx/mount (mf/element local-state-fn {:title "(fn) Clicks count"}) el2))
+  (mf/mount (local-state {:title "Clicks count"}) el1)
+  (mf/mount (mf/element local-state-fn {:title "(fn) Clicks count"}) el2))
 
 

@@ -19,8 +19,7 @@ This is the list of the main differences that rumext introduces vs rum:
 - function components uses React Hooks behind the scenes for provide
   **local state**, **pure components** and **reactivity** (the ability
   of rerender component on atom change).
-- a clojurescript friendly abstractions for React Hooks (look on
-  `src/rumext/func.cljs` file).
+- a clojurescript friendly abstractions for React Hooks.
 - more idiomatic macro for define class based components, that allows
   include lifecycle methods directly (without need to create an ad-hoc
   mixin).

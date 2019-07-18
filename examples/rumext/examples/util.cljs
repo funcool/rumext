@@ -1,5 +1,5 @@
 (ns rumext.examples.util
-  (:require [rumext.core :as rmx :refer-macros [defc defcs]]
+  (:require [rumext.alpha :as mf]
             [goog.dom :as dom]))
 
 (defonce *clock (atom (.getTime (js/Date.))))
@@ -22,8 +22,8 @@
   [period]
   {:did-mount
    (fn [state]
-     (let [rcomp (::rmx/react-component state)
-           sem (js/setInterval #(rmx/request-render rcomp) period)]
+     (let [rcomp (::mf/react-component state)
+           sem (js/setInterval #(mf/request-render rcomp) period)]
        (assoc state ::interval sem)))
    :will-unmount
    (fn [state]
@@ -31,10 +31,12 @@
 
 ;; Using custom mixin
 
-(defc watches-count
-  {:mixins [(periodic-refresh 1000)]}
-  [ref]
-  [:span (count (.-watches ref))])
+(mf/def watches-count
+  :mixins [(periodic-refresh 1000)]
+  :render
+  (fn [own ref]
+    [ref]
+    [:span (count (.-watches ref))]))
 
 ;; Generic board utils
 
@@ -52,12 +54,13 @@
        (partition board-width)
        (mapv vec)))
 
-(defc board-stats
-  {:mixins [rmx/reactive]}
-  [[*board *renders]]
-  [:div.stats
-   "Renders: "       (rmx/react *renders)
-   [:br]
-   "Board watches: " (watches-count *board)
-   [:br]
-   "Color watches: " (watches-count *color) ])
+(mf/def board-stats
+  :mixins [mf/reactive]
+  :render
+  (fn [own [*board *renders]]
+    [:div.stats
+     "Renders: "       (mf/react *renders)
+     [:br]
+     "Board watches: " (watches-count *board)
+     [:br]
+     "Color watches: " (watches-count *color) ]))

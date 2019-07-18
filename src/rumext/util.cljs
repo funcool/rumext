@@ -2,12 +2,12 @@
 
 (defn collect
   [key mixins]
-  (into [] (keep (fn [m] (get m key))) mixins))
+  (seq (into [] (keep (fn [m] (get m key))) mixins)))3
 
 (defn collect*
   [keys mixins]
   (let [xf (mapcat (fn [m] (keep (fn [k] (get m k)) keys)))]
-    (into [] xf mixins)))
+    (seq (into [] xf mixins))))
 
 (defn call-all
   ([state fns]

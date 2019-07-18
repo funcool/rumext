@@ -1,19 +1,21 @@
 (ns rumext.examples.refs
-  (:require [rumext.core :as rmx]))
+  (:require [rumext.core :as mx]))
 
-(rmx/defcs ta
+(mx/defcs ta
   {:init
-   (fn [state]
-     (assoc state :ta (rmx/create-ref)))
+   (fn [own]
+     (assoc own ::ta (mx/create-ref)))
+
    :after-render
-   (fn [state]
-     (let [ta (rmx/ref-node (:ta state))]
+   (fn [own]
+     (let [ta (mx/ref-node (::ta own))]
        (set! (.-height (.-style ta)) "0")
        (set! (.-height (.-style ta)) (str (+ 2 (.-scrollHeight ta)) "px")))
-     state) }
-  [{:keys [::rmx/react-component ta] :as state}]
+     own)}
+
+  [own]
   [:textarea
-   {:ref ta
+   {:ref (::ta own)
     :style { :width   "100%"
             :padding "10px"
             :font    "inherit"
@@ -21,12 +23,12 @@
             :resize  "none"}
     :default-value "Auto-resizing\ntextarea"
     :placeholder "Auto-resizing textarea"
-    :on-change (fn [_] (rmx/request-render react-component)) }])
+    :on-change (fn [_] (-> (mx/react-component own)
+                           (mx/request-render)))}])
 
-(rmx/defc refs
+(mx/defc refs
   []
-  [:div
-   (ta)])
+  [:div (ta)])
 
 (defn mount! [el]
-  (rmx/mount (refs) el))
+  (mx/mount (refs) el))
