@@ -18,14 +18,15 @@
 (binary-clock/mount! (util/el "binary-clock"))
 (timer-static/mount! (util/el "timer-static"))
 (timer-reactive/mount! (util/el "timer-reactive"))
-(local-state/mount! (util/el "local-state"))
+
+(local-state/mount! (util/el "local-state-1")
+                    (util/el "local-state-2"))
+
 (refs/mount! (util/el "refs"))
 (controls/mount! (util/el "controls"))
 (board-reactive/mount! (util/el "board-reactive"))
 (portals/mount! (util/el "portals"))
 ;; (errors/mount! (util/el "errors"))
-
-
 
 
 
