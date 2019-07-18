@@ -174,40 +174,10 @@
   (let [render (fn [state] [(apply render-body (::react-component state) (::props state)) state])]
     (build-legacy-elem-ctor render mixins display-name)))
 
-;; render queue
-
-(def ^:private schedule
-  (or (and (exists? js/window)
-           (or js/window.requestAnimationFrame
-               js/window.webkitRequestAnimationFrame
-               js/window.mozRequestAnimationFrame
-               js/window.msRequestAnimationFrame))
-    #(js/setTimeout % 16)))
-
-(def ^:private batch
-  (or (when (exists? js/ReactNative) js/ReactNative.unstable_batchedUpdates)
-      (when (exists? js/ReactDOM) js/ReactDOM.unstable_batchedUpdates)
-      (fn [f a] (f a))))
-
-(def ^:private empty-queue [])
-(def ^:private render-queue (volatile! empty-queue))
-
-(defn- render-all [queue]
-  (doseq [comp queue
-          :when (not (gobj/get comp ":rumext.core/unmounted?"))]
-    (.forceUpdate comp)))
-
-(defn- render []
-  (let [queue @render-queue]
-    (vreset! render-queue empty-queue)
-    (batch render-all queue)))
-
 (defn request-render
   "Schedules react component to be rendered on next animation frame."
   [component]
-  (when (empty? @render-queue)
-    (schedule render))
-  (vswap! render-queue conj component))
+  (.forceUpdate component))
 
 (defn mount
   "Add element to the DOM tree. Idempotent. Subsequent mounts will just update element."
