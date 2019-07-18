@@ -209,6 +209,11 @@
     (schedule render))
   (vswap! render-queue conj component))
 
+(defn force-render
+  "Schedules react component to be rendered on next animation frame."
+  [component]
+  (.forceUpdate component))
+
 (defn mount
   "Add element to the DOM tree. Idempotent. Subsequent mounts will just update element."
   [element node]
@@ -307,6 +312,12 @@
 
 ;; local mixin
 
+(def sync-render
+  "A special mixin for mark posible renders of the component tu use
+  synchronous rendering (async by default). Mainly needed for forms
+  related pages."
+  {:init (fn [own props] (assoc own ::sync-render true))})
+
 (defn local
   "Mixin constructor. Adds an atom to component’s state that can be used
   to keep stuff during component’s lifecycle. Component will be
@@ -329,7 +340,9 @@
     (fn [state props]
       (let [lstate (atom initial)
             component (::react-component state)]
-        (add-watch lstate key #(request-render component))
+        (if (::sync-render state)
+          (add-watch lstate key #(force-render component))
+          (add-watch lstate key #(request-render component)))
         (assoc state key lstate)))}))
 
 
@@ -360,7 +373,8 @@
                old-reactions    (::reactions state #{})
                [dom next-state] (render-fn state)
                new-reactions    (deref *reactions*)
-               key              (::reactions-key state)]
+               key              (::reactions-key state)
+               sync-render?     (::sync-render state)]
            (doseq [ref old-reactions]
              (when-not (contains? new-reactions ref)
                (remove-watch ref key)))
@@ -368,7 +382,9 @@
              (when-not (contains? old-reactions ref)
                (add-watch ref key
                           (fn [_ _ _ _]
-                            (request-render comp)))))
+                            (if sync-render?
+                              (force-render comp)
+                              (request-render comp))))))
            [dom (assoc next-state ::reactions new-reactions)]))))
    :will-unmount
    (fn [state]
