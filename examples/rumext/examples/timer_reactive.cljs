@@ -3,7 +3,7 @@
             [rumext.func :as mxf]
             [rumext.examples.util :as util]))
 
-(mxf/defnc timer
+(mxf/defc timer
   {:wrap [mxf/reactive]}
   [props]
   (let [ts (mxf/react util/*clock)]

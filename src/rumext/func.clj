@@ -36,7 +36,7 @@
   (let [[render doc metadata cname] (parse-defc args)]
     `(rumext.func/build-fn-ctor ~render ~cname ~metadata)))
 
-(defmacro defnc
+(defmacro defc
   [& args]
   (let [[render doc metadata cname] (parse-defc args)]
     `(def ~(symbol cname) ~doc (rumext.func/build-fn-ctor ~render ~cname ~metadata))))
