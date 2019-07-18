@@ -102,10 +102,10 @@ arguments does not change between them.
 
 
 ```clojure
-(rum/def title
+(mx/def title
   :mixins [mx/static]
   :render
-  (fn [_ {:props [name]}]
+  (fn [_ {:keys [name]}]
     [:div {:class "label"} name]))
 ```
 
@@ -146,11 +146,118 @@ https://reactjs.org/docs/react-component.html
 
 Functional components are defined using functions, and exposes a
 limited set of functionalities supported by class based tanks to the
-combination of **React Hooks** and high-order components.
+combination of **React Hooks** and higher-order components.
 
 Let's see a example of how to define a component:
 
-TODO
+```clojure
+(require '[rumext.core :as mx]
+         '[rumext.func :as mxf])
+
+(def title
+  (mxf/fnc title [{:keys [name]}]
+    [:div {:class "label"} name]))
+```
+
+The `fnc` is a macro for define a lighweight macro for define a
+function based component (much in the same way as `fn` macro for
+define functions in ClojureScript).
+
+There are alsoe `defnc` macro that behaves in the similar way to the `defn`:
+
+```clojure
+(mxf/defnc title
+  [{:keys [name]}]
+  [:div {:class "label"} name])
+```
+
+### Higher-Order Components
+
+The function based components instead of mixins, that is common
+concept on object oriented programming, you have higher-order
+components (components that wraps components) and rumext exposes two:
+
+- `mxf/reactive`: same functionality as `mx/reactive` in class based components.
+- `mxf/memo`: same functionality as `mx/static` in class based components.
+
+And you can use them in two ways. The traditional one:
+
+```clojure
+(def title
+  (mxf/memo
+    (mxf/fnc title [{:keys [name]}]
+      [:div {:class "label"} name])))
+```
+
+Or using a special metadata:
+
+```clojure
+(mx/defnc title
+  {:wrap [mxf/memo]}
+  [props]
+  [:div {:class "label"} (:name props)])
+```
+
+
+### Hooks
+
+React hooks is a basic primitive that React exposes for add state and
+side-effects to functional components. Rumext exposes right now only
+thre hooks with a ClojureScript based api.
+
+#### useState
+
+Hook used for maintain a local state and in functional components
+replaces the `mx/local` mixin. Calling `mxf/use-state` returns an
+atom-like object that will deref to the current value and you can call
+`swap!` and `reset!` on it for modify its state.
+
+Any mutation will schedule the component to be rerendered.
+
+```clojure
+(require '[rumext.core as mx]
+         '[rumext.func :as mxf])
+
+(mx/defnc local-state
+  [props]
+  (let [local (mxf/use-state 0)]
+    [:div {:on-click #(swap! local inc)}
+      [:span "Clicks: " @local]]))
+
+(mx/mount (mxf/element local-state) js/document.body)
+```
+
+#### useEffect
+
+This is a primitive that allows incorporate probably efectful code
+into a functional component.
+
+```clojure
+(mx/defnc local-timer
+  [props]
+  (let [local (mxf/use-state 0)]
+    (mxf/use-effect
+      :start (fn [] (js/setInterval #(swap! local inc) 1000))
+      :end (fn [sem] (js/clearInterval sem)))
+    [:div "Counter: " @local]))
+
+(mx/mount (mxf/element local-state) js/document.body)
+```
+
+The `:start` callback will be called once the component mounts (like
+`did-mount`) and the `:end` callback will be caled once the component
+will unmounts (like `will-unmount`).
+
+There are an excepction when you pass a `:watch` parameter, that can
+change how many times `:start` will be executed:
+
+- `:watch nil` the default behavior explained before.
+- `:watch true` the `:start` callback will be executed after each
+  render (a combination of `did-mount` and `did-update` class based
+  components).
+- `:watch [variable1 variable2]`: only execute `:start` when some of
+  referenced variables changes.
+- `:watch []` the same as `:watch nil`.
 
 
 ## License ##

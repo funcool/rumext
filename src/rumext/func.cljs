@@ -75,6 +75,8 @@
 (defn use-effect
   [& {:keys [init end watch] :or {init identity}}]
   (let [watch (cond
+                (array? watch) watch
+                (true? watch) nil
                 (nil? watch) #js []
                 (vector? watch) (into-array watch))]
     (js/React.useEffect
@@ -137,3 +139,11 @@
                  (fn [prev next]
                    (= (wrap-props prev)
                       (wrap-props next)))))
+
+
+
+(defn element
+  ([klass]
+   (element klass #js {}))
+  ([klass props]
+   (js/React.createElement klass props)))
