@@ -1,6 +1,6 @@
 (ns rumext.examples.core
   (:require [clojure.string :as str]
-            [rumext.core :as r]
+            [rumext.core :as mx]
             [rumext.examples.util :as util]
             [rumext.examples.binary-clock :as binary-clock]
             [rumext.examples.timer-static :as timer-static]

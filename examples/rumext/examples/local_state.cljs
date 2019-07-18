@@ -1,29 +1,30 @@
 (ns rumext.examples.local-state
-  (:require [rumext.core :as rmx]
+  (:require [rumext.core :as mx]
+            [rumext.func :as mf]
             [rumext.examples.util :as util]))
 
-;; Local component state
-
-;; (rmx/defcs local-state
-;;   {:mixins [(rmx/local 0)]}
-;;   [state title]
-;;   (let [*count (::rmx/local state)]
-;;     [:div
-;;      {:style {"-webkit-user-select" "none"
-;;               "cursor" "pointer"}
-;;       :on-click (fn [_] (swap! *count inc)) }
-;;      title ": " @*count]))
-
-(rmx/def local-state
-  :mixins [(rmx/local 0)]
+(mx/def local-state
+  :mixins [(mx/local 0)]
   :render
-  (fn [own title]
-    (let [*count (::rmx/local own)]
+  (fn [own {:keys [title] :as props}]
+    (let [count (::mx/local own)]
       [:div
        {:style {"-webkit-user-select" "none"
                 "cursor" "pointer"}
-        :on-click (fn [_] (swap! *count inc)) }
-       title ": " @*count])))
+        :on-click (fn [_] (swap! count inc)) }
+       title ": " @count])))
 
-(defn mount! [el]
-  (rmx/mount (local-state "Clicks count") el))
+(mf/defc local-state-fn
+  [{:keys [title] :as props}]
+  (let [count (mf/use-state 0)]
+    [:div
+     {:style {"-webkit-user-select" "none"
+              "cursor" "pointer"}
+      :on-click (fn [_] (swap! count inc)) }
+     title ": " @count]))
+
+(defn mount! [el1 el2]
+  (mx/mount (local-state {:title "Clicks count"}) el1)
+  (mx/mount (mf/element local-state-fn {:title "(fn) Clicks count"}) el2))
+
+

@@ -5,22 +5,17 @@
 (ns rumext.func
   (:refer-clojure :exclude [ref])
   (:require-macros rumext.func)
-  (:require [cljsjs.react]
-            [cljsjs.react.dom]
-            [rumext.core :as mx]))
+  (:require
+   [cljsjs.react]
+   [cljsjs.react.dom]
+   [rumext.util :as util]))
 
 ;; --- Macros Impl
-
-(defn- wrap-props
-  [props]
-  (if (map? props)
-    props
-    (into {} (for [k (.keys js/Object props)] [(keyword k) (unchecked-get props k)]))))
 
 (defn build-fn-ctor
   [render display-name metatada]
   (let [factory (fn [props]
-                  (let [props (wrap-props props)]
+                  (let [props (util/wrap-props props)]
                     (render props)))]
     (unchecked-set factory "displayName" display-name)
     (if-let [wrap (seq (:wrap metatada []))]
@@ -84,6 +79,16 @@
           (fn [] (end r))))
      watch)))
 
+(defn use-memo
+  ([callback] (use-memo #js [] callback))
+  ([watch callback]
+   (let [watch (cond
+                 (array? watch) watch
+                 (true? watch) nil
+                 (nil? watch) #js []
+                 (vector? watch) (into-array watch))]
+    (js/React.useMemo callback watch))))
+
 ;; --- High Order Components
 
 (def ^:private ^:dynamic *reactions*)
@@ -136,13 +141,12 @@
   [component]
   (js/React.memo component
                  (fn [prev next]
-                   (= (wrap-props prev)
-                      (wrap-props next)))))
-
-
+                   (= (util/wrap-props prev)
+                      (util/wrap-props next)))))
 
 (defn element
   ([klass]
-   (element klass #js {}))
+   (js/React.createElement klass #js {}))
   ([klass props]
-   (js/React.createElement klass props)))
+   (->> (if (map? props) (util/map->obj props) props)
+        (js/React.createElement klass))))

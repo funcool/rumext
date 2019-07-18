@@ -64,7 +64,7 @@
     (unchecked-set ctor "getDerivedStateFromProps"
                    (fn [props state]
                      (let [lstate  @(gobj/get state ":rumext.core/state")
-                           nprops   (gobj/get props ":rumext.core/props")
+                           nprops  (gobj/get props ":rumext.core/props")
                            nstate  (merge lstate {::props nprops})
                            nstate  (reduce #(%2 %1) nstate derive-state)]
                        ;; allocate new volatile
@@ -134,11 +134,11 @@
 (defn build-def
   [render-body mixins display-name]
   (let [render (fn [state] [(render-body state (::props state)) state])
-        class (build-class render mixins display-name)
+        klass (build-class render mixins display-name)
         keyfn (first (collect :key-fn mixins))]
     (if (some? keyfn)
-      #(js/React.createElement class #js {":rumext.core/props" %1 "key" (keyfn %1)})
-      #(js/React.createElement class #js {":rumext.core/props" %1}))))
+      #(js/React.createElement klass #js {":rumext.core/props" %1 "key" (keyfn %1)})
+      #(js/React.createElement klass #js {":rumext.core/props" %1}))))
 
 (defn build-legacy-fn-ctor
   [render-body display-name]
