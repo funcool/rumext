@@ -34,7 +34,7 @@
 
 (defmacro html
   [body]
-  (let [opts {:create-element 'js/React.createElement
+  (let [opts {:create-element 'rumext.alpha/create-element
               :rewrite-for? true
               :array-children? false}]
     (-> body (hicada.compiler/compile opts handlers &env))))

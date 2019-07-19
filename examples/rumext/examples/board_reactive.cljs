@@ -14,7 +14,6 @@
                  (swap! *board-renders inc)
                  state)}
   [[x y]]
-  (prn "cell" x y)
   (let [celref (l/derive (l/in [y x]) *board)]
     ;; each cell subscribes to its own cursor inside a board
     ;; note that subscription to color is conditional:

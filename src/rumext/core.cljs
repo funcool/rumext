@@ -16,37 +16,37 @@
 
 (defn build-legacy-fn-ctor
   [render-body display-name]
-  (let [klass (fn [props] (apply render-body (gobj/get props ":rumext.core/props")))]
+  (let [klass (fn [props] (apply render-body (gobj/get props ":rumext.alpha/props")))]
     (gobj/set klass "displayName" display-name)
     (fn [& args]
-      (js/React.createElement klass #js {":rumext.core/props" args}))))
+      (js/React.createElement klass #js {":rumext.alpha/props" args}))))
 
 (defn build-legacy-lazy-ctor
   [builder render mixins display-name]
   (let [ctor (delay (builder render mixins display-name))]
     (fn [& args] (@ctor args))))
 
-(defn- build-legacy-elem-ctor
+(defn- build-legacy-elem
   "The common code used by build-defc, -defcs and -defcc."
   [render mixins display-name]
   (let [class (ra/build-class render mixins display-name)
         keyfn (first (collect :key-fn mixins))]
     (if (some? keyfn)
-      #(js/React.createElement class #js {":rumext.core/props" %1 "key" (apply keyfn %1)})
-      #(js/React.createElement class #js {":rumext.core/props" %1}))))
+      #(js/React.createElement class #js {":rumext.alpha/props" %1 "key" (apply keyfn %1)})
+      #(js/React.createElement class #js {":rumext.alpha/props" %1}))))
 
 (defn build-defc
   [render-body mixins display-name]
-  (let [render (fn [state] [(apply render-body (::props state)) state])]
-    (build-legacy-elem-ctor render mixins display-name)))
+  (let [render (fn [state] [(apply render-body (::ra/props state)) state])]
+    (build-legacy-elem render mixins display-name)))
 
 (defn build-defcs [render-body mixins display-name]
-  (let [render (fn [state] [(apply render-body state (::props state)) state])]
-    (build-legacy-elem-ctor render mixins display-name)))
+  (let [render (fn [state] [(apply render-body state (::ra/props state)) state])]
+    (build-legacy-elem render mixins display-name)))
 
 (defn build-defcc [render-body mixins display-name]
-  (let [render (fn [state] [(apply render-body (::react-component state) (::props state)) state])]
-    (build-legacy-elem-ctor render mixins display-name)))
+  (let [render (fn [state] [(apply render-body (::ra/react-component state) (::ra/props state)) state])]
+    (build-legacy-elem render mixins display-name)))
 
 ;; Backward compatibility
 (def request-render ra/request-render)

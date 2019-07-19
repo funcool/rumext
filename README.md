@@ -8,7 +8,7 @@ Add to deps.edn:
 
 ```
 funcool/rumext {:git/url "https://github.com/funcool/rumext.git",
-                :sha "4d6a5f263f2fc37eae6756f5745838c6d946353e"}
+                :sha "303c5d5db489dd74ee6597531e46127f8be5d984"}
 ```
 
 ## Differences with rum
@@ -46,18 +46,17 @@ compromise for backward compatibility.
 
 ## Class Components
 
-
 ### Defining a Class Component
 
 Let's see an example of how to use rumext macros for define class
 based components.
 
 ```clojure
-(require '[rumext.core as mx])
+(require '[rumext.alpha as mx])
 
 (mx/def local-state
   :desc "A component docstring/description (optional)."
-  :mixins [(rmt/local 0)]
+  :mixins [(mx/local 0)]
   :init
   (fn [own props]
     (println "Component initialized")
@@ -65,7 +64,7 @@ based components.
 
   :render
   (fn [own {:keys [title] :as props}]
-    (let [*count (::rmt/local state)]
+    (let [*count (::mx/local state)]
       [:div {:on-click #(swap! *count inc)}
         [:span title ": " @*count]])))
 ```
@@ -150,11 +149,10 @@ docorate (wrap) with other higher-order components.
 Let's see a example of how to define a component:
 
 ```clojure
-(require '[rumext.core :as mx]
-         '[rumext.func :as mxf])
+(require '[rumext.alpha :as mx])
 
 (def title
-  (mxf/fnc title [{:keys [name]}]
+  (mx/fnc title [{:keys [name]}]
     [:div {:class "label"} name]))
 ```
 
@@ -163,26 +161,42 @@ components. There are also `defnc` macro that behaves in the similar
 way to the `defn`:
 
 ```clojure
-(mxf/defnc title
+(mx/defnc title
   [{:keys [name]}]
   [:div {:class "label"} name])
 ```
+
+Take care that function component macros does not returs factories,
+they return directly the component function. So you need to wrap it
+yourself in a react element or use the hicada facilities for it:
+
+```clojure
+;; mounting
+(mx/mount (mx/element title {:name "foobar"}) js/document.body)
+
+;; using it in other component
+(mx/defnc other-component
+  [props]
+  [:section
+    [:& title {:name "foobar"}]])
+```
+
 
 ### Higher-Order Components
 
 This is the way you have to extend/add additional functionality to a
 function component. Rumext exposes two:
 
-- `mxf/reactive`: same functionality as `mx/reactive` in class based components.
-- `mxf/memo`: same functionality as `mx/static` in class based components.
+- `mx/reactive`: same functionality as `mx/reactive` in class based components.
+- `mx/memo`: same functionality as `mx/static` in class based components.
 
 And you can use them in two ways, the traditional one that consists in direct
 wrapping a component with an other:
 
 ```clojure
 (def title
-  (mxf/memo
-    (mxf/fnc title [{:keys [name]}]
+  (mx/memo
+    (mx/fnc title [{:keys [name]}]
       [:div {:class "label"} name])))
 ```
 
@@ -191,12 +205,12 @@ less call ceremony:
 
 ```clojure
 (mx/defnc title
-  {:wrap [mxf/memo]}
+  {:wrap [mx/memo]}
   [props]
   [:div {:class "label"} (:name props)])
 ```
 
-NOTE: The `mxf/reactive` higher-order component behind the scenes uses
+NOTE: The `mx/reactive` higher-order component behind the scenes uses
 **React Hooks** as internal primitives for implement the same behavior
 as the `mx/reactive` mixin on class components.
 
@@ -210,23 +224,22 @@ three hooks with a ClojureScript based api.
 #### useState
 
 Hook used for maintain a local state and in functional components
-replaces the `mx/local` mixin. Calling `mxf/use-state` returns an
+replaces the `mx/local` mixin. Calling `mx/use-state` returns an
 atom-like object that will deref to the current value and you can call
 `swap!` and `reset!` on it for modify its state.
 
 Any mutation will schedule the component to be rerendered.
 
 ```clojure
-(require '[rumext.core as mx]
-         '[rumext.func :as mxf])
+(require '[rumext.alpha as mx])
 
 (mx/defnc local-state
   [props]
-  (let [local (mxf/use-state 0)]
+  (let [local (mx/use-state 0)]
     [:div {:on-click #(swap! local inc)}
       [:span "Clicks: " @local]]))
 
-(mx/mount (mxf/element local-state) js/document.body)
+(mx/mount (mx/element local-state) js/document.body)
 ```
 
 #### useEffect
@@ -237,13 +250,13 @@ into a functional component.
 ```clojure
 (mx/defnc local-timer
   [props]
-  (let [local (mxf/use-state 0)]
-    (mxf/use-effect
+  (let [local (mx/use-state 0)]
+    (mx/use-effect
       :start (fn [] (js/setInterval #(swap! local inc) 1000))
       :end (fn [sem] (js/clearInterval sem)))
     [:div "Counter: " @local]))
 
-(mx/mount (mxf/element local-state) js/document.body)
+(mx/mount (mx/element local-state) js/document.body)
 ```
 
 The `:start` callback will be called once the component mounts (like

@@ -2,7 +2,7 @@
 ;; License - v 1.0
 ;; Copyright (c) 2016-2019 Andrey Antukh <niwi@niwi.nz>
 ;;
-;; Many parts of this code is derived from https://github.com/tonsky/rum
+;; Some parts of this code is derived from https://github.com/tonsky/rum
 
 (ns rumext.alpha
   (:refer-clojure :exclude [ref deref])
@@ -20,10 +20,14 @@
   (-name [this] (str this))
   (-namespace [_] ""))
 
+(def create-element
+  "An alias to the js/React.createElemen (only for internal use)."
+  js/React.createElement)
+
 (defn get-local-state
   "Given React component, returns Rum state associated with it."
   [comp]
-  (gobj/get (.-state comp) ":rumext.core/state"))
+  (gobj/get (.-state comp) ":rumext.alpha/state"))
 
 (defn- extend! [obj props]
   (doseq [[k v] props
@@ -50,10 +54,10 @@
 
         ctor           (fn [props]
                          (this-as this
-                           (let [lprops (unchecked-get props ":rumext.core/props")
+                           (let [lprops (unchecked-get props ":rumext.alpha/props")
                                  lstate (-> {::props lprops ::react-component this}
                                             (call-all init lprops))]
-                             (unchecked-set this "state" #js {":rumext.core/state" (volatile! lstate)})
+                             (unchecked-set this "state" #js {":rumext.alpha/state" (volatile! lstate)})
                              (.call js/React.Component this props))))
         _              (goog/inherits ctor js/React.Component)
         prototype      (unchecked-get ctor "prototype")]
@@ -65,13 +69,13 @@
 
     (unchecked-set ctor "getDerivedStateFromProps"
                    (fn [props state]
-                     (let [lstate  @(gobj/get state ":rumext.core/state")
-                           nprops  (gobj/get props ":rumext.core/props")
+                     (let [lstate  @(gobj/get state ":rumext.alpha/state")
+                           nprops  (gobj/get props ":rumext.alpha/props")
                            nstate  (merge lstate {::props nprops})
                            nstate  (reduce #(%2 %1) nstate derive-state)]
                        ;; allocate new volatile
                        ;; so that we can access both old and new states in shouldComponentUpdate
-                       #js {":rumext.core/state" (volatile! nstate)})))
+                       #js {":rumext.alpha/state" (volatile! nstate)})))
 
     (unchecked-set prototype "render"
                    (fn []
@@ -93,13 +97,13 @@
                      (fn [next-props next-state]
                        (this-as this
                          (let [lstate @(get-local-state this)
-                               nstate @(gobj/get next-state ":rumext.core/state")]
+                               nstate @(gobj/get next-state ":rumext.alpha/state")]
                            (or (some #(% lstate nstate) should-update) false))))))
 
     (when-not (empty? make-snapshot)
       (unchecked-set prototype "getSnapshotBeforeUpdate"
                      (fn [prev-props prev-state]
-                       (let [lstate  @(gobj/get prev-state ":rumext.core/state")]
+                       (let [lstate  @(gobj/get prev-state ":rumext.alpha/state")]
                          (call-all lstate make-snapshot)))))
 
     (when-not (empty? did-update)
@@ -124,7 +128,7 @@
                        (let [lstate (get-local-state this)]
                          (when-not (empty? will-unmount)
                            (vswap! lstate call-all will-unmount))
-                         (gobj/set this ":rumext.core/unmounted?" true)))))
+                         (gobj/set this ":rumext.alpha/unmounted?" true)))))
 
     ctor))
 
@@ -149,8 +153,8 @@
         klass (build-class render mixins display-name)
         keyfn (first (collect :key-fn mixins))]
     (if (some? keyfn)
-      #(js/React.createElement klass #js {":rumext.core/props" %1 "key" (keyfn %1)})
-      #(js/React.createElement klass #js {":rumext.core/props" %1}))))
+      #(create-element klass #js {":rumext.alpha/props" %1 "key" (keyfn %1)})
+      #(create-element klass #js {":rumext.alpha/props" %1}))))
 
 ;; render queue
 
@@ -171,7 +175,7 @@
 
 (defn- render-all [queue]
   (doseq [comp queue
-          :when (not (gobj/get comp ":rumext.core/unmounted?"))]
+          :when (not (gobj/get comp ":rumext.alpha/unmounted?"))]
     (.forceUpdate comp)))
 
 (defn- render []
@@ -301,7 +305,7 @@
   "Mixin constructor. Adds an atom to component’s state that can be used
   to keep stuff during component’s lifecycle. Component will be
   re-rendered if atom’s value changes. Atom is stored under
-  user-provided key or under `:rumext.core/local` by default.
+  user-provided key or under `:rumext.alpha/local` by default.
 
    ```
    (rmx/defcs counter < (rmx/local 0 :cnt)
@@ -374,7 +378,7 @@
   instead of `deref` inside render, and your component will subscribe
   to changes happening to the derefed atom."
   [ref]
-  (assert *reactions* "rumext.core/react is only supported in conjunction with rumext.core/reactive")
+  (assert *reactions* "rumext.alpha/react is only supported in conjunction with rumext.alpha/reactive")
   (vswap! *reactions* conj ref)
   (cljs.core/deref ref))
 
@@ -496,7 +500,7 @@
 
 (defn element
   ([klass]
-   (js/React.createElement klass #js {}))
+   (create-element klass #js {}))
   ([klass props]
    (->> (if (map? props) (util/map->obj props) props)
-        (js/React.createElement klass))))
+        (create-element klass))))
