@@ -7,8 +7,8 @@ This is a friendly fork of [rum](https://github.com/tonsky/rum).
 Add to deps.edn:
 
 ```
-funcool/rumext {:git/url "https://github.com/funcool/rumext.git",
-                :sha "303c5d5db489dd74ee6597531e46127f8be5d984"}
+funcool/rumext {:git/url "https://github.com/funcool/rumext.git"
+                :sha "23778a6f5999a9da5ffd4cfc7f7dd6ca82721f50"}
 ```
 
 ## Differences with rum
