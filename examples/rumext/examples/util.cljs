@@ -59,7 +59,7 @@
   :render
   (fn [own [*board *renders]]
     [:div.stats
-     "Renders: "       (mf/react *renders)
+     "Renders: "       (mf/deref *renders)
      [:br]
      "Board watches: " (watches-count *board)
      [:br]

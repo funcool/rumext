@@ -3,9 +3,9 @@
             [rumext.examples.util :as util]))
 
 (mf/defc timer
-  {:wrap [mf/reactive]}
+  {:wrap [mf/reactive*]}
   [props]
-  (let [ts (mf/react util/*clock)]
+  (let [ts (mf/deref util/*clock)]
     [:div "Reactive" ": "
      [:span {:style {:color @util/*color}}
       (util/format-time ts)]]))

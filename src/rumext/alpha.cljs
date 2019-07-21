@@ -134,7 +134,7 @@
 
     ctor))
 
-(defn build-lazy-ctor
+(defn build-lazy
   [builder render mixins display-name]
   (let [ctor (delay (builder render mixins display-name))]
     (fn [props] (@ctor props))))
@@ -273,26 +273,15 @@
 
 ;; --- Mixins
 
-(def static
+(def memo
   "Mixin. Will avoid re-render if none of component’s arguments have
-  changed. Does equality check (`=`) on all arguments.
-
-   ```
-   (rmx/defc label < rmx/static
-     [text]
-     [:div text])
-
-   (rmx/mount (label \"abc\") js/document.body)
-
-   ;; def != abc, will re-render
-   (rmx/mount (label \"def\") js/document.body)
-
-   ;; def == def, won’t re-render
-   (rmx/mount (label \"def\") js/document.body)
-   ```"
+  changed. Does equality check (`=`) on all arguments."
   {:should-update (fn [old-state new-state]
                     (not= (::props old-state) (::props new-state)))})
 
+(def static
+  "Mixin. Will avoid re-render."
+  {:should-update (constantly false)})
 
 ;; local mixin
 
@@ -331,7 +320,7 @@
 
 (def ^:private ^:dynamic *reactions*)
 
-(def ^:private reactive*
+(def reactive
   "Mixin. Works in conjunction with [[react]].
 
    ```
@@ -382,7 +371,6 @@
   (assert *reactions* "rumext.alpha/react is only supported in conjunction with rumext.alpha/reactive")
   (vswap! *reactions* conj ref)
   (cljs.core/deref ref))
-
 
 (def react deref)
 
@@ -453,44 +441,36 @@
                  (vector? watch) (into-array watch))]
     (js/React.useMemo callback watch))))
 
-(defn- wrap-reactive
+;; --- Higher-Order Components
+
+(defn reactive*
   [component]
-  (rumext.alpha/fnc wrapper [props]
-    (binding [*reactions* (volatile! #{})]
-      (let [key-ref (use-ref (random-uuid))
-            reactions-ref (use-ref #{})
-            state (use-state (int 0))
-            dom (component props)
-            new-reactions (cljs.core/deref *reactions*)
-            trigger-render #(swap! state unchecked-inc-int)
-            old-reactions (cljs.core/deref reactions-ref)
-            key (cljs.core/deref key-ref)]
+  (letfn [(wrapper [props]
+            (binding [*reactions* (volatile! #{})]
+              (let [key-ref (use-ref (random-uuid))
+                    reactions-ref (use-ref #{})
+                    state (use-state (int 0))
+                    dom (component props)
+                    new-reactions (cljs.core/deref *reactions*)
+                    trigger-render #(swap! state unchecked-inc-int)
+                    old-reactions (cljs.core/deref reactions-ref)
+                    key (cljs.core/deref key-ref)]
+                (use-effect
+                 :end #(run! (fn [ref] (remove-watch ref key)) @reactions-ref))
 
-        (use-effect
-         :end #(run! (fn [ref] (remove-watch ref key)) @reactions-ref))
+                (run! (fn [ref]
+                        (when-not (contains? new-reactions ref)
+                          (remove-watch ref key))) old-reactions)
+                (run! (fn [ref]
+                        (when-not (contains? old-reactions ref)
+                          (add-watch ref key trigger-render))) new-reactions)
 
-        (run! (fn [ref]
-                (when-not (contains? new-reactions ref)
-                  (remove-watch ref key))) old-reactions)
-        (run! (fn [ref]
-                (when-not (contains? old-reactions ref)
-                  (add-watch ref key trigger-render))) new-reactions)
+                (reset! reactions-ref new-reactions)
+                dom)))]
+    (unchecked-set wrapper "displayName" (.-displayName component))
+    wrapper))
 
-        (reset! reactions-ref new-reactions)
-        dom))))
-
-(def reactive
-  "Both a mixin and wrapper/decorator for function components."
-  (specify reactive*
-    cljs.core/IFn
-    (-invoke
-      ([this component]
-       (let [dname (.-displayName component)
-             result (wrap-reactive component)]
-         (unchecked-set result "displayName" dname)
-         result)))))
-
-(defn memo
+(defn memo*
   [component]
   (js/React.memo component
                  (fn [prev next]
