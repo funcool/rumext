@@ -59,7 +59,7 @@
 (def dom-node ra/dom-node)
 (def create-ref ra/create-ref)
 (def ref-val ra/ref-val)
-(def static ra/static)
+(def static ra/memo)
 (def sync-render ra/sync-render)
 (def reactive ra/reactive)
 (def react ra/deref)
