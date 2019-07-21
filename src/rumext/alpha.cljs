@@ -356,23 +356,23 @@
                new-reactions    (cljs.core/deref *reactions*)
                key              (::reactions-key state)
                sync-render?     (::sync-render state)]
-           (doseq [ref old-reactions]
-             (when-not (contains? new-reactions ref)
-               (remove-watch ref key)))
-           (doseq [ref new-reactions]
-             (when-not (contains? old-reactions ref)
-               (add-watch ref key
-                          (fn [_ _ _ _]
-                            (if sync-render?
-                              (force-render comp)
-                              (request-render comp))))))
+
+           (run! (fn [ref]
+                   (when-not (contains? new-reactions ref)
+                     (remove-watch ref key))) old-reactions)
+           (run! (fn [ref]
+                   (when-not (contains? old-reactions ref)
+                     (add-watch ref key
+                                (fn [_ _ _ _]
+                                  (if sync-render?
+                                    (force-render comp)
+                                    (request-render comp)))))) new-reactions)
            [dom (assoc next-state ::reactions new-reactions)]))))
    :will-unmount
-   (fn [state]
-     (let [key (::reactions-key state)]
-       (doseq [ref (::reactions state)]
-         (remove-watch ref key)))
-     (dissoc state ::reactions ::reactions-key)) })
+   (fn [{:keys [::reactions-key ::reactions] :as state}]
+     (run! (fn [ref] (remove-watch ref reactions-key)) reactions)
+     (dissoc state ::reactions ::reactions-key))
+   })
 
 (defn deref
   "Works in conjunction with [[reactive]] mixin. Use this function
@@ -467,16 +467,14 @@
             key (cljs.core/deref key-ref)]
 
         (use-effect
-         :end #(doseq [ref @reactions-ref]
-                 (remove-watch ref key)))
+         :end #(run! (fn [ref] (remove-watch ref key)) @reactions-ref))
 
-        (doseq [ref old-reactions]
-          (when-not (contains? new-reactions ref)
-            (remove-watch ref key)))
-
-        (doseq [ref new-reactions]
-          (when-not (contains? old-reactions ref)
-            (add-watch ref key trigger-render)))
+        (run! (fn [ref]
+                (when-not (contains? new-reactions ref)
+                  (remove-watch ref key))) old-reactions)
+        (run! (fn [ref]
+                (when-not (contains? old-reactions ref)
+                  (add-watch ref key trigger-render))) new-reactions)
 
         (reset! reactions-ref new-reactions)
         dom))))
