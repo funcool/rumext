@@ -176,9 +176,8 @@
 (def ^:private render-queue (volatile! empty-queue))
 
 (defn- render-all [queue]
-  (doseq [comp queue
-          :when (not (gobj/get comp ":rumext.alpha/unmounted?"))]
-    (.forceUpdate comp)))
+  (let [not-unmounted? #(not (gobj/get % ":rumext.alpha/unmounted?"))]
+    (run! #(.forceUpdate %) (filter not-unmounted? queue))))
 
 (defn- render []
   (let [queue @render-queue]
