@@ -161,16 +161,13 @@
 ;; render queue
 
 (def ^:private schedule
-  (or (and (exists? js/window)
-           (or js/window.requestAnimationFrame
-               js/window.webkitRequestAnimationFrame
-               js/window.mozRequestAnimationFrame
-               js/window.msRequestAnimationFrame))
-    #(js/setTimeout % 16)))
+  "Use raf if exsits, if not, schedule is synchronous."
+  (let [raf (unchecked-get js/window "requestAnimationFrame")]
+    (if (fn? raf) raf (fn [f] (f)))))
 
 (def ^:private batch
-  (or (when (exists? js/ReactDOM) js/ReactDOM.unstable_batchedUpdates)
-      (fn [f a] (f a))))
+  (let [ubu (unchecked-get js/ReactDOM "unstable_batchedUpdates")]
+    (if (fn? ubu) ubu (fn [f a] (f a)))))
 
 (def ^:private empty-queue [])
 (def ^:private render-queue (volatile! empty-queue))
