@@ -24,15 +24,17 @@
   "An alias to the js/React.createElemen (only for internal use)."
   js/React.createElement)
 
-(defn get-local-state
+(defn- get-local-state
   "Given React component, returns Rum state associated with it."
   [comp]
-  (gobj/get (.-state comp) ":rumext.alpha/state"))
+  (-> (unchecked-get comp "state")
+      (unchecked-get ":rumext.alpha/state")))
 
-(defn- extend! [obj props]
-  (doseq [[k v] props
-          :when (some? v)]
-    (gobj/set obj (name k) (clj->js v))))
+(defn- extend!
+  [obj props]
+  (run! (fn [[k v]]
+          (unchecked-set obj (name k) (clj->js v)))
+        props))
 
 (defn build-class
   [render mixins display-name]
@@ -69,8 +71,8 @@
 
     (unchecked-set ctor "getDerivedStateFromProps"
                    (fn [props state]
-                     (let [lstate  @(gobj/get state ":rumext.alpha/state")
-                           nprops  (gobj/get props ":rumext.alpha/props")
+                     (let [lstate  @(unchecked-get state ":rumext.alpha/state")
+                           nprops  (unchecked-get props ":rumext.alpha/props")
                            nstate  (merge lstate {::props nprops})
                            nstate  (reduce #(%2 %1) nstate derive-state)]
                        ;; allocate new volatile
@@ -97,13 +99,13 @@
                      (fn [next-props next-state]
                        (this-as this
                          (let [lstate @(get-local-state this)
-                               nstate @(gobj/get next-state ":rumext.alpha/state")]
+                               nstate @(unchecked-get next-state ":rumext.alpha/state")]
                            (or (some #(% lstate nstate) should-update) false))))))
 
     (when-not (empty? make-snapshot)
       (unchecked-set prototype "getSnapshotBeforeUpdate"
                      (fn [prev-props prev-state]
-                       (let [lstate  @(gobj/get prev-state ":rumext.alpha/state")]
+                       (let [lstate  @(unchecked-get prev-state ":rumext.alpha/state")]
                          (call-all lstate make-snapshot)))))
 
     (when-not (empty? did-update)
@@ -128,7 +130,7 @@
                        (let [lstate (get-local-state this)]
                          (when-not (empty? will-unmount)
                            (vswap! lstate call-all will-unmount))
-                         (gobj/set this ":rumext.alpha/unmounted?" true)))))
+                         (unchecked-set this ":rumext.alpha/unmounted?" true)))))
 
     ctor))
 
