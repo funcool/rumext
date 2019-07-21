@@ -99,10 +99,13 @@
 (defmacro defc
   [& args]
   (let [[render doc metadata cname] (parse-defc args)]
-    `(def ~(symbol cname) ~doc (rumext.alpha/build-fnc ~render ~cname ~metadata))))
-
+    `(def ~(symbol cname) ~(str doc) (rumext.alpha/build-fnc ~render ~cname ~metadata))))
 
 (defmacro def
   [cname & args]
   (let [[render doc mixins] (apply parse-def args)]
-    `(def ~cname ~doc (rumext.alpha/build-lazy-ctor rumext.alpha/build-def ~render ~mixins ~(str cname)))))
+    `(def ~cname ~(str doc) (rumext.alpha/build-lazy-ctor rumext.alpha/build-def ~render ~mixins ~(str cname)))))
+
+(defmacro elem
+  [cm & childs]
+  `(html [:& ~cm ~@childs]))

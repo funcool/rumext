@@ -2,7 +2,7 @@
 
 (defn collect
   [key mixins]
-  (seq (into [] (keep (fn [m] (get m key))) mixins)))3
+  (seq (into [] (keep (fn [m] (get m key))) mixins)))
 
 (defn collect*
   [keys mixins]
