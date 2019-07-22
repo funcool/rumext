@@ -473,10 +473,13 @@
 
 (defn memo*
   [component]
-  (js/React.memo component
-                 (fn [prev next]
-                   (= (unchecked-get prev ":rumext.alpha/props")
-                      (unchecked-get next ":rumext.alpha/props")))))
+  (let [cm (js/React.memo component
+                          (fn [prev next]
+                            (= (unchecked-get prev ":rumext.alpha/props")
+                               (unchecked-get next ":rumext.alpha/props"))))]
+    (unchecked-set cm "displayName"
+                   (str "memo(" (unchecked-get component "displayName") ")"))
+    cm))
 
 (defn element
   ([klass]
