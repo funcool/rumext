@@ -136,14 +136,23 @@
 
 (defn build-lazy
   [builder render mixins display-name]
-  (let [ctor (delay (builder render mixins display-name))]
-    (fn [props] (@ctor props))))
+  (let [klass (delay (builder render mixins display-name))]
+    ;; The IFn protocol impl is only for backward compatibility (and
+    ;; on benchmarks seems like it does not imples overhead).
+    (specify! klass
+      cljs.core/IFn
+      (-invoke
+        ([this props]
+         (let [keyfn (first (collect :key-fn mixins))]
+           (if (some? keyfn)
+             (create-element @klass #js {":rumext.alpha/props" props "key" (keyfn props)})
+             (create-element @klass #js {":rumext.alpha/props" props}))))))))
 
 (defn build-fnc
   [render display-name metatada]
   (let [factory (fn [props]
-                  (let [props (util/wrap-props props)]
-                    (render props)))]
+                  (let [lprops (unchecked-get props ":rumext.alpha/props")]
+                    (render lprops)))]
     (unchecked-set factory "displayName" display-name)
     (if-let [wrap (seq (:wrap metatada []))]
       (reduce #(%2 %1) factory wrap)
@@ -151,12 +160,8 @@
 
 (defn build-def
   [render-body mixins display-name]
-  (let [render (fn [state] [(render-body state (::props state)) state])
-        klass (build-class render mixins display-name)
-        keyfn (first (collect :key-fn mixins))]
-    (if (some? keyfn)
-      #(create-element klass #js {":rumext.alpha/props" %1 "key" (keyfn %1)})
-      #(create-element klass #js {":rumext.alpha/props" %1}))))
+  (let [render (fn [state] [(render-body state (::props state)) state])]
+    (build-class render mixins display-name)))
 
 ;; render queue
 
@@ -266,7 +271,6 @@
   "Given state and ref handle, returns DOM node associated with ref."
   [ref]
   (js/ReactDOM.findDOMNode (ref-val ref)))
-
 
 ;; --- Mixins
 
@@ -471,12 +475,14 @@
   [component]
   (js/React.memo component
                  (fn [prev next]
-                   (= (util/wrap-props prev)
-                      (util/wrap-props next)))))
+                   (= (unchecked-get prev ":rumext.alpha/props")
+                      (unchecked-get next ":rumext.alpha/props")))))
 
 (defn element
   ([klass]
-   (create-element klass #js {}))
+   (let [klass (if (delay? klass) @klass klass)]
+     (create-element klass #js {":rumext.alpha/props" {}})))
   ([klass props]
-   (->> (if (map? props) (util/map->obj props) props)
-        (create-element klass))))
+   (let [klass (if (delay? klass) @klass klass)
+         props #js {":rumext.alpha/props" props}]
+     (create-element klass props))))

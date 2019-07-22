@@ -26,11 +26,13 @@
 (def handlers
   {:& (fn
         ([_ klass]
-         [klass {} nil])
+         (let [klass `(if (delay? ~klass) (deref ~klass) ~klass)]
+           [klass {} nil]))
         ([_ klass attrs & children]
-         (if (map? attrs)
-           [klass (to-js-map attrs) children]
-           [klass {} (cons attrs children)])))})
+         (let [klass `(if (delay? ~klass) (deref ~klass) ~klass)]
+           (if (map? attrs)
+             [klass (to-js-map {":rumext.alpha/props" attrs}) children]
+             [klass {} (cons attrs children)]))))})
 
 (defmacro html
   [body]
@@ -105,7 +107,3 @@
   [cname & args]
   (let [[render doc mixins] (apply parse-def args)]
     `(def ~cname ~(str doc) (rumext.alpha/build-lazy rumext.alpha/build-def ~render ~mixins ~(str cname)))))
-
-(defmacro elem
-  [cm & childs]
-  `(html [:& ~cm ~@childs]))

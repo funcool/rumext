@@ -1,6 +1,8 @@
 (ns rumext.examples.core
   (:require [clojure.string :as str]
+            [goog.dom :as dom]
             [rumext.core :as mx]
+            [rumext.alpha :as mf]
             [rumext.examples.util :as util]
             [rumext.examples.binary-clock :as binary-clock]
             [rumext.examples.timer-static :as timer-static]
@@ -11,22 +13,19 @@
             [rumext.examples.errors :as errors]
             [rumext.examples.board-reactive :as board-reactive]
             [rumext.examples.portals :as portals]
+            [rumext.examples.bench]
             ))
 
 (enable-console-print!)
 
-(binary-clock/mount! (util/el "binary-clock"))
-(timer-static/mount! (util/el "timer-static"))
-(timer-reactive/mount! (util/el "timer-reactive"))
+(binary-clock/mount! (dom/getElement "binary-clock"))
+(timer-static/mount! (dom/getElement "timer-static"))
+(timer-reactive/mount! (dom/getElement "timer-reactive"))
 
-(local-state/mount! (util/el "local-state-1")
-                    (util/el "local-state-2"))
+(local-state/mount! (dom/getElement "local-state"))
 
-(refs/mount! (util/el "refs"))
-(controls/mount! (util/el "controls"))
-(board-reactive/mount! (util/el "board-reactive"))
-(portals/mount! (util/el "portals"))
+(refs/mount! (dom/getElement "refs"))
+(controls/mount! (dom/getElement "controls"))
+(board-reactive/mount! (dom/getElement "board-reactive"))
+(portals/mount! (dom/getElement "portals"))
 ;; (errors/mount! (util/el "errors"))
-
-
-
