@@ -28,11 +28,9 @@
         ([_ klass]
          (let [klass `(if (delay? ~klass) (deref ~klass) ~klass)]
            [klass {} nil]))
-        ([_ klass attrs & children]
+        ([_ klass attrs]
          (let [klass `(if (delay? ~klass) (deref ~klass) ~klass)]
-           (if (map? attrs)
-             [klass (to-js-map {":rumext.alpha/props" attrs}) children]
-             [klass {} (cons attrs children)]))))})
+           [klass (to-js-map {":rumext.alpha/props" attrs}) nil])))})
 
 (defmacro html
   [body]
