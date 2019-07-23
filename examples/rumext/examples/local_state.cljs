@@ -3,11 +3,20 @@
             [rumext.alpha :as mf]
             [rumext.examples.util :as util]))
 
-(mf/def label
-  :render
-  (fn [own {:keys [title n] :as props}]
-    [:div
-     [:span title ": " n]]))
+(mf/defc label
+  {:wrap [mf/memo*]}
+  [{:keys [title n] :as props}]
+  (prn "label" props)
+  (mf/use-effect
+   {:watch n
+    :init (fn [x]
+            (prn "label$use-effect$init" x)
+            x)
+    :end (fn [x]
+           (prn "label$use-effect$end" x))})
+
+  [:div
+   [:span title ": " n]])
 
 (mf/def local-state
   :mixins [(mf/local 0)]
@@ -18,10 +27,11 @@
        [:div
         {:style {"-webkit-user-select" "none"
                  "cursor" "pointer"}
-         :on-click (fn [_] (swap! count inc)) }
+         :on-click (fn [_] (swap! count inc))
+         ;; :on-click (fn [_] (swap! count identity))
+         }
 
-        [:& label {:title "Counter1" :n @count :bar #{:baz :rrr}}]
-        (label {:title "Counter2" :n @count :bar #{:baz :rrr}})]])))
+        [:& label {:title "Counter1" :n @count :bar #{:baz :rrr}}]]])))
 
 (mf/defc local-state-fn
   [{:keys [title] :as props}]

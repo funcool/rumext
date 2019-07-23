@@ -153,7 +153,7 @@
                     (render lprops)))]
     (unchecked-set factory "displayName" display-name)
     (if-let [wrap (seq (:wrap metatada []))]
-      (reduce #(%2 %1) factory wrap)
+      (reduce #(%2 %1) factory (reverse wrap))
       factory)))
 
 (defn build-def
@@ -377,17 +377,21 @@
       (-deref [self] (.-current ref)))))
 
 (defn use-effect
-  [& {:keys [init end watch] :or {init identity}}]
-  (let [watch (cond
-                (array? watch) watch
-                (true? watch) nil
-                (nil? watch) #js []
-                (vector? watch) (into-array watch))]
+  [{:keys [init end watch cmp] :or {init identity end identity cmp =}}]
+  (let [wprops (use-ref ::noop)
+        rwatch (cond
+                 (true? watch) nil
+                 (nil? watch) #js []
+                 :else #js [watch])]
     (js/React.useEffect
-     #(let [r (init)]
-        (when (fn? end)
-          (fn [] (end r))))
-     watch)))
+     (fn []
+       (if (or (true? watch)
+               (not (cmp @wprops watch)))
+         (let [r (init watch)]
+           (reset! wprops watch)
+           (fn [] (end r)))
+         (constantly false)))
+     rwatch)))
 
 (defn use-memo
   ([callback] (use-memo #js [] callback))
@@ -413,8 +417,9 @@
                     trigger-render #(swap! state unchecked-inc-int)
                     old-reactions (cljs.core/deref reactions-ref)
                     key (cljs.core/deref key-ref)]
+
                 (use-effect
-                 :end #(run! (fn [ref] (remove-watch ref key)) @reactions-ref))
+                 {:end #(run! (fn [ref] (remove-watch ref key)) @reactions-ref)})
 
                 (run! (fn [ref]
                         (when-not (contains? new-reactions ref)
@@ -430,13 +435,19 @@
 
 (defn memo*
   [component]
-  (let [cm (js/React.memo component
-                          (fn [prev next]
-                            (= (unchecked-get prev ":rumext.alpha/props")
-                               (unchecked-get next ":rumext.alpha/props"))))]
-    (unchecked-set cm "displayName"
+  (letfn [(wrapper [props]
+            (let [lprops (use-state ::noop)
+                  lstate (use-ref nil)
+                   nprops (unchecked-get props ":rumext.alpha/props")]
+              (if (not= @lprops nprops)
+                (let [result (create-element component props)]
+                  (reset! lstate result)
+                  (reset! lprops nprops)
+                  result)
+                @lstate)))]
+    (unchecked-set wrapper "displayName"
                    (str "memo(" (unchecked-get component "displayName") ")"))
-    cm))
+    wrapper))
 
 (defn element
   ([klass]
