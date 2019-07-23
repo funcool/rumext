@@ -17,10 +17,12 @@
   []
   [:dl
    [:dt "Color: "]
-   [:dd [:& input {:color util/*color}]]
+   [:dd
+    [:& input {:color util/*color}]]
    ;; Binding another component to the same atom will keep 2 input boxes in sync
    [:dt "Clone: "]
-   [:dd [:& input {:color util/*color}]]
+   [:dd
+    (mf/element input {:color util/*color})]
    [:dt "Color: "]
    [:dd (util/watches-count util/*color) " watches"]
 

@@ -32,9 +32,7 @@
 
 (defn- extend!
   [obj props]
-  (run! (fn [[k v]]
-          (unchecked-set obj (name k) (clj->js v)))
-        props))
+  (run! (fn [[k v]] (unchecked-set obj (name k) (clj->js v))) props))
 
 (defn build-class
   [render mixins display-name]
@@ -143,9 +141,9 @@
       cljs.core/IFn
       (-invoke
         ([this props]
-         (let [keyfn (first (collect :key-fn mixins))]
-           (if (some? keyfn)
-             (create-element @klass #js {":rumext.alpha/props" props "key" (keyfn props)})
+         (let [key (:key props nil)]
+           (if key
+             (create-element @klass #js {":rumext.alpha/props" props "key" key})
              (create-element @klass #js {":rumext.alpha/props" props}))))))))
 
 (defn build-fnc
@@ -201,7 +199,8 @@
   (.forceUpdate component))
 
 (defn mount
-  "Add element to the DOM tree. Idempotent. Subsequent mounts will just update element."
+  "Add element to the DOM tree. Idempotent. Subsequent mounts will
+  just update element."
   [element node]
   (js/ReactDOM.render element node)
   nil)
@@ -212,7 +211,8 @@
   (js/ReactDOM.unmountComponentAtNode node))
 
 (defn hydrate
-  "Same as [[mount]] but must be called on DOM tree already rendered by a server via [[render-html]]."
+  "Same as [[mount]] but must be called on DOM tree already rendered
+  by a server via [[render-html]]."
   [element node]
   (js/ReactDOM.hydrate element node))
 
@@ -222,28 +222,10 @@
   (js/ReactDOM.createPortal element node))
 
 (defn with-key
-  "Adds React key to element.
-
-   ```
-   (rmx/defc label [text] [:div text])
-
-   (-> (label)
-       (rmx/with-key \"abc\")
-       (rmx/mount js/document.body))
-   ```"
   [element key]
   (js/React.cloneElement element #js { "key" key } nil))
 
 (defn with-ref
-  "Adds React ref (string or callback) to element.
-
-   ```
-   (rmx/defc label [text] [:div text])
-
-   (-> (label)
-       (rmx/with-ref \"abc\")
-       (rmx/mount js/document.body))
-   ```"
   [element ref]
   (js/React.cloneElement element #js { "ref" ref } nil))
 
@@ -293,20 +275,6 @@
   {:init (fn [own props] (assoc own ::sync-render true))})
 
 (defn local
-  "Mixin constructor. Adds an atom to component’s state that can be used
-  to keep stuff during component’s lifecycle. Component will be
-  re-rendered if atom’s value changes. Atom is stored under
-  user-provided key or under `:rumext.alpha/local` by default.
-
-   ```
-   (rmx/defcs counter < (rmx/local 0 :cnt)
-     [state label]
-     (let [*cnt (:cnt state)]
-       [:div {:on-click (fn [_] (swap! *cnt inc))}
-         label @*cnt]))
-
-   (rmx/mount (counter \"Click count: \"))
-   ```"
   ([] (local {} ::local))
   ([initial] (local initial ::local))
   ([initial key]
@@ -322,17 +290,6 @@
 (def ^:private ^:dynamic *reactions*)
 
 (def reactive
-  "Mixin. Works in conjunction with [[react]].
-
-   ```
-   (rmx/defc comp < rmx/reactive
-     [*counter]
-     [:div (rmx/react counter)])
-
-   (def *counter (atom 0))
-   (rmx/mount (comp *counter) js/document.body)
-   (swap! *counter inc) ;; will force comp to re-render
-   ```"
   {:init
    (fn [state props]
      (assoc state ::reactions-key (random-uuid)))
@@ -487,5 +444,7 @@
      (create-element klass #js {":rumext.alpha/props" {}})))
   ([klass props]
    (let [klass (if (delay? klass) @klass klass)
+         key   (:key props)
          props #js {":rumext.alpha/props" props}]
+     (when key (unchecked-set props "key" key))
      (create-element klass props))))

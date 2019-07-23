@@ -52,4 +52,4 @@
       [:tr [:th {:col-span 8} (render-count)]]]]))
 
 (defn mount! [el]
-  (mf/mount (mf/elem binary-clock) el))
+  (mf/mount (mf/element binary-clock) el))

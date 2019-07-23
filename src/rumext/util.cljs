@@ -29,10 +29,9 @@
         (persistent! r)))))
 
 (defn map->obj
-  [map]
-  (let [m (js-obj)]
-    (doseq [[k v] map]
-      (unchecked-set m (name k) v))
+  [o]
+  (let [m #js {}]
+    (run! (fn [[k v]] (unchecked-set m (name k) v)) o)
     m))
 
 (defn wrap-props
