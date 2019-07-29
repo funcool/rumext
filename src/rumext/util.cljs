@@ -40,5 +40,23 @@
     (map? props) props
     (nil? props) {}
     (object? props) (obj->map props)
-    :else (throw (ex-info "Unecpected props" {:props props}))))
+    :else (throw (ex-info "Unexpected props" {:props props}))))
 
+(defn props-equals?
+  [eq? new-props old-props]
+  (let [old-keys (.keys js/Object old-props)
+        new-keys (.keys js/Object new-props)
+        old-keys-len (alength old-keys)
+        new-keys-len (alength new-keys)]
+    (if (identical? old-keys-len new-keys-len)
+      (loop [idx (int 0) ret true]
+        (if (< idx new-keys-len)
+          (let [key (aget new-keys idx)
+                new-val (unchecked-get new-props key)
+                old-val (unchecked-get old-props key)
+                result (eq? new-val old-val)]
+            (if ^boolean result
+              (recur (inc idx) result)
+              false))
+          ret))
+      false)))

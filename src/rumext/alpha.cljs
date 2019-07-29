@@ -21,16 +21,16 @@
   (-namespace [_] ""))
 
 (def create-element
-  "An alias to the js/React.createElemen (only for internal use)."
+  "An alias to the js/React.createElement (only for internal use)."
   js/React.createElement)
 
-(defn- get-local-state
+(defn get-local-state
   "Given React component, returns Rum state associated with it."
   [comp]
   (-> (unchecked-get comp "state")
       (unchecked-get ":rumext.alpha/state")))
 
-(defn- extend!
+(defn extend!
   [obj props]
   (run! (fn [[k v]] (unchecked-set obj (name k) (clj->js v))) props))
 
@@ -54,7 +54,7 @@
 
         ctor           (fn [props]
                          (this-as this
-                           (let [lprops (unchecked-get props ":rumext.alpha/props")
+                           (let [lprops (util/wrap-props props)
                                  lstate (-> {::props lprops ::react-component this}
                                             (call-all init lprops))]
                              (unchecked-set this "state" #js {":rumext.alpha/state" (volatile! lstate)})
@@ -67,16 +67,6 @@
 
     (unchecked-set ctor "displayName" display-name)
 
-    (unchecked-set ctor "getDerivedStateFromProps"
-                   (fn [props state]
-                     (let [lstate  @(unchecked-get state ":rumext.alpha/state")
-                           nprops  (unchecked-get props ":rumext.alpha/props")
-                           nstate  (merge lstate {::props nprops})
-                           nstate  (reduce #(%2 %1) nstate derive-state)]
-                       ;; allocate new volatile
-                       ;; so that we can access both old and new states in shouldComponentUpdate
-                       #js {":rumext.alpha/state" (volatile! nstate)})))
-
     (unchecked-set prototype "render"
                    (fn []
                      (this-as this
@@ -84,6 +74,24 @@
                              [dom nstate] (wrapped-render @lstate)]
                          (vreset! lstate nstate)
                          dom))))
+
+    (unchecked-set prototype "componentWillUnmount"
+                   (fn []
+                     (this-as this
+                       (let [lstate (get-local-state this)]
+                         (when-not (empty? will-unmount)
+                           (vswap! lstate call-all will-unmount))
+                         (unchecked-set this ":rumext.alpha/unmounted?" true)))))
+
+    (unchecked-set ctor "getDerivedStateFromProps"
+                   (fn [props state]
+                     (let [lstate  @(unchecked-get state ":rumext.alpha/state")
+                           nprops  (util/wrap-props props)
+                           nstate  (assoc lstate ::props nprops)
+                           nstate  (reduce #(%2 %1) nstate derive-state)]
+                       ;; allocate new volatile
+                       ;; so that we can access both old and new states in shouldComponentUpdate
+                       #js {":rumext.alpha/state" (volatile! nstate)})))
 
     (when-not (empty? did-mount)
       (unchecked-set prototype "componentDidMount"
@@ -94,11 +102,10 @@
 
     (when-not (empty? should-update)
       (unchecked-set prototype "shouldComponentUpdate"
-                     (fn [next-props next-state]
+                     (fn [new-props new-state]
                        (this-as this
-                         (let [lstate @(get-local-state this)
-                               nstate @(unchecked-get next-state ":rumext.alpha/state")]
-                           (or (some #(% lstate nstate) should-update) false))))))
+                         (let [old-props (unchecked-get this "props")]
+                           (or (some #(% old-props new-props) should-update) false))))))
 
     (when-not (empty? make-snapshot)
       (unchecked-set prototype "getSnapshotBeforeUpdate"
@@ -121,15 +128,6 @@
                            (vswap! lstate call-all did-catch error
                                    {::component-stack (gobj/get info "componentStack")})
                            (.forceUpdate this))))))
-
-    (unchecked-set prototype "componentWillUnmount"
-                   (fn []
-                     (this-as this
-                       (let [lstate (get-local-state this)]
-                         (when-not (empty? will-unmount)
-                           (vswap! lstate call-all will-unmount))
-                         (unchecked-set this ":rumext.alpha/unmounted?" true)))))
-
     ctor))
 
 (defn build-lazy
@@ -141,16 +139,15 @@
       cljs.core/IFn
       (-invoke
         ([this props]
-         (let [key (:key props nil)]
-           (if key
-             (create-element @klass #js {":rumext.alpha/props" props "key" key})
-             (create-element @klass #js {":rumext.alpha/props" props}))))))))
+         (let [props (cond
+                       (map? props) (util/map->obj props)
+                       (object? props) props
+                       :else (throw (ex-info "Unexpected props" {:props props})))]
+           (create-element @klass props)))))))
 
 (defn build-fnc
   [render display-name metatada]
-  (let [factory (fn [props]
-                  (let [lprops (unchecked-get props ":rumext.alpha/props")]
-                    (render lprops)))]
+  (let [factory #(render (util/wrap-props %))]
     (unchecked-set factory "displayName" display-name)
     (if-let [wrap (seq (:wrap metatada []))]
       (reduce #(%2 %1) factory (reverse wrap))
@@ -258,9 +255,16 @@
 
 (def memo
   "Mixin. Will avoid re-render if none of component’s arguments have
-  changed. Does equality check (`=`) on all arguments."
-  {:should-update (fn [old-state new-state]
-                    (not= (::props old-state) (::props new-state)))})
+  changed. Does equality check (`identical?`) on all arguments."
+  {:should-update (fn [old-props new-props]
+                    (not (util/props-equals? identical? old-props new-props)))})
+
+(def pure
+  "Mixin. Will avoid re-render if none of component’s arguments have
+  changed. Does equalty check (`=`) on all
+  arguments."
+  {:should-update (fn [old-props new-props]
+                    (not (util/props-equals? = old-props new-props)))})
 
 (def static
   "Mixin. Will avoid re-render."
@@ -287,7 +291,7 @@
           (add-watch lstate key #(request-render component)))
         (assoc state key lstate)))}))
 
-(def ^:private ^:dynamic *reactions*)
+(def ^:dynamic *reactions*)
 
 (def reactive
   {:init
@@ -332,11 +336,29 @@
 
 (def react deref)
 
+;; --- Raw Hooks
+
+(defn use-state*
+  [initial]
+  (js/React.useState initial))
+
+(defn use-ref*
+  [initial]
+  (js/React.useRef initial))
+
+(defn use-effect*
+  [f deps]
+  (js/React.useEffect f deps))
+
+(defn use-memo*
+  [f deps]
+  (js/React.useMemo f deps))
+
 ;; --- Hooks
 
 (defn use-state
   [initial]
-  (let [[state set-state] (js/React.useState initial)]
+  (let [[state set-state] (use-state* initial)]
     (reify
       cljs.core/IReset
       (-reset! [_ new-value]
@@ -357,7 +379,7 @@
 
 (defn use-ref
   [initial]
-  (let [ref (js/React.useRef initial)]
+  (let [ref (use-ref* initial)]
     (reify
       cljs.core/IReset
       (-reset! [_ new-value]
@@ -377,35 +399,59 @@
       (-deref [self] (.-current ref)))))
 
 (defn use-effect
-  [{:keys [init end watch cmp] :or {init identity end identity cmp =}}]
-  (let [wprops (use-ref ::noop)
-        rwatch (cond
-                 (true? watch) nil
-                 (nil? watch) #js []
-                 :else #js [watch])]
-    (js/React.useEffect
-     (fn []
-       (if (or (true? watch)
-               (not (cmp @wprops watch)))
-         (let [r (init watch)]
-           (reset! wprops watch)
-           (fn [] (end r)))
-         (constantly false)))
-     rwatch)))
+  [{:keys [init end deps] :or {init identity end identity}}]
+  (use-effect*
+   (fn []
+     (let [r (init deps)]
+       (fn [] (end r))))
+
+   (cond
+     (array? deps) deps
+     (true? deps) nil
+     (nil? deps) #js []
+     (vector? deps) (into-array deps)
+     :else #js [deps])))
 
 (defn use-memo
-  ([callback] (use-memo #js [] callback))
-  ([watch callback]
-   (let [watch (cond
-                 (array? watch) watch
-                 (true? watch) nil
-                 (nil? watch) #js []
-                 (vector? watch) (into-array watch))]
-    (js/React.useMemo callback watch))))
+  [{:keys [deps init]}]
+  (use-memo*
+   (fn [] (init deps))
+   (cond
+     (array? deps) deps
+     (true? deps) nil
+     (nil? deps) #js []
+     (vector? deps) (into-array deps)
+     :else #js [deps])))
+
+(def ^:private +noop-sentinel+ (js/Symbol "noop"))
+
+(defn- use-deref-impl
+  [{:keys [deps ref] :as opts}]
+  (let [[state reset-state!] (use-state* +noop-sentinel+)
+        key (use-memo* random-uuid, #js [])]
+    (use-effect*
+     (fn []
+       (add-watch ref key (fn [_ _ _ val] (reset-state! val)))
+       (fn [] (remove-watch ref key)))
+     (cond
+       (array? deps) deps
+       (true? deps) nil
+       (nil? deps) #js [ref]
+       (vector? deps) (into-array deps)
+       :else #js [deps]))
+    (if (identical? state +noop-sentinel+)
+      @ref
+      state)))
+
+(defn use-deref
+  [options]
+  (if (map? options)
+    (use-deref-impl options)
+    (use-deref-impl {:ref options})))
 
 ;; --- Higher-Order Components
 
-(defn reactive*
+(defn wrap-reactive
   [component]
   (letfn [(wrapper [props]
             (binding [*reactions* (volatile! #{})]
@@ -433,29 +479,21 @@
     (unchecked-set wrapper "displayName" (.-displayName component))
     wrapper))
 
-(defn memo*
-  [component]
-  (letfn [(wrapper [props]
-            (let [lprops (use-state ::noop)
-                  lstate (use-ref nil)
-                   nprops (unchecked-get props ":rumext.alpha/props")]
-              (if (not= @lprops nprops)
-                (let [result (create-element component props)]
-                  (reset! lstate result)
-                  (reset! lprops nprops)
-                  result)
-                @lstate)))]
-    (unchecked-set wrapper "displayName"
-                   (str "memo(" (unchecked-get component "displayName") ")"))
-    wrapper))
+
+(defn wrap-memo
+  ([component]
+   (js/React.memo component))
+  ([component eq?]
+   (js/React.memo component #(util/props-equals? eq? %1 %2))))
 
 (defn element
   ([klass]
    (let [klass (if (delay? klass) @klass klass)]
-     (create-element klass #js {":rumext.alpha/props" {}})))
+     (create-element klass #js {})))
   ([klass props]
    (let [klass (if (delay? klass) @klass klass)
-         key   (:key props)
-         props #js {":rumext.alpha/props" props}]
-     (when key (unchecked-set props "key" key))
+         props (cond
+                 (map? props) (util/map->obj props)
+                 (object? props) props
+                 :else (throw (ex-info "Unexpected props" {:props props})))]
      (create-element klass props))))
