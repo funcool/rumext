@@ -1,5 +1,6 @@
 (ns rumext.examples.board-reactive
-  (:require [rumext.core :as mx]
+  (:require [goog.dom :as dom]
+            [rumext.core :as mx]
             [rumext.examples.util :as util]
             [lentes.core :as l]))
 
@@ -13,7 +14,7 @@
    :did-update (fn [state]
                  (swap! *board-renders inc)
                  state)}
-  [[x y]]
+  [x y]
   (let [celref (l/derive (l/in [y x]) *board)]
     ;; each cell subscribes to its own cursor inside a board
     ;; note that subscription to color is conditional:
@@ -24,7 +25,6 @@
                                   (mx/react util/*color))}
       :on-mouse-over (fn [_] (swap! celref not) nil)}]))
 
-
 (mx/defc board-reactive
   []
   [:div.artboard
@@ -32,10 +32,9 @@
      [:div.art-row {:key y}
       (for [x (range 0 util/board-width)]
         ;; this is how one can specify React key for component
-        (-> (cell [x y])
-            (mx/with-key [x y])))])
-   #_(util/board-stats [*board *board-renders])])
+        (-> (cell x y)
+            (mx/with-key x)))])])
 
-
-(defn mount! [el]
-  (mx/mount (board-reactive) el))
+(defn mount! []
+  (mx/mount (board-reactive)
+            (dom/getElement "board-reactive")))

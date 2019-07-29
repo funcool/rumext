@@ -4,48 +4,27 @@
             [rumext.examples.util :as util]))
 
 (mf/defc label
-  {:wrap [mf/memo*]}
-  [{:keys [title n] :as props}]
-  (prn "label" props)
-  (mf/use-effect
-   {:watch n
-    :init (fn [x]
-            (prn "label$use-effect$init" x)
-            x)
-    :end (fn [x]
-           (prn "label$use-effect$end" x))})
-
-  [:div
-   [:span title ": " n]])
-
-(mf/def local-state
-  :mixins [(mf/local 0)]
-  :render
-  (fn [own {:keys [title] :as props}]
-    (let [count (::mf/local own)]
-      [:section
-       [:div
-        {:style {"-webkit-user-select" "none"
-                 "cursor" "pointer"}
-         :on-click (fn [_] (swap! count inc))
-         ;; :on-click (fn [_] (swap! count identity))
-         }
-
-        [:& label {:title "Counter1" :n @count :bar #{:baz :rrr}}]]])))
-
-(mf/defc local-state-fn
-  [{:keys [title] :as props}]
-  (let [count (mf/use-state 0)]
+  {:wrap [mf/wrap-memo]}
+  [{:keys [state] :as props}]
+  ;; (prn "label" props)
+  (let [{:keys [title n]} state]
     [:div
-     {:style {"-webkit-user-select" "none"
-              "cursor" "pointer"}
-      :on-click (fn [_] (swap! count inc)) }
-     title ": " @count]))
+     [:span title ": " n]]))
 
-(defn mount! [parent]
-  (let [el1 (dom/getElement "local-state-1" parent)
-        el2 (dom/getElement "local-state-2" parent)]
-    (mf/mount (mf/element local-state {:title "Clicks count"}) el1)
-    (mf/mount (mf/element local-state-fn {:title "(fn) Clicks count"}) el2)))
+(mf/defc local-state
+  [{:keys [title] :as props}]
+  (let [local (mf/use-state {:counter1 {:title "Counter 1"
+                                        :n 0}
+                             :counter2 {:title "Counter 2"
+                                        :n 0}})]
+    [:section {:class "counters"}
+     [:& label {:state (:counter1 @local)}]
+     [:& label {:state (:counter2 @local)}]
+     [:button {:on-click #(swap! local update-in [:counter1 :n] inc)} "Increment Counter 1"]
+     [:button {:on-click #(swap! local update-in [:counter2 :n] inc)} "Increment Counter 2"]]))
+
+(defn mount! []
+  (mf/mount (mf/element local-state {:title "Clicks count"})
+            (dom/getElement "local-state-1")))
 
 

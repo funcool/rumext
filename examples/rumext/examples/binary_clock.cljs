@@ -1,5 +1,6 @@
 (ns rumext.examples.binary-clock
-  (:require [rumext.alpha :as mf]
+  (:require [goog.dom :as dom]
+            [rumext.alpha :as mf]
             [rumext.examples.util :as util]))
 
 (def *bclock-renders (atom 0))
@@ -12,22 +13,22 @@
 
 (mf/def bit
   :mixins [mf/memo mf/reactive]
+
   :after-render
   (fn [state]
     (swap! *bclock-renders inc)
     state)
 
   :render
-  (fn [own [n b]]
+  (fn [own {:keys [n b] :as props}]
     (let [color (mf/deref util/*color)]
       (if (bit-test n b)
         [:td.bclock-bit {:style {:background-color color}}]
         [:td.bclock-bit {}]))))
 
 (mf/defc binary-clock
-  {:wrap [mf/reactive*]}
   []
-  (let [ts   (mf/deref util/*clock)
+  (let [ts   (mf/use-deref util/*clock)
         msec (mod ts 1000)
         sec  (mod (quot ts 1000) 60)
         min  (mod (quot ts 60000) 60)
@@ -43,13 +44,59 @@
         msl  (mod  msec 10)]
     [:table.bclock
      [:tbody
-      [:tr [:td] (bit [hl 3]) [:th] [:td]  (bit [ml 3]) [:th] [:td] (bit [sl 3]) [:th] (bit [msh 3]) (bit [msm 3]) (bit [msl 3])
-       ]
-      [:tr [:td] (bit [hl 2]) [:th] (bit [mh 2]) (bit [ml 2]) [:th] (bit [sh 2]) (bit [sl 2]) [:th] (bit [msh 2]) (bit [msm 2]) (bit [msl 2])]
-      [:tr (bit [hh 1]) (bit [hl 1]) [:th] (bit [mh 1]) (bit [ml 1]) [:th] (bit [sh 1]) (bit [sl 1]) [:th] (bit [msh 1]) (bit [msm 1]) (bit [msl 1])]
-      [:tr (bit [hh 0]) (bit [hl 0]) [:th] (bit [mh 0]) (bit [ml 0]) [:th] (bit [sh 0]) (bit [sl 0]) [:th] (bit [msh 0]) (bit [msm 0]) (bit [msl 0])]
-      [:tr [:th hh]   [:th hl]   [:th] [:th mh]   [:th ml]   [:th] [:th sh]   [:th sl]   [:th] [:th msh]   [:th msm]   [:th msl]]
-      [:tr [:th {:col-span 8} (render-count)]]]]))
+      [:tr
+       [:td] [:& bit {:n hl :b 3}] [:th]
+       [:td] [:& bit {:n ml :b 3}] [:th]
+       [:td] [:& bit {:n sl :b 3}] [:th]
+       [:& bit {:n msh :b 3}]
+       [:& bit {:n msm :b 3}]
+       [:& bit {:n msl :b 3}]]
+      [:tr
+       [:td] [:& bit {:n hl :b 2}] [:th]
+       [:& bit {:n mh :b 2}]
+       [:& bit {:n ml :b 2}] [:th]
+       [:& bit {:n sh :b 2}]
+       [:& bit {:n sl :b 2}] [:th]
+       [:& bit {:n msh :b 2}]
+       [:& bit {:n msm :b 2}]
+       [:& bit {:n msl :b 2}]]
+      [:tr
+       [:& bit {:n hh :b 1}]
+       [:& bit {:n hl :b 1}] [:th]
+       [:& bit {:n mh :b 1}]
+       [:& bit {:n ml :b 1}] [:th]
+       [:& bit {:n sh :b 1}]
+       [:& bit {:n sl :b 1}] [:th]
+       [:& bit {:n msh :b 1}]
+       [:& bit {:n msm :b 1}]
+       [:& bit {:n msl :b 1}]]
+      [:tr
+       [:& bit {:n hh :b 0}]
+       [:& bit {:n hl :b 0}] [:th]
+       [:& bit {:n mh :b 0}]
+       [:& bit {:n ml :b 0}] [:th]
+       [:& bit {:n sh :b 0}]
+       [:& bit {:n sl :b 0}] [:th]
+       [:& bit {:n msh :b 0}]
+       [:& bit {:n msm :b 0}]
+       [:& bit {:n msl :b 0}]]
+      [:tr
+       [:th hh]
+       [:th hl]
+       [:th]
+       [:th mh]
+       [:th ml]
+       [:th]
+       [:th sh]
+       [:th sl]
+       [:th]
+       [:th msh]
+       [:th msm]
+       [:th msl]]
+      [:tr
+       [:th {:col-span 8}
+        [:& render-count]]]]]))
 
-(defn mount! [el]
-  (mf/mount (mf/element binary-clock) el))
+(defn mount! []
+  (mf/mount (mf/element binary-clock) (dom/getElement "binary-clock")))
+

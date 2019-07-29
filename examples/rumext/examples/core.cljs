@@ -5,27 +5,26 @@
             [rumext.alpha :as mf]
             [rumext.examples.util :as util]
             [rumext.examples.binary-clock :as binary-clock]
-            [rumext.examples.timer-static :as timer-static]
             [rumext.examples.timer-reactive :as timer-reactive]
             [rumext.examples.local-state :as local-state]
             [rumext.examples.refs :as refs]
             [rumext.examples.controls :as controls]
             [rumext.examples.errors :as errors]
             [rumext.examples.board-reactive :as board-reactive]
+            [rumext.examples.board :as board]
             [rumext.examples.portals :as portals]
             [rumext.examples.bench]
             ))
 
 (enable-console-print!)
 
-(binary-clock/mount! (dom/getElement "binary-clock"))
-(timer-static/mount! (dom/getElement "timer-static"))
-(timer-reactive/mount! (dom/getElement "timer-reactive"))
+(binary-clock/mount!)
+(timer-reactive/mount!)
+(local-state/mount!)
 
-(local-state/mount! (dom/getElement "local-state"))
-
-(refs/mount! (dom/getElement "refs"))
-(controls/mount! (dom/getElement "controls"))
-(board-reactive/mount! (dom/getElement "board-reactive"))
-(portals/mount! (dom/getElement "portals"))
+;; (refs/mount! (dom/getElement "refs"))
+;; (controls/mount! (dom/getElement "controls"))
+(board-reactive/mount!)
+(board/mount!)
+;; (portals/mount! (dom/getElement "portals"))
 ;; (errors/mount! (util/el "errors"))
