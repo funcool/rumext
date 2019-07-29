@@ -2,6 +2,9 @@
 
 This is a friendly fork of [rum](https://github.com/tonsky/rum).
 
+**WARNING**: documentation outdated (look code and tests).
+
+
 ## Using rumext
 
 Add to deps.edn:

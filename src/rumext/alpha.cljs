@@ -67,6 +67,16 @@
 
     (unchecked-set ctor "displayName" display-name)
 
+    (unchecked-set ctor "getDerivedStateFromProps"
+                   (fn [props state]
+                     (let [lstate  @(unchecked-get state ":rumext.alpha/state")
+                           nprops  (util/wrap-props props)
+                           nstate  (assoc lstate ::props nprops)
+                           nstate  (reduce #(%2 %1) nstate derive-state)]
+                       ;; allocate new volatile
+                       ;; so that we can access both old and new states in shouldComponentUpdate
+                       #js {":rumext.alpha/state" (volatile! nstate)})))
+
     (unchecked-set prototype "render"
                    (fn []
                      (this-as this
@@ -82,16 +92,6 @@
                          (when-not (empty? will-unmount)
                            (vswap! lstate call-all will-unmount))
                          (unchecked-set this ":rumext.alpha/unmounted?" true)))))
-
-    (unchecked-set ctor "getDerivedStateFromProps"
-                   (fn [props state]
-                     (let [lstate  @(unchecked-get state ":rumext.alpha/state")
-                           nprops  (util/wrap-props props)
-                           nstate  (assoc lstate ::props nprops)
-                           nstate  (reduce #(%2 %1) nstate derive-state)]
-                       ;; allocate new volatile
-                       ;; so that we can access both old and new states in shouldComponentUpdate
-                       #js {":rumext.alpha/state" (volatile! nstate)})))
 
     (when-not (empty? did-mount)
       (unchecked-set prototype "componentDidMount"
@@ -325,7 +325,7 @@
      (dissoc state ::reactions ::reactions-key))
    })
 
-(defn deref
+(defn react
   "Works in conjunction with [[reactive]] mixin. Use this function
   instead of `deref` inside render, and your component will subscribe
   to changes happening to the derefed atom."
@@ -333,8 +333,6 @@
   (assert *reactions* "rumext.alpha/react is only supported in conjunction with rumext.alpha/reactive")
   (vswap! *reactions* conj ref)
   (cljs.core/deref ref))
-
-(def react deref)
 
 ;; --- Raw Hooks
 
@@ -423,31 +421,30 @@
      (vector? deps) (into-array deps)
      :else #js [deps])))
 
-(def ^:private +noop-sentinel+ (js/Symbol "noop"))
+(def ^:private +sentinel+ (js/Symbol "noop"))
 
 (defn- use-deref-impl
-  [{:keys [deps ref] :as opts}]
-  (let [[state reset-state!] (use-state* +noop-sentinel+)
-        key (use-memo* random-uuid, #js [])]
+  [iref]
+  (let [cache (use-ref +sentinel+)
+        state (use-state (int 0))
+        key (use-memo* random-uuid #js [iref])]
     (use-effect*
      (fn []
-       (add-watch ref key (fn [_ _ _ val] (reset-state! val)))
-       (fn [] (remove-watch ref key)))
-     (cond
-       (array? deps) deps
-       (true? deps) nil
-       (nil? deps) #js [ref]
-       (vector? deps) (into-array deps)
-       :else #js [deps]))
-    (if (identical? state +noop-sentinel+)
-      @ref
-      state)))
+       (add-watch iref key (fn [_ _ _ val]
+                             (reset! cache val)
+                             (swap! state inc)))
+       (fn []
+         (reset! cache +sentinel+)
+         (remove-watch iref key)))
+     #js [iref])
+    (let [result @cache]
+      (if (identical? result +sentinel+)
+        @iref
+        result))))
 
-(defn use-deref
-  [options]
-  (if (map? options)
-    (use-deref-impl options)
-    (use-deref-impl {:ref options})))
+(defn deref
+  [iref]
+  (use-deref-impl iref))
 
 ;; --- Higher-Order Components
 
