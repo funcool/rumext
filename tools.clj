@@ -16,18 +16,6 @@
     (println "Unknown or missing task. Choose one of:" interposed)
     (System/exit 1)))
 
-;; (defmethod task "test"
-;;   [[_ exclude]]
-;;   (let [tests (ef/find-tests "test")
-;;         tests (if (string? exclude)
-;;                 (ef/find-tests (symbol exclude))
-;;                 tests)]
-;;     (ef/run-tests tests
-;;                   {:fail-fast? true
-;;                    :capture-output? false
-;;                    :multithread? false})
-;;     (System/exit 1)))
-
 (defmethod task "repl"
   [args]
   (rebel-readline.core/with-line-reader
@@ -36,16 +24,6 @@
     (clojure.main/repl
      :prompt (fn []) ;; prompt is handled by line-reader
      :read (rebel-readline.clojure.main/create-repl-read))))3
-
-;; (def options
-;;   {:main 'rumext.examples.core
-;;    :output-to "out/main.js"
-;;    :output-dir "out"
-;;    :optimizations :none
-;;    :pretty-print true
-;;    :language-in  :ecmascript5
-;;    :language-out :ecmascript5
-;;    :verbose true})
 
 (def build-options
   {:main 'rumext.examples.core
@@ -83,6 +61,33 @@
   (figwheel/start
    figwheel-options
    {:id "dev" :options (assoc build-options :source-map true)}))
+
+(require '[badigeon.jar])
+(require '[badigeon.deploy])
+
+(defmethod task "jar"
+  [args]
+  (badigeon.jar/jar 'funcool/rumext
+                    {:mvn/version "2.0.0-SNAPSHOT"}
+                    {:out-path "target/rumext.jar"
+                     :mvn/repos '{"clojars" {:url "https://repo.clojars.org/"}}
+                     :allow-all-dependencies? false}))
+
+(defmethod task "deploy"
+  [args]
+  (let [artifacts [{:file-path "target/rumext.jar" :extension "jar"}
+                   {:file-path "pom.xml" :extension "pom"}]]
+    (badigeon.deploy/deploy
+     'funcool/rumext "2.0.0-SNAPSHOT"
+     artifacts
+     {:id "clojars" :url "https://repo.clojars.org/"}
+     {:allow-unsigned? true})))
+
+(defmethod task "build-and-deploy"
+  [args]
+  (task ["jar"])
+  (task ["deploy"]))
+
 
 ;;; Build script entrypoint. This should be the last expression.
 
