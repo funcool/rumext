@@ -2,16 +2,13 @@
 
 This is a friendly fork of [rum](https://github.com/tonsky/rum).
 
-**WARNING**: documentation outdated (look code and tests).
-
 
 ## Using rumext
 
 Add to deps.edn:
 
 ```
-funcool/rumext {:git/url "https://github.com/funcool/rumext.git"
-                :sha "23778a6f5999a9da5ffd4cfc7f7dd6ca82721f50"}
+funcool/rumext {:mvn/version "2.0.0-SNAPSHOT"}
 ```
 
 ## Differences with rum
@@ -55,11 +52,11 @@ Let's see an example of how to use rumext macros for define class
 based components.
 
 ```clojure
-(require '[rumext.alpha as mx])
+(require '[rumext.alpha as mf])
 
-(mx/def local-state
+(mf/def local-state
   :desc "A component docstring/description (optional)."
-  :mixins [(mx/local 0)]
+  :mixins [(mf/local 0)]
   :init
   (fn [own props]
     (println "Component initialized")
@@ -67,43 +64,50 @@ based components.
 
   :render
   (fn [own {:keys [title] :as props}]
-    (let [*count (::mx/local state)]
+    (let [*count (::mf/local state)]
       [:div {:on-click #(swap! *count inc)}
         [:span title ": " @*count]])))
+
+(mf/def parent-component
+  :render
+  (fn [own props]
+    [:section
+     [:h1 "Some title"]
+     [:& local-state {:title "Some title"}]]))
 ```
 
-This example uses the `mx/local` mixin that provides a local mutable stat
+This example uses the `mf/local` mixin that provides a local mutable stat
 to the component.
 
 
 ### Reactive Component
 
-You need to use the `mx/reactive` mixin and `mx/react` (instead of
+You need to use the `mf/reactive` mixin and `mf/react` (instead of
 deref) for deref the atom. Let's see an example:
 
 ```clojure
 (def count (atom 0))
 
-(mx/def counter
-  :mixins [mx/reactive]
+(mf/def counter
+  :mixins [mf/reactive]
   :render
   (fn [own props]
     [:div {:on-click #(swap! count inc)}
-      [:span "Clicks: " (mx/react count)]]))
+      [:span "Clicks: " (mf/react count)]]))
 
-(mx/mount (counter) js/document.body)
+(mf/mount (mf/element counter) js/document.body)
 ```
 
 ### Pure Component
 
 If you have a component that only accepts immutable data structures,
-you can use the `mx/static` mixin for avoid unnecesary renders if
+you can use the `mf/memo` mixin for avoid unnecesary renders if
 arguments does not change between them.
 
 
 ```clojure
-(mx/def title
-  :mixins [mx/static]
+(mf/def title
+  :mixins [mf/memo]
   :render
   (fn [_ {:keys [name]}]
     [:div {:class "label"} name]))
@@ -112,11 +116,18 @@ arguments does not change between them.
 So if we manuall trigger the component mounting, we will obtain:
 
 ```clojure
-(mx/mount (title "ciri") body)   ;; first render
-(mx/mount (title "ciri") body)   ;; second render: don't be rendered
-(mx/mount (title "geralt") body) ;; third render: re-render
-(mx/mount (title "geralt") body) ;; forth render:  don't be rendered
+(mf/mount (mf/element title {:name "ciri"}) body)   ;; first render
+(mf/mount (mf/element title {:name "ciri"}) body)   ;; second render: don't be rendered
+(mf/mount (mf/element title {:name "geralt"}) body) ;; third render: re-render
+(mf/mount (mf/element title {:name "geralt"}) body) ;; forth render:  don't be rendered
 ```
+
+The `mf/memo` mixin uses `indentical?` for compare props. If you want
+equality by value (using the `=` function), you can use `mf/pure`
+mixin.
+
+There also `mf/static` mixin that completelly prevents rerendering.
+
 
 ### Lifecycle Methods
 
@@ -152,54 +163,39 @@ docorate (wrap) with other higher-order components.
 Let's see a example of how to define a component:
 
 ```clojure
-(require '[rumext.alpha :as mx])
+(require '[rumext.alpha :as mf])
 
 (def title
-  (mx/fnc title [{:keys [name]}]
+  (mf/fnc title [{:keys [name]}]
     [:div {:class "label"} name]))
 ```
 
 The `fnc` is a `fn` analogous macro for creating function
-components. There are also `defnc` macro that behaves in the similar
+components. There are also `defc` macro that behaves in the similar
 way to the `defn`:
 
 ```clojure
-(mx/defnc title
+(mf/defc title
   [{:keys [name]}]
   [:div {:class "label"} name])
 ```
-
-Take care that function component macros does not returs factories,
-they return directly the component function. So you need to wrap it
-yourself in a react element or use the hicada facilities for it:
-
-```clojure
-;; mounting
-(mx/mount (mx/element title {:name "foobar"}) js/document.body)
-
-;; using it in other component
-(mx/defnc other-component
-  [props]
-  [:section
-    [:& title {:name "foobar"}]])
-```
-
 
 ### Higher-Order Components
 
 This is the way you have to extend/add additional functionality to a
 function component. Rumext exposes two:
 
-- `mx/reactive`: same functionality as `mx/reactive` in class based components.
-- `mx/memo`: same functionality as `mx/static` in class based components.
+- `mf/wrap-reactive`: same functionality as `mf/reactive` in class
+  based components.
+- `mf/wrap-memo`: same functionality as `mf/memo` in class based components.
 
 And you can use them in two ways, the traditional one that consists in direct
 wrapping a component with an other:
 
 ```clojure
 (def title
-  (mx/memo
-    (mx/fnc title [{:keys [name]}]
+  (mf/wrap-memo
+    (mf/fnc title [{:keys [name]}]
       [:div {:class "label"} name])))
 ```
 
@@ -207,15 +203,15 @@ Or using a special metadata syntax, that does the same thing but with
 less call ceremony:
 
 ```clojure
-(mx/defnc title
-  {:wrap [mx/memo]}
+(mf/defc title
+  {:wrap [mf/wrap-memo]}
   [props]
   [:div {:class "label"} (:name props)])
 ```
 
-NOTE: The `mx/reactive` higher-order component behind the scenes uses
+NOTE: The `mf/reactive` higher-order component behind the scenes uses
 **React Hooks** as internal primitives for implement the same behavior
-as the `mx/reactive` mixin on class components.
+as the `mf/reactive` mixin on class components.
 
 
 ### Hooks (React Hooks)
@@ -224,58 +220,115 @@ React hooks is a basic primitive that React exposes for add state and
 side-effects to functional components. Rumext exposes right now only
 three hooks with a ClojureScript based api.
 
-#### useState
+
+#### use-state (React.useState)
 
 Hook used for maintain a local state and in functional components
-replaces the `mx/local` mixin. Calling `mx/use-state` returns an
+replaces the `mf/local` mixin. Calling `mf/use-state` returns an
 atom-like object that will deref to the current value and you can call
 `swap!` and `reset!` on it for modify its state.
 
 Any mutation will schedule the component to be rerendered.
 
 ```clojure
-(require '[rumext.alpha as mx])
+(require '[rumext.alpha as mf])
 
-(mx/defnc local-state
+(mf/defc local-state
   [props]
-  (let [local (mx/use-state 0)]
+  (let [local (mf/use-state 0)]
     [:div {:on-click #(swap! local inc)}
       [:span "Clicks: " @local]]))
 
-(mx/mount (mx/element local-state) js/document.body)
+(mf/mount (mf/element local-state) js/document.body)
 ```
 
-#### useEffect
+#### use-ref (React.useRef)
+
+In the same way as `use-state` returns an atom like object. The unique
+difference is that updating the ref value does not schedules the
+component to rerender.
+
+
+#### use-effect (React.useEffect)
 
 This is a primitive that allows incorporate probably efectful code
-into a functional component.
+into a functional component:
 
 ```clojure
-(mx/defnc local-timer
+(mf/defc local-timer
   [props]
-  (let [local (mx/use-state 0)]
-    (mx/use-effect
+  (let [local (mf/use-state 0)]
+    (mf/use-effect
       :start (fn [] (js/setInterval #(swap! local inc) 1000))
       :end (fn [sem] (js/clearInterval sem)))
     [:div "Counter: " @local]))
 
-(mx/mount (mx/element local-state) js/document.body)
+(mf/mount (mf/element local-state) js/document.body)
 ```
 
 The `:start` callback will be called once the component mounts (like
 `did-mount`) and the `:end` callback will be caled once the component
 will unmounts (like `will-unmount`).
 
-There are an excepction when you pass a `:watch` parameter, that can
+There are an excepction when you pass a `:deps` parameter, that can
 change how many times `:start` will be executed:
 
-- `:watch nil` the default behavior explained before.
-- `:watch true` the `:start` callback will be executed after each
+- `:deps nil` the default behavior explained before.
+- `:deps true` the `:start` callback will be executed after each
   render (a combination of `did-mount` and `did-update` class based
   components).
-- `:watch [variable1 variable2]`: only execute `:start` when some of
+- `:deps [variable1 variable2]`: only execute `:start` when some of
   referenced variables changes.
 - `:watch []` the same as `:watch nil`.
+
+NOTE: for avoid vector to js-array conversion, you can pass directly a
+js array in `:deps`.
+
+
+#### use-memo (React.useMemo)
+
+The purpose of this hook is return a memoized value.
+
+Example:
+
+```clojure
+(mf/defc sample-component
+  [{:keys [x]}]
+  (let [v (mf/use-memo {:init #(pow x 10)
+                        :deps [x]})]
+    [:span "Value is:" v]))
+```
+
+On each render, while `x` has the same value, the `v` only will be
+calculated once.
+
+
+#### deref
+
+This is a custom hook, alternative to `mf/wrap-reactive` &
+`mf/react`.
+
+The purpose of this hook is reactivelly rerender component on
+a reference (atom-like object) changes.
+
+Example:
+
+```clojure
+(def clock (atom (.getTime (js/Date.))))
+(js/setInterval #(reset! clock (.getTime (js/Date.))) 160)
+
+(mf/defc timer
+  [props]
+  (let [ts (mf/deref clock)]
+    [:div "Timer (deref)" ": "
+     [:span ts]]))
+```
+
+#### Raw Hooks
+
+In some circumstances you will want access to the raw react hooks
+functions. For this purpose, rumext exposes the following functions:
+`use-state*`, `use-ref*`, `use-memo*` and `use-effect*`.
 
 
 ## License ##
