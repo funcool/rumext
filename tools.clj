@@ -7,7 +7,6 @@
          '[rebel-readline.clojure.line-reader]
          '[rebel-readline.clojure.service.local])
 
-
 (defmulti task first)
 
 (defmethod task :default

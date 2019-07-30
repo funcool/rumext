@@ -141,6 +141,7 @@
         ([this props]
          (let [props (cond
                        (map? props) (util/map->obj props)
+                       (nil? props) #js {}
                        (object? props) props
                        :else (throw (ex-info "Unexpected props" {:props props})))]
            (create-element @klass props)))))))

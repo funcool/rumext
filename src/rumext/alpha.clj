@@ -23,6 +23,8 @@
         (list* 'js* (str "{" kvs-str "}") (mapv identity (vals m)))
         assoc :tag 'object))))
 
+(create-ns 'rumext.util)
+
 (def handlers
   {:& (fn
         ([_ klass]
@@ -32,7 +34,7 @@
          (let [klass `(if (delay? ~klass) (deref ~klass) ~klass)]
            (if (map? props)
              [klass (to-js-map props) nil]
-             [klass props nil]))))})
+             [klass (list 'rumext.util/map->obj props) nil]))))})
 
 (defmacro html
   [body]

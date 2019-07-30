@@ -47,7 +47,7 @@
         ctor           (fn [props]
                          (this-as this
                            (let [lprops (unchecked-get props ":rumext.core/props")
-                                 lstate (-> {::props lprops ::react-component this}
+                                 lstate (-> {::props lprops ::ra/react-component this}
                                             (call-all init lprops))]
                              (unchecked-set this "state" #js {":rumext.core/state" (volatile! lstate)})
                              (.call js/React.Component this props))))
@@ -154,7 +154,7 @@
     (build-legacy-elem render mixins display-name)))
 
 (defn build-defcc [render-body mixins display-name]
-  (let [render (fn [state] [(apply render-body (::react-component state) (::props state)) state])]
+  (let [render (fn [state] [(apply render-body (::ra/react-component state) (::props state)) state])]
     (build-legacy-elem render mixins display-name)))
 
 ;; Backward compatibility
@@ -170,11 +170,7 @@
 (def ref-val ra/ref-val)
 (def sync-render ra/sync-render)
 (def react ra/react)
-
-(defn react-component
-  "Given state, returns react component associated with."
-  [state]
-  (::react-component state))
+(def react-component ra/react-component)
 
 (def static
   {:should-update (fn [old-state new-state]
@@ -188,7 +184,7 @@
    (fn [render-fn]
      (fn [state]
        (binding [ra/*reactions* (volatile! #{})]
-         (let [comp             (::react-component state)
+         (let [comp             (::ra/react-component state)
                old-reactions    (::reactions state #{})
                [dom next-state] (render-fn state)
                new-reactions    (deref ra/*reactions*)
@@ -219,7 +215,7 @@
    {:init
     (fn [state props]
       (let [lstate (atom initial)
-            component (::react-component state)]
+            component (::ra/react-component state)]
         (if (::sync-render state)
           (add-watch lstate key #(ra/force-render component))
           (add-watch lstate key #(ra/request-render component)))
@@ -230,5 +226,5 @@
   ([ref]
    (js/ReactDOM.findDOMNode (ref-val ref)))
   ([state key]
-   (let [ref (-> state ::react-component (gobj/get "refs") (gobj/get (name key)))]
+   (let [ref (-> state ::ra/react-component (gobj/get "refs") (gobj/get (name key)))]
      (js/ReactDOM.findDOMNode ref))))
