@@ -22,8 +22,8 @@
 (timer-reactive/mount!)
 (local-state/mount!)
 
-;; (refs/mount! (dom/getElement "refs"))
-;; (controls/mount! (dom/getElement "controls"))
+(refs/mount!)
+(controls/mount!)
 (board-reactive/mount!)
 (board/mount!)
 ;; (portals/mount! (dom/getElement "portals"))

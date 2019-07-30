@@ -1,5 +1,6 @@
 (ns rumext.examples.refs
-  (:require [rumext.core :as mx]))
+  (:require [goog.dom :as dom]
+            [rumext.core :as mx]))
 
 (mx/defcs ta
   {:init
@@ -30,5 +31,5 @@
   []
   [:div (ta)])
 
-(defn mount! [el]
-  (mx/mount (refs) el))
+(defn mount! []
+  (mx/mount (refs) (dom/getElement "refs")))

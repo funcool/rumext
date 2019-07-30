@@ -169,8 +169,12 @@
 (def create-ref ra/create-ref)
 (def ref-val ra/ref-val)
 (def sync-render ra/sync-render)
-(def react ra/deref)
-(def react-component ra/react-component)
+(def react ra/react)
+
+(defn react-component
+  "Given state, returns react component associated with."
+  [state]
+  (::react-component state))
 
 (def static
   {:should-update (fn [old-state new-state]

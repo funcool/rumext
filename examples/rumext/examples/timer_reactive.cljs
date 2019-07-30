@@ -6,18 +6,17 @@
 (mf/defc timer1
   {:wrap [mf/wrap-reactive]}
   [props]
-  (let [ts (mf/deref util/*clock)]
+  (let [ts (mf/react util/*clock)]
     [:div "Timer (wrap-reactive)" ": "
      [:span {:style {:color @util/*color}}
       (util/format-time ts)]]))
 
 (mf/defc timer2
   [props]
-  (let [ts (mf/use-deref util/*clock)]
+  (let [ts (mf/deref util/*clock)]
     [:div "Timer (use-watch)" ": "
      [:span {:style {:color @util/*color}}
       (util/format-time ts)]]))
-
 
 (mf/defc timer3
   [{:keys [ts] :as props}]
@@ -35,8 +34,8 @@
 
   (add-watch util/*clock :timer-static
              (fn [_ _ _ ts]
-                 (mf/mount (mf/element timer3 {:ts ts})
-                           (dom/getElement "timer3")))))
+               (mf/mount (mf/element timer3 {:ts ts})
+                         (dom/getElement "timer3")))))
 
 
 

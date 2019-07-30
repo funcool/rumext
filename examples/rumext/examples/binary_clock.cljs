@@ -9,7 +9,7 @@
   :mixins [mf/reactive]
   :render
   (fn [own props]
-    [:div.stats "Renders: " (mf/deref *bclock-renders)]))
+    [:div.stats "Renders: " (mf/react *bclock-renders)]))
 
 (mf/def bit
   :mixins [mf/memo mf/reactive]
@@ -21,14 +21,14 @@
 
   :render
   (fn [own {:keys [n b] :as props}]
-    (let [color (mf/deref util/*color)]
+    (let [color (mf/react util/*color)]
       (if (bit-test n b)
         [:td.bclock-bit {:style {:background-color color}}]
         [:td.bclock-bit {}]))))
 
 (mf/defc binary-clock
   []
-  (let [ts   (mf/use-deref util/*clock)
+  (let [ts   (mf/deref util/*clock)
         msec (mod ts 1000)
         sec  (mod (quot ts 1000) 60)
         min  (mod (quot ts 60000) 60)

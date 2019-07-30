@@ -4,7 +4,7 @@
 
 (defonce *clock (atom (.getTime (js/Date.))))
 (defonce *color (atom "#FA8D97"))
-(defonce *speed (atom 150))
+(defonce *speed (atom 160))
 
 ;; Start clock ticking
 (defn tick []
@@ -34,9 +34,9 @@
 (mf/def watches-count
   :mixins [(periodic-refresh 1000)]
   :render
-  (fn [own ref]
+  (fn [own {:keys [iref]}]
     [ref]
-    [:span (count (.-watches ref))]))
+    [:span (count (.-watches iref))]))
 
 ;; Generic board utils
 
@@ -59,7 +59,7 @@
   :render
   (fn [own [*board *renders]]
     [:div.stats
-     "Renders: "       (mf/deref *renders)
+     "Renders: "       (mf/react *renders)
      [:br]
      "Board watches: " (watches-count *board)
      [:br]
