@@ -30,11 +30,11 @@
         ([_ klass]
          (let [klass `(if (delay? ~klass) (deref ~klass) ~klass)]
            [klass {} nil]))
-        ([_ klass props]
+        ([_ klass props & children]
          (let [klass `(if (delay? ~klass) (deref ~klass) ~klass)]
            (if (map? props)
-             [klass (to-js-map props) nil]
-             [klass (list 'rumext.util/map->obj props) nil]))))})
+             [klass (to-js-map props) children]
+             [klass (list 'rumext.util/map->obj props) children]))))})
 
 (defmacro html
   [body]
