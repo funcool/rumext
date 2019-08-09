@@ -43,6 +43,13 @@
               :array-children? false}]
     (-> body (hicada.compiler/compile opts handlers &env))))
 
+(defmethod hc/compile-form "cond"
+  [[_ & clauses]]
+  `(cond ~@(doall
+            (mapcat
+             (fn [[check expr]] [check (hc/compile-html expr)])
+             (partition 2 clauses))))
+
 (defmethod hc/compile-form "letfn"
   [[_ bindings & body]]
   `(letfn ~bindings ~@(butlast body) ~(hc/emitter (last body))))
