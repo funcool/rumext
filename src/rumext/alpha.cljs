@@ -435,6 +435,34 @@
   ([f deps]
    (use-effect-impl f identity deps)))
 
+(defn- use-layout-effect-impl
+  [init end deps]
+  (useLayoutEffect
+   (fn []
+     (let [r (init)]
+       (fn [] (end r))))
+   (cond
+     (nil? deps) #js []
+     (array? deps) deps
+     (true? deps) nil
+     (vector? deps) (into-array deps)
+     :else #js [deps])))
+
+(defn use-layout-effect
+  ([fn-or-opts]
+   (cond
+     (fn? fn-or-opts)
+     (use-layout-effect-impl fn-or-opts identity nil)
+
+     (map? fn-or-opts)
+     (use-layout-effect-impl (:init fn-or-opts identity)
+                      (:end fn-or-opts identity)
+                      (:deps fn-or-opts))
+     :else
+     (throw (ex-info "Invalid arguments" {}))))
+  ([f deps]
+   (use-layout-effect-impl f identity deps)))
+
 (defn- use-memo-impl
   [init deps]
   (useMemo
