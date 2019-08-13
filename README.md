@@ -328,7 +328,7 @@ Example:
 
 In some circumstances you will want access to the raw react hooks
 functions. For this purpose, rumext exposes the following functions:
-`use-state*`, `use-ref*`, `use-memo*` and `use-effect*`.
+`useState`, `useRef`, `useMemo` and `useEffect`.
 
 
 ## License ##
