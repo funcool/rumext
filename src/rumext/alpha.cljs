@@ -357,6 +357,10 @@
   [f deps]
   (js/React.useMemo f deps))
 
+(defn useLayoutEffect
+  [f deps]
+  (js/React.useLayoutEffect f deps))
+
 ;; --- Hooks
 
 ;; The cljs version of use-ref is identical to the raw (no
@@ -408,11 +412,9 @@
       (-deref [self] (ref-val ref)))))
 
 (defn- use-effect-impl
-  [init end deps]
+  [f deps]
   (useEffect
-   (fn []
-     (let [r (init)]
-       (fn [] (end r))))
+   #(let [r (f)] (if (fn? r) r (constantly nil)))
    (cond
      (nil? deps) #js []
      (array? deps) deps
@@ -424,23 +426,20 @@
   ([fn-or-opts]
    (cond
      (fn? fn-or-opts)
-     (use-effect-impl fn-or-opts identity nil)
+     (use-effect-impl fn-or-opts nil)
 
      (map? fn-or-opts)
-     (use-effect-impl (:init fn-or-opts identity)
-                      (:end fn-or-opts identity)
+     (use-effect-impl (:fn fn-or-opts)
                       (:deps fn-or-opts))
      :else
      (throw (ex-info "Invalid arguments" {}))))
   ([f deps]
-   (use-effect-impl f identity deps)))
+   (use-effect-impl f deps)))
 
 (defn- use-layout-effect-impl
-  [init end deps]
+  [f deps]
   (useLayoutEffect
-   (fn []
-     (let [r (init)]
-       (fn [] (end r))))
+   #(let [r (f)] (if (fn? r) r (constantly nil)))
    (cond
      (nil? deps) #js []
      (array? deps) deps
@@ -452,21 +451,20 @@
   ([fn-or-opts]
    (cond
      (fn? fn-or-opts)
-     (use-layout-effect-impl fn-or-opts identity nil)
+     (use-layout-effect-impl fn-or-opts nil)
 
      (map? fn-or-opts)
-     (use-layout-effect-impl (:init fn-or-opts identity)
-                      (:end fn-or-opts identity)
-                      (:deps fn-or-opts))
+     (use-layout-effect-impl (:fn fn-or-opts)
+                             (:deps fn-or-opts))
      :else
      (throw (ex-info "Invalid arguments" {}))))
   ([f deps]
-   (use-layout-effect-impl f identity deps)))
+   (use-layout-effect-impl f deps)))
 
 (defn- use-memo-impl
-  [init deps]
+  [f deps]
   (useMemo
-   (fn [] (init deps))
+   (fn [] (f))
    (cond
      (nil? deps) #js []
      (array? deps) deps
@@ -481,7 +479,7 @@
      (use-memo-impl fn-or-opts nil)
 
      (map? fn-or-opts)
-     (use-memo-impl (:init fn-or-opts)
+     (use-memo-impl (:fn fn-or-opts)
                     (:deps fn-or-opts))
      :else
      (throw (ex-info "Invalid arguments" {}))))
@@ -521,7 +519,7 @@
                     trigger-render #(update-state! (fn [v] (unchecked-inc-int v)))
                     old-reactions (cljs.core/deref reactions)]
                 (use-effect
-                 {:end #(run! (fn [ref] (remove-watch ref key)) @reactions)})
+                 {:fn (constantly #(run! (fn [ref] (remove-watch ref key)) @reactions))})
 
                 (run! (fn [ref]
                         (when-not (contains? new-reactions ref)
