@@ -48,7 +48,7 @@
   `(cond ~@(doall
             (mapcat
              (fn [[check expr]] [check (hc/compile-html expr)])
-             (partition 2 clauses))))
+             (partition 2 clauses)))))
 
 (defmethod hc/compile-form "letfn"
   [[_ bindings & body]]

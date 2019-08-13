@@ -35,7 +35,6 @@
   :mixins [(periodic-refresh 1000)]
   :render
   (fn [own {:keys [iref]}]
-    [ref]
     [:span (count (.-watches iref))]))
 
 ;; Generic board utils

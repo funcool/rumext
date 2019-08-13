@@ -245,7 +245,11 @@
 (defn ref-val
   "Given state and ref handle, returns React component."
   [ref]
-  (gobj/get ref "current"))
+  (unchecked-get ref "current"))
+
+(defn set-ref-val!
+  [ref val]
+  (unchecked-set ref "current" val))
 
 (defn ref-node
   "Given state and ref handle, returns DOM node associated with ref."
@@ -274,7 +278,7 @@
 ;; local mixin
 
 (def sync-render
-  "A special mixin for mark posible renders of the component tu use
+  "A special mixin for mark posible renders of the component to use
   synchronous rendering (async by default). Mainly needed for forms
   related pages."
   {:init (fn [own props] (assoc own ::sync-render true))})
@@ -297,7 +301,7 @@
 (def reactive
   {:init
    (fn [state props]
-     (assoc state ::reactions-key (random-uuid)))
+     (assoc state ::reactions-key (gensym "reactive")))
    :wrap-render
    (fn [render-fn]
      (fn [state]
@@ -337,27 +341,31 @@
 
 ;; --- Raw Hooks
 
-(defn use-state*
-  [initial]
-  (js/React.useState initial))
-
-(defn use-ref*
+(defn useRef
   [initial]
   (js/React.useRef initial))
 
-(defn use-effect*
+(defn useState
+  [initial]
+  (js/React.useState initial))
+
+(defn useEffect
   [f deps]
   (js/React.useEffect f deps))
 
-(defn use-memo*
+(defn useMemo
   [f deps]
   (js/React.useMemo f deps))
 
 ;; --- Hooks
 
+;; The cljs version of use-ref is identical to the raw (no
+;; customizations/adaptations needed)
+(def use-ref useRef)
+
 (defn use-state
   [initial]
-  (let [[state set-state] (use-state* initial)]
+  (let [[state set-state] (useState initial)]
     (reify
       cljs.core/IReset
       (-reset! [_ new-value]
@@ -376,72 +384,96 @@
      cljs.core/IDeref
      (-deref [self] state))))
 
-(defn use-ref
+(defn use-var
+  "A custom hook for define mutable variables that persists
+  on renders (based on useRef hook)."
   [initial]
-  (let [ref (use-ref* initial)]
+  (let [ref (useRef initial)]
     (reify
       cljs.core/IReset
       (-reset! [_ new-value]
-        (set! (.-current ref) new-value))
+        (set-ref-val! ref new-value))
 
       cljs.core/ISwap
       (-swap! [self f]
-        (set! (.-current ref) (f (.-current ref))))
+        (set-ref-val! ref (f (ref-val ref))))
       (-swap! [self f x]
-        (set! (.-current ref) (f (.-current ref) x)))
+        (set-ref-val! ref (f (ref-val ref) x)))
       (-swap! [self f x y]
-        (set! (.-current ref) (f (.-current ref) x y)))
+        (set-ref-val! ref (f (ref-val ref) x y)))
       (-swap! [self f x y more]
-        (set! (.-current ref) (apply f (.-current ref) x y more)))
+        (set-ref-val! ref (apply f (ref-val ref) x y more)))
 
       cljs.core/IDeref
-      (-deref [self] (.-current ref)))))
+      (-deref [self] (ref-val ref)))))
 
-(defn use-effect
-  [{:keys [init end deps] :or {init identity end identity}}]
-  (use-effect*
+(defn- use-effect-impl
+  [init end deps]
+  (useEffect
    (fn []
-     (let [r (init deps)]
+     (let [r (init)]
        (fn [] (end r))))
-
    (cond
+     (nil? deps) #js []
      (array? deps) deps
      (true? deps) nil
+     (vector? deps) (into-array deps)
+     :else #js [deps])))
+
+(defn use-effect
+  ([fn-or-opts]
+   (cond
+     (fn? fn-or-opts)
+     (use-effect-impl fn-or-opts identity nil)
+
+     (map? fn-or-opts)
+     (use-effect-impl (:init fn-or-opts identity)
+                      (:end fn-or-opts identity)
+                      (:deps fn-or-opts))
+     :else
+     (throw (ex-info "Invalid arguments" {}))))
+  ([f deps]
+   (use-effect-impl f identity deps)))
+
+(defn- use-memo-impl
+  [init deps]
+  (useMemo
+   (fn [] (init deps))
+   (cond
      (nil? deps) #js []
+     (array? deps) deps
+     (true? deps) nil
      (vector? deps) (into-array deps)
      :else #js [deps])))
 
 (defn use-memo
-  [{:keys [deps init]}]
-  (use-memo*
-   (fn [] (init deps))
+  ([fn-or-opts]
    (cond
-     (array? deps) deps
-     (true? deps) nil
-     (nil? deps) #js []
-     (vector? deps) (into-array deps)
-     :else #js [deps])))
+     (fn? fn-or-opts)
+     (use-memo-impl fn-or-opts nil)
+
+     (map? fn-or-opts)
+     (use-memo-impl (:init fn-or-opts)
+                    (:deps fn-or-opts))
+     :else
+     (throw (ex-info "Invalid arguments" {}))))
+  ([f deps]
+   (use-memo-impl f deps)))
 
 (def ^:private +sentinel+ (js/Symbol "noop"))
 
 (defn- use-deref-impl
   [iref]
-  (let [cache (use-ref +sentinel+)
-        state (use-state (int 0))
-        key (use-memo* random-uuid #js [iref])]
-    (use-effect*
+  (let [[state set-state!] (useState +sentinel+)]
+    (useEffect
      (fn []
-       (add-watch iref key (fn [_ _ _ val]
-                             (reset! cache val)
-                             (swap! state inc)))
-       (fn []
-         (reset! cache +sentinel+)
-         (remove-watch iref key)))
+       (let [key (gensym "use-deref")]
+         (add-watch iref key #(set-state! %4))
+         (fn [] (remove-watch iref key))))
      #js [iref])
-    (let [result @cache]
-      (if (identical? result +sentinel+)
-        @iref
-        result))))
+    (if (identical? state +sentinel+)
+      @iref
+      state)))
 
 (defn deref
   [iref]
@@ -453,17 +485,15 @@
   [component]
   (letfn [(wrapper [props]
             (binding [*reactions* (volatile! #{})]
-              (let [key-ref (use-ref (random-uuid))
-                    reactions-ref (use-ref #{})
-                    state (use-state (int 0))
+              (let [key (useMemo random-uuid #js [])
+                    reactions (use-var #{})
+                    [state update-state!] (useState (int 0))
                     dom (component props)
                     new-reactions (cljs.core/deref *reactions*)
-                    trigger-render #(swap! state unchecked-inc-int)
-                    old-reactions (cljs.core/deref reactions-ref)
-                    key (cljs.core/deref key-ref)]
-
+                    trigger-render #(update-state! (fn [v] (unchecked-inc-int v)))
+                    old-reactions (cljs.core/deref reactions)]
                 (use-effect
-                 {:end #(run! (fn [ref] (remove-watch ref key)) @reactions-ref)})
+                 {:end #(run! (fn [ref] (remove-watch ref key)) @reactions)})
 
                 (run! (fn [ref]
                         (when-not (contains? new-reactions ref)
@@ -472,11 +502,11 @@
                         (when-not (contains? old-reactions ref)
                           (add-watch ref key trigger-render))) new-reactions)
 
-                (reset! reactions-ref new-reactions)
+                (reset! reactions new-reactions)
                 dom)))]
-    (unchecked-set wrapper "displayName" (.-displayName component))
+    (->> (unchecked-get component "displayName")
+         (unchecked-set wrapper "displayName"))
     wrapper))
-
 
 (defn wrap-memo
   ([component]

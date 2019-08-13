@@ -1,11 +1,19 @@
 (require '[clojure.java.shell :as shell])
 (require '[figwheel.main.api :as figwheel])
-(require '[cljs.build.api :as api])
+
+(require '[cljs.build.api :as api]
+         '[cljs.repl :as repl]
+         '[cljs.repl.node :as node])
+
+(require '[badigeon.jar])
+(require '[badigeon.deploy])
 
 (require '[rebel-readline.core]
          '[rebel-readline.clojure.main]
          '[rebel-readline.clojure.line-reader]
-         '[rebel-readline.clojure.service.local])
+         '[rebel-readline.clojure.service.local]
+         '[rebel-readline.cljs.service.local]
+         '[rebel-readline.cljs.repl])
 
 (defmulti task first)
 
@@ -23,7 +31,19 @@
      (rebel-readline.clojure.service.local/create))
     (clojure.main/repl
      :prompt (fn []) ;; prompt is handled by line-reader
-     :read (rebel-readline.clojure.main/create-repl-read))))3
+     :read (rebel-readline.clojure.main/create-repl-read))))
+
+(defmethod task "node:repl"
+  [args]
+  (rebel-readline.core/with-line-reader
+    (rebel-readline.clojure.line-reader/create
+     (rebel-readline.cljs.service.local/create))
+    (cljs.repl/repl
+     (node/repl-env)
+     :prompt (fn []) ;; prompt is handled by line-reader
+     :read (rebel-readline.cljs.repl/create-repl-read)
+     :output-dir "out/repl"
+     :cache-analysis false)))
 
 (def build-options
   {:main 'rumext.examples.core
@@ -61,9 +81,6 @@
   (figwheel/start
    figwheel-options
    {:id "dev" :options (assoc build-options :source-map true)}))
-
-(require '[badigeon.jar])
-(require '[badigeon.deploy])
 
 (defmethod task "jar"
   [args]
