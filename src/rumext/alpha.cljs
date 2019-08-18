@@ -501,38 +501,13 @@
 
 ;; --- Higher-Order Components
 
-(defn wrap-reactive
-  [component]
-  (letfn [(wrapper [props]
-            (binding [*reactions* (volatile! #{})]
-              (let [key (useMemo random-uuid #js [])
-                    reactions (use-var #{})
-                    [state update-state!] (useState (int 0))
-                    dom (component props)
-                    new-reactions (cljs.core/deref *reactions*)
-                    trigger-render #(update-state! (fn [v] (unchecked-inc-int v)))
-                    old-reactions (cljs.core/deref reactions)]
-                (use-effect
-                 {:fn (constantly #(run! (fn [ref] (remove-watch ref key)) @reactions))})
-
-                (run! (fn [ref]
-                        (when-not (contains? new-reactions ref)
-                          (remove-watch ref key))) old-reactions)
-                (run! (fn [ref]
-                        (when-not (contains? old-reactions ref)
-                          (add-watch ref key trigger-render))) new-reactions)
-
-                (reset! reactions new-reactions)
-                dom)))]
-    (->> (unchecked-get component "displayName")
-         (unchecked-set wrapper "displayName"))
-    wrapper))
-
 (defn wrap-memo
   ([component]
    (js/React.memo component))
   ([component eq?]
    (js/React.memo component #(util/props-equals? eq? %1 %2))))
+
+;; --- Other API
 
 (defn element
   ([klass]
