@@ -488,22 +488,16 @@
 
 (def ^:private +sentinel+ (js/Symbol "noop"))
 
-(defn- use-deref-impl
+(defn deref
   [iref]
-  (let [[state set-state!] (useState +sentinel+)]
+  (let [[state set-state!] (useState #(cljs.core/deref iref))]
     (useEffect
      (fn []
        (let [key (gensym "use-deref")]
          (add-watch iref key #(set-state! %4))
          (fn [] (remove-watch iref key))))
      #js [iref])
-    (if (identical? state +sentinel+)
-      @iref
-      state)))
-
-(defn deref
-  [iref]
-  (use-deref-impl iref))
+    state))
 
 ;; --- Higher-Order Components
 
