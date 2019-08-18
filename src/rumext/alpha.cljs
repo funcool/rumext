@@ -357,6 +357,10 @@
   [f deps]
   (js/React.useMemo f deps))
 
+(defn useCallback
+  [f deps]
+  (js/React.useCallback f deps))
+
 (defn useLayoutEffect
   [f deps]
   (js/React.useLayoutEffect f deps))
@@ -486,7 +490,30 @@
   ([f deps]
    (use-memo-impl f deps)))
 
-(def ^:private +sentinel+ (js/Symbol "noop"))
+(defn- use-callback-impl
+  [f deps]
+  (useCallback
+   (if (fn? f) f (fn [] (f)))
+   (cond
+     (nil? deps) #js []
+     (array? deps) deps
+     (true? deps) nil
+     (vector? deps) (into-array deps)
+     :else #js [deps])))
+
+(defn use-callback
+  ([fn-or-opts]
+   (cond
+     (fn? fn-or-opts)
+     (use-callback-impl fn-or-opts nil)
+
+     (map? fn-or-opts)
+     (use-callback-impl (:fn fn-or-opts)
+                        (:deps fn-or-opts))
+     :else
+     (throw (ex-info "Invalid arguments" {}))))
+  ([f deps]
+   (use-callback-impl f deps)))
 
 (defn deref
   [iref]
