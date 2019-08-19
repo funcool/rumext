@@ -1,5 +1,5 @@
-{:deps {cljsjs/react {:mvn/version "16.8.6-0"}
-        cljsjs/react-dom {:mvn/version "16.8.6-0"}
+{:deps {cljsjs/react {:mvn/version "16.9.0-0"}
+        cljsjs/react-dom {:mvn/version "16.9.0-0"}
         hicada/hicada {:mvn/version "0.1.8"}}
  :paths ["src"]
  :aliases {:dev {:extra-paths ["examples" "target"]
