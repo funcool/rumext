@@ -5,12 +5,12 @@
 
 ;; generic “atom editor” component
 (mf/defc input
-  {:wrap [mf/wrap-reactive]}
   [{:keys [color] :as props}]
-  [:input {:type "text"
-           :value (mf/react color)
-           :style {:width 100}
-           :on-change #(reset! color (.. % -target -value))}])
+  (let [value (mf/deref color)]
+    [:input {:type "text"
+             :value value
+             :style {:width 100}
+             :on-change #(reset! color (.. % -target -value))}]))
 
 ;; Raw top-level component, everything interesting is happening inside
 (mf/defc controls
