@@ -26,5 +26,3 @@
 (controls/mount!)
 (board-reactive/mount!)
 (board/mount!)
-;; (portals/mount! (dom/getElement "portals"))
-;; (errors/mount! (util/el "errors"))

@@ -6,7 +6,7 @@
 (mf/defc timer1
   [props]
   (let [ts (mf/deref util/*clock)]
-    [:div "Timer (use-watch)" ": "
+    [:div "Timer (deref)" ": "
      [:span {:style {:color @util/*color}}
       (util/format-time ts)]]))
 
@@ -18,9 +18,9 @@
 
 (defn mount! []
   (mf/mount (mf/element timer1)
-            (dom/getElement "timer2"))
+            (dom/getElement "timer1"))
   (mf/mount (mf/element timer2 {:ts @util/*clock})
-            (dom/getElement "timer3"))
+            (dom/getElement "timer2"))
 
   (add-watch util/*clock :timer-static
              (fn [_ _ _ ts]
