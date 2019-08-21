@@ -49,7 +49,8 @@
                            (let [lprops (unchecked-get props ":rumext.core/props")
                                  lstate (-> {::props lprops ::ra/react-component this}
                                             (call-all init lprops))]
-                             (unchecked-set this "state" #js {":rumext.core/state" (volatile! lstate)})
+                             (unchecked-set this "state" #js {":rumext.core/state" (volatile! lstate)
+                                                              ":rumext.alpha/renders" -9007199254740991})
                              (.call js/React.Component this props))))
         _              (goog/inherits ctor js/React.Component)
         prototype      (unchecked-get ctor "prototype")]
@@ -168,7 +169,6 @@
 (def dom-node ra/dom-node)
 (def create-ref ra/create-ref)
 (def ref-val ra/ref-val)
-(def sync-render ra/sync-render)
 (def react ra/react)
 (def react-component ra/react-component)
 

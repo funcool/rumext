@@ -57,7 +57,8 @@
                            (let [lprops (util/wrap-props props)
                                  lstate (-> {::props lprops ::react-component this}
                                             (call-all init lprops))]
-                             (unchecked-set this "state" #js {":rumext.alpha/state" (volatile! lstate)})
+                             (unchecked-set this "state" #js {":rumext.alpha/state" (volatile! lstate)
+                                                              ":rumext.alpha/renders" -9007199254740991})
                              (.call js/React.Component this props))))
         _              (goog/inherits ctor js/React.Component)
         prototype      (unchecked-get ctor "prototype")]
@@ -159,37 +160,16 @@
   (let [render (fn [state] [(render-body state (::props state)) state])]
     (build-class render mixins display-name)))
 
-;; render queue
-
-(def ^:private schedule
-  "Use raf if exsits, if not, schedule is synchronous."
-  (let [raf (unchecked-get js/window "requestAnimationFrame")]
-    (if (fn? raf) raf (fn [f] (f)))))
-
-(def ^:private batch
-  (let [ubu (unchecked-get js/ReactDOM "unstable_batchedUpdates")]
-    (if (fn? ubu) ubu (fn [f a] (f a)))))
-
-(def ^:private empty-queue [])
-(def ^:private render-queue (volatile! empty-queue))
-
-(defn- render-all [queue]
-  (let [not-unmounted? #(not (gobj/get % ":rumext.alpha/unmounted?"))]
-    (run! #(.forceUpdate %) (filter not-unmounted? queue))))
-
-(defn- render []
-  (let [queue @render-queue]
-    (vreset! render-queue empty-queue)
-    (batch render-all queue)))
-
 ;; --- Main Api
 
 (defn request-render
   "Schedules react component to be rendered on next animation frame."
   [component]
-  (when (empty? @render-queue)
-    (schedule render))
-  (vswap! render-queue conj component))
+  (letfn [(updater [state]
+            (unchecked-set state ":rumext.alpha/renders"
+                           (unchecked-inc (unchecked-get state ":rumext.alpha/renders")))
+            state)]
+    (.setState component updater)))
 
 (defn force-render
   "Schedules react component to be rendered on next animation frame."
@@ -277,12 +257,6 @@
 
 ;; local mixin
 
-(def sync-render
-  "A special mixin for mark posible renders of the component to use
-  synchronous rendering (async by default). Mainly needed for forms
-  related pages."
-  {:init (fn [own props] (assoc own ::sync-render true))})
-
 (defn local
   ([] (local {} ::local))
   ([initial] (local initial ::local))
@@ -291,9 +265,7 @@
     (fn [state props]
       (let [lstate (atom initial)
             component (::react-component state)]
-        (if (::sync-render state)
-          (add-watch lstate key #(force-render component))
-          (add-watch lstate key #(request-render component)))
+        (add-watch lstate key #(request-render component))
         (assoc state key lstate)))}))
 
 (def ^:dynamic *reactions*)
@@ -310,9 +282,7 @@
                old-reactions    (::reactions state #{})
                [dom next-state] (render-fn state)
                new-reactions    (cljs.core/deref *reactions*)
-               key              (::reactions-key state)
-               sync-render?     (::sync-render state)]
-
+               key              (::reactions-key state)]
            (run! (fn [ref]
                    (when-not (contains? new-reactions ref)
                      (remove-watch ref key))) old-reactions)
@@ -320,10 +290,9 @@
                    (when-not (contains? old-reactions ref)
                      (add-watch ref key
                                 (fn [_ _ _ _]
-                                  (if sync-render?
-                                    (force-render comp)
-                                    (request-render comp)))))) new-reactions)
+                                  (request-render comp))))) new-reactions)
            [dom (assoc next-state ::reactions new-reactions)]))))
+
    :will-unmount
    (fn [{:keys [::reactions-key ::reactions] :as state}]
      (run! (fn [ref] (remove-watch ref reactions-key)) reactions)
