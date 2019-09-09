@@ -486,13 +486,16 @@
 
 (defn deref
   [iref]
-  (let [[state set-state!] (useState #(cljs.core/deref iref))]
+  (let [[state set-state!] (useState #(cljs.core/deref iref))
+        key (useMemo
+             (fn []
+               (let [key (gensym "use-deref")]
+                 (add-watch iref key #(set-state! %4))
+                 key))
+             #js [iref])]
     (useEffect
-     (fn []
-       (let [key (gensym "use-deref")]
-         (add-watch iref key #(set-state! %4))
-         (fn [] (remove-watch iref key))))
-     #js [iref])
+     (fn [] (fn [] (remove-watch iref key)))
+     #js [key])
     state))
 
 ;; --- Higher-Order Components
