@@ -24,7 +24,7 @@
     (println "Unknown or missing task. Choose one of:" interposed)
     (System/exit 1)))
 
-(defmethod task "repl"
+(defmethod task "repl:jvm"
   [args]
   (rebel-readline.core/with-line-reader
     (rebel-readline.clojure.line-reader/create
@@ -82,30 +82,6 @@
    figwheel-options
    {:id "dev" :options (assoc build-options :source-map true)}))
 
-(defmethod task "jar"
-  [args]
-  (badigeon.jar/jar 'funcool/rumext
-                    {:mvn/version "2.0.0-SNAPSHOT"}
-                    {:out-path "target/rumext.jar"
-                     :mvn/repos '{"clojars" {:url "https://repo.clojars.org/"}}
-                     :allow-all-dependencies? false}))
-
-(defmethod task "deploy"
-  [args]
-  (let [artifacts [{:file-path "target/rumext.jar" :extension "jar"}
-                   {:file-path "pom.xml" :extension "pom"}]]
-    (badigeon.deploy/deploy
-     'funcool/rumext "2.0.0-SNAPSHOT"
-     artifacts
-     {:id "clojars" :url "https://repo.clojars.org/"}
-     {:allow-unsigned? true})))
-
-(defmethod task "build-and-deploy"
-  [args]
-  (task ["jar"])
-  (task ["deploy"]))
-
-
-;;; Build script entrypoint. This should be the last expression.
+;; Build script entrypoint. This should be the last expression.
 
 (task *command-line-args*)
