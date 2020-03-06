@@ -112,7 +112,12 @@
   (let [[render doc metadata cname] (parse-defc args)]
     `(def ~(symbol cname) ~(str doc) (rumext.alpha/build-fnc ~render ~cname ~metadata))))
 
+(defmacro defrc
+  [& args]
+  (let [[render doc metadata cname] (parse-defc args)]
+    `(def ~(symbol cname) ~(str doc) (rumext.alpha/build-raw-fnc ~render ~cname ~metadata))))
+
 (defmacro def
   [cname & args]
   (let [[render doc mixins] (apply parse-def args)]
-    `(def ~cname ~(str doc) (rumext.alpha/build-lazy rumext.alpha/build-def ~render ~mixins ~(str cname)))))
+    `(def ~cname ~(str doc) (rumext.alpha/build-lazy ~render ~mixins ~(str cname)))))

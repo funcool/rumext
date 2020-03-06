@@ -131,9 +131,26 @@
                            (.forceUpdate this))))))
     ctor))
 
+(defn build-raw-fnc
+  [render display-name metatada]
+  (unchecked-set render "displayName" display-name)
+  (if-let [wrap (seq (:wrap metatada []))]
+    (reduce #(%2 %1) render (reverse wrap))
+    render))
+
+(defn build-fnc
+  [render display-name metatada]
+  (let [render #(render (util/wrap-props %))]
+    (build-raw-fnc render display-name metatada)))
+
+(defn build-def
+  [render-body mixins display-name]
+  (let [render (fn [state] [(render-body state (::props state)) state])]
+    (build-class render mixins display-name)))
+
 (defn build-lazy
-  [builder render mixins display-name]
-  (let [klass (delay (builder render mixins display-name))]
+  [render mixins display-name]
+  (let [klass (delay (build-def render mixins display-name))]
     ;; The IFn protocol impl is only for backward compatibility (and
     ;; on benchmarks seems like it does not imples overhead).
     (specify! klass
@@ -147,18 +164,7 @@
                        :else (throw (ex-info "Unexpected props" {:props props})))]
            (create-element @klass props)))))))
 
-(defn build-fnc
-  [render display-name metatada]
-  (let [factory #(render (util/wrap-props %))]
-    (unchecked-set factory "displayName" display-name)
-    (if-let [wrap (seq (:wrap metatada []))]
-      (reduce #(%2 %1) factory (reverse wrap))
-      factory)))
 
-(defn build-def
-  [render-body mixins display-name]
-  (let [render (fn [state] [(render-body state (::props state)) state])]
-    (build-class render mixins display-name)))
 
 ;; --- Main Api
 
