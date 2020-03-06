@@ -336,6 +336,23 @@
 
 ;; --- Hooks
 
+(defn deps
+  "A convenience function that translates the list of arguments into a
+  valid js array for use in the deps list of hooks.
+
+  It translates INamed to Strings and uuid instances to strings for
+  correct equality check (react uses equivalent to `identical?` for
+  check the equality and uuid and INamed objects always returns false
+  to this check)."
+  [& items]
+  (->> items
+       (map (fn [o]
+              (cond
+                (instance? cljs.core/INamed o) (name o)
+                (uuid? o) (str o)
+                :else o)))
+       (to-array)))
+
 ;; The cljs version of use-ref is identical to the raw (no
 ;; customizations/adaptations needed)
 (def use-ref useRef)
