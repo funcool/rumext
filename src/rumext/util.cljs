@@ -49,14 +49,13 @@
         old-keys-len (alength old-keys)
         new-keys-len (alength new-keys)]
     (if (identical? old-keys-len new-keys-len)
-      (loop [idx (int 0) ret true]
+      (loop [idx (int 0)]
         (if (< idx new-keys-len)
           (let [key (aget new-keys idx)
                 new-val (unchecked-get new-props key)
-                old-val (unchecked-get old-props key)
-                result (eq? new-val old-val)]
-            (if ^boolean result
-              (recur (inc idx) result)
+                old-val (unchecked-get old-props key)]
+            (if ^boolean (eq? new-val old-val)
+              (recur (inc idx))
               false))
-          ret))
+          true))
       false)))
