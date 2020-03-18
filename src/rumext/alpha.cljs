@@ -6,7 +6,7 @@
 
 (ns rumext.alpha
   (:refer-clojure :exclude [ref deref])
-  (:require-macros rumext.core)
+  (:require-macros rumext.alpha)
   (:require
    [cljsjs.react]
    [cljsjs.react.dom]
@@ -46,7 +46,7 @@
         should-update  (collect   :should-update mixins)    ;; old-state state -> boolean
         did-update     (collect* [:did-update               ;; state snapshot -> state
                                   :after-render] mixins)    ;; state -> state
-        make-snapshot  (collect :make-snapshot mixins)      ;; state -> snapshot
+        make-snapshot  (collect   :make-snapshot mixins)    ;; state -> snapshot
         did-catch      (collect   :did-catch mixins)        ;; state error info -> state
         will-unmount   (collect   :will-unmount mixins)     ;; state -> state
         class-props    (reduce merge (collect :class-properties mixins))  ;; custom prototype properties and methods

@@ -5,9 +5,6 @@
          '[cljs.repl :as repl]
          '[cljs.repl.node :as node])
 
-(require '[badigeon.jar])
-(require '[badigeon.deploy])
-
 (require '[rebel-readline.core]
          '[rebel-readline.clojure.main]
          '[rebel-readline.clojure.line-reader]
