@@ -131,18 +131,6 @@
                            (.forceUpdate this))))))
     ctor))
 
-(defn build-raw-fnc
-  [render display-name metatada]
-  (unchecked-set render "displayName" display-name)
-  (if-let [wrap (seq (:wrap metatada []))]
-    (reduce #(%2 %1) render (reverse wrap))
-    render))
-
-(defn build-fnc
-  [render display-name metatada]
-  (let [render #(render (util/wrap-props %))]
-    (build-raw-fnc render display-name metatada)))
-
 (defn build-def
   [render-body mixins display-name]
   (let [render (fn [state] [(render-body state (::props state)) state])]

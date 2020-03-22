@@ -95,29 +95,52 @@
       3 (if (vector? v)
           (recur (assoc r :args v) (inc s) (first n) (rest n))
           (throw (ex-info "Invalid macro definition: expected component args vector" {})))
-      4 (let [sym (:name r)
-              args (:args r)
-              func (if (map? v)
-                     `(fn ~args ~v (html (do ~@n)))
-                     `(fn ~args (html (do ~@(cons v n)))))]
-          [func (:doc r) (:metadata r) sym]))))
-
-(defmacro fnc
-  [& args]
-  (let [[render doc metadata cname] (parse-defc args)]
-    `(rumext.alpha/build-fnc ~render ~cname ~metadata)))
+      4 {:cname  (:name r)
+         :docs   (str (:doc r))
+         :arg    (first (:args r))
+         :body   (cons v n)
+         :meta   (:metadata r)})))
 
 (defmacro defc
   [& args]
-  (let [[render doc metadata cname] (parse-defc args)]
-    `(def ~(symbol cname) ~(str doc) (rumext.alpha/build-fnc ~render ~cname ~metadata))))
+  (let [{:keys [cname
+                docs
+                arg
+                body
+                meta]} (parse-defc args)
 
-(defmacro defrc
-  [& args]
-  (let [[render doc metadata cname] (parse-defc args)]
-    `(def ~(symbol cname) ~(str doc) (rumext.alpha/build-raw-fnc ~render ~cname ~metadata))))
+        argsym (gensym "args")
+        render `(fn [~argsym]
+                  (let [~@(cond
+                            (and (::wrap-props meta true)
+                                 (boolean arg))
+                            [arg `(rumext.util/wrap-props ~argsym)]
+
+                            (boolean arg)
+                            [arg argsym]
+
+                            :else
+                            [])]
+                    ~@(butlast body)
+                    (html ~(last body))))
+
+        wrap-with (or (::wrap meta)
+                      (:wrap meta))
+
+        render (cond-> render
+                 (seq wrap-with)
+                 (as-> f (reduce (fn [r fi] `(~fi ~r)) f (reverse wrap-with))))
+
+        dsym (symbol cname)
+
+        ]
+    `(do
+       (def ~dsym ~docs ~render)
+       (set! (.-displayName ~dsym) ~cname)
+       )))
 
 (defmacro def
   [cname & args]
   (let [[render doc mixins] (apply parse-def args)]
     `(def ~cname ~(str doc) (rumext.alpha/build-lazy ~render ~mixins ~(str cname)))))
+

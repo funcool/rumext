@@ -14,7 +14,7 @@
 
 ;; Raw top-level component, everything interesting is happening inside
 (mf/defc controls
-  []
+  [props]
   [:dl
    [:dt "Color: "]
    [:dd
