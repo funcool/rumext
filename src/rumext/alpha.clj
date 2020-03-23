@@ -144,3 +144,44 @@
   (let [[render doc mixins] (apply parse-def args)]
     `(def ~cname ~(str doc) (rumext.alpha/build-lazy ~render ~mixins ~(str cname)))))
 
+;; (defmacro component
+;;   [& args]
+;;   (let [params (apply hash-map args)
+;;         ctor  (gensym "component")
+;;         proto (gensym "component")]
+;;     `(let [~ctor (fn [props#]
+;;                    (.call ~(:init params) ~(list 'js* "this"))
+;;                    (.call js/React.Component ~(list 'js* "this") props#))
+;;            tmp#   (goog/inherits ~ctor js/React.Component)
+;;            ~proto (cljs.core/unchecked-get ~ctor "prototype")]
+;;        ~@(->> (keys params)
+;;               (map (fn [kw]
+;;                      (case kw
+;;                        :render
+;;                        `(cljs.core/unchecked-set
+;;                          ~proto "render" ~(:render params))
+
+;;                        ;; :did-catch
+;;                        ;; `(cljs.core/unchecked-set
+;;                        ;;   proto# "componentDidCatch"
+;;                        ;;   `(fn [error# info#]
+;;                        ;;      (cljs.core/this-as this#
+;;                        ;;        (~(:did-catch params) this# error# info#))))
+
+;;                        ;; :will-unmount
+;;                        ;; `(cljs.core/unchecked-set
+;;                        ;;   proto# "componentWillUnmount"
+;;                        ;;   (fn []
+;;                        ;;     (cljs.core/this-as this#
+;;                        ;;       (~(:will-unmount params) this#))))
+
+;;                        ;; :did-mount
+;;                        ;; `(cljs.core/unchecked-set
+;;                        ;;   proto# "componentDidMount"
+;;                        ;;   (fn []
+;;                        ;;     (cljs.core/this-as this#
+;;                        ;;       (~(:did-mount params) this#))))
+
+;;                        nil)))
+;;               (filter identity))
+;;        ~ctor)))

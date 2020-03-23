@@ -5,9 +5,9 @@
  {:dev
   {:extra-paths ["examples" "target"]
    :extra-deps
-   {com.bhauman/figwheel-main {:mvn/version "0.2.3"}
-    com.bhauman/rebel-readline-cljs {:mvn/version "0.1.4"}
-    com.bhauman/rebel-readline {:mvn/version "0.1.4"}
+   {com.bhauman/figwheel-main {:mvn/version "RELEASE"}
+    com.bhauman/rebel-readline-cljs {:mvn/version "RELEASE"}
+    com.bhauman/rebel-readline {:mvn/version "RELEASE"}
 
     cljsjs/react {:mvn/version "16.13.0-0"}
     cljsjs/react-dom {:mvn/version "16.13.0-0"}

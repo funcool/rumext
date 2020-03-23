@@ -1,6 +1,7 @@
 # rumext #
 
-This is a friendly fork of [rum](https://github.com/tonsky/rum).
+Simple and Decomplected UI library based on React (originated as fork
+from [rum](https://github.com/tonsky/rum)).
 
 
 ## Using rumext
@@ -8,7 +9,7 @@ This is a friendly fork of [rum](https://github.com/tonsky/rum).
 Add to deps.edn:
 
 ```
-funcool/rumext {:mvn/version "2.0.0-SNAPSHOT"}
+funcool/rumext {:mvn/version "2020.03.23-1"}
 ```
 
 ## Differences with rum
@@ -165,53 +166,28 @@ Let's see a example of how to define a component:
 ```clojure
 (require '[rumext.alpha :as mf])
 
-(def title
-  (mf/fnc title [{:keys [name]}]
-    [:div {:class "label"} name]))
-```
-
-The `fnc` is a `fn` analogous macro for creating function
-components. There are also `defc` macro that behaves in the similar
-way to the `defn`:
-
-```clojure
 (mf/defc title
   [{:keys [name]}]
   [:div {:class "label"} name])
 ```
+
 
 ### Higher-Order Components
 
 This is the way you have to extend/add additional functionality to a
 function component. Rumext exposes two:
 
-- `mf/wrap-reactive`: same functionality as `mf/reactive` in class
-  based components.
 - `mf/wrap-memo`: same functionality as `mf/memo` in class based components.
 
-And you can use them in two ways, the traditional one that consists in direct
-wrapping a component with an other:
-
-```clojure
-(def title
-  (mf/wrap-memo
-    (mf/fnc title [{:keys [name]}]
-      [:div {:class "label"} name])))
-```
-
-Or using a special metadata syntax, that does the same thing but with
-less call ceremony:
+In order to use the high-order components, you need wrap the component manually
+or passing it as a special property in the metadata:
 
 ```clojure
 (mf/defc title
-  {:wrap [mf/wrap-memo]}
+  {::mf/wrap [mf/wrap-memo]}
   [props]
   [:div {:class "label"} (:name props)])
 ```
-
-NOTE: The `mf/reactive` higher-order component behind the scenes uses
-**React Hooks** as internal primitives for implement the same behavior
-as the `mf/reactive` mixin on class components.
 
 
 ### Hooks (React Hooks)
@@ -259,25 +235,27 @@ into a functional component:
   [props]
   (let [local (mf/use-state 0)]
     (mf/use-effect
-      :start (fn [] (js/setInterval #(swap! local inc) 1000))
-      :end (fn [sem] (js/clearInterval sem)))
+     {:fn (fn []
+            (let [sem (js/setInterval #(swap! local inc) 1000)]
+              #(js/clearInterval sem)))})
     [:div "Counter: " @local]))
 
 (mf/mount (mf/element local-state) js/document.body)
 ```
 
-The `:start` callback will be called once the component mounts (like
-`did-mount`) and the `:end` callback will be caled once the component
-will unmounts (like `will-unmount`).
+The `:fn` callback will be called once the component mounts (like
+`did-mount`) and the returned function callback will be caled once the
+component will unmounts (like `will-unmount`). Returning function is
+optional.
 
 There are an excepction when you pass a `:deps` parameter, that can
-change how many times `:start` will be executed:
+change how many times `:fn` will be executed:
 
 - `:deps nil` the default behavior explained before.
-- `:deps true` the `:start` callback will be executed after each
-  render (a combination of `did-mount` and `did-update` class based
+- `:deps true` the `:fn` callback will be executed after each render
+  (a combination of `did-mount` and `did-update` class based
   components).
-- `:deps [variable1 variable2]`: only execute `:start` when some of
+- `:deps (mf/deps variable1 variable2)`: only execute `:start` when some of
   referenced variables changes.
 - `:watch []` the same as `:watch nil`.
 
@@ -294,8 +272,8 @@ Example:
 ```clojure
 (mf/defc sample-component
   [{:keys [x]}]
-  (let [v (mf/use-memo {:init #(pow x 10)
-                        :deps [x]})]
+  (let [v (mf/use-memo {:fn #(pow x 10)
+                        :deps (mf/deps x)})]
     [:span "Value is:" v]))
 ```
 
@@ -305,11 +283,10 @@ calculated once.
 
 #### deref
 
-This is a custom hook, alternative to `mf/wrap-reactive` &
-`mf/react`.
+This is a custom hook, alternative to `mf/reactive` mixin on class components.
 
-The purpose of this hook is reactivelly rerender component on
-a reference (atom-like object) changes.
+The purpose of this hook is reactivelly rerender component on a
+reference (atom-like object) changes.
 
 Example:
 
@@ -323,6 +300,7 @@ Example:
     [:div "Timer (deref)" ": "
      [:span ts]]))
 ```
+
 
 #### Raw Hooks
 
