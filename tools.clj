@@ -62,7 +62,14 @@
   [optimizations]
   (api/build (api/inputs "src" "examples")
              (cond->  (assoc build-options :optimizations optimizations)
-               (= optimizations :none) (assoc :source-map true))))
+               (= optimizations :none)
+               (assoc :source-map true)
+
+               (= optimizations :advanced)
+               (assoc :pseudo-names true
+                      :pretty-print true))))
+
+
 
 (defmethod task "build"
   [[_ type]]

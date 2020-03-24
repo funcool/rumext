@@ -1,8 +1,7 @@
 ;; This Source Code Form is subject to the terms of the Eclipse Public
 ;; License - v 1.0
-;; Copyright (c) 2016-2019 Andrey Antukh <niwi@niwi.nz>
 ;;
-;; Some parts of this code is derived from https://github.com/tonsky/rum
+;; Copyright (c) 2016-2020 Andrey Antukh <niwi@niwi.nz>
 
 (ns rumext.alpha
   (:refer-clojure :exclude [ref deref])
@@ -10,8 +9,7 @@
   (:require
    [cljsjs.react]
    [cljsjs.react.dom]
-   [goog.object :as gobj]
-   [rumext.util :as util :refer [collect collect* call-all]]))
+   [rumext.util :as util]))
 
 ;; --- Impl
 
@@ -20,155 +18,7 @@
   (-name [this] (str this))
   (-namespace [_] ""))
 
-(def create-element
-  "An alias to the js/React.createElement (only for internal use)."
-  js/React.createElement)
-
-(defn get-local-state
-  "Given React component, returns Rum state associated with it."
-  [comp]
-  (-> (unchecked-get comp "state")
-      (unchecked-get ":rumext.alpha/state")))
-
-(defn extend!
-  [obj props]
-  (run! (fn [[k v]] (unchecked-set obj (name k) (clj->js v))) props))
-
-(defn build-class
-  [render mixins display-name]
-  (let [init           (collect   :init mixins)             ;; state props -> state
-        render         render                               ;; state -> [dom state]
-        wrap-render    (collect   :wrap-render mixins)      ;; render-fn -> render-fn
-        wrapped-render (reduce #(%2 %1) render wrap-render)
-        derive-state   (collect   :derive-state mixins)     ;; state -> state
-        did-mount      (collect* [:did-mount                ;; state -> state
-                                  :after-render] mixins)    ;; state -> state
-        should-update  (collect   :should-update mixins)    ;; old-state state -> boolean
-        did-update     (collect* [:did-update               ;; state snapshot -> state
-                                  :after-render] mixins)    ;; state -> state
-        make-snapshot  (collect   :make-snapshot mixins)    ;; state -> snapshot
-        did-catch      (collect   :did-catch mixins)        ;; state error info -> state
-        will-unmount   (collect   :will-unmount mixins)     ;; state -> state
-        class-props    (reduce merge (collect :class-properties mixins))  ;; custom prototype properties and methods
-        static-props   (reduce merge (collect :static-properties mixins)) ;; custom static properties and methods
-
-        ctor           (fn [props]
-                         (this-as this
-                           (let [lprops (util/wrap-props props)
-                                 lstate (-> {::props lprops ::react-component this}
-                                            (call-all init lprops))]
-                             (unchecked-set this "state" #js {":rumext.alpha/state" (volatile! lstate)
-                                                              ":rumext.alpha/renders" -9007199254740991})
-                             (.call js/React.Component this props))))
-        _              (goog/inherits ctor js/React.Component)
-        prototype      (unchecked-get ctor "prototype")]
-
-    (extend! prototype class-props)
-    (extend! ctor static-props)
-
-    (unchecked-set ctor "displayName" display-name)
-
-    (unchecked-set ctor "getDerivedStateFromProps"
-                   (fn [props state]
-                     (let [lstate  @(unchecked-get state ":rumext.alpha/state")
-                           nprops  (util/wrap-props props)
-                           nstate  (assoc lstate ::props nprops)
-                           nstate  (reduce #(%2 %1) nstate derive-state)]
-                       ;; allocate new volatile
-                       ;; so that we can access both old and new states in shouldComponentUpdate
-                       #js {":rumext.alpha/state" (volatile! nstate)})))
-
-    (unchecked-set prototype "render"
-                   (fn []
-                     (this-as this
-                       (let [lstate (get-local-state this)
-                             [dom nstate] (wrapped-render @lstate)]
-                         (vreset! lstate nstate)
-                         dom))))
-
-    (unchecked-set prototype "componentWillUnmount"
-                   (fn []
-                     (this-as this
-                       (let [lstate (get-local-state this)]
-                         (when-not (empty? will-unmount)
-                           (vswap! lstate call-all will-unmount))
-                         (unchecked-set this ":rumext.alpha/unmounted?" true)))))
-
-    (when-not (empty? did-mount)
-      (unchecked-set prototype "componentDidMount"
-                     (fn []
-                       (this-as this
-                         (let [lstate (get-local-state this)]
-                           (vswap! lstate call-all did-mount))))))
-
-    (when-not (empty? should-update)
-      (unchecked-set prototype "shouldComponentUpdate"
-                     (fn [new-props new-state]
-                       (this-as this
-                         (let [old-props (unchecked-get this "props")]
-                           (or (some #(% old-props new-props) should-update) false))))))
-
-    (when-not (empty? make-snapshot)
-      (unchecked-set prototype "getSnapshotBeforeUpdate"
-                     (fn [prev-props prev-state]
-                       (let [lstate  @(unchecked-get prev-state ":rumext.alpha/state")]
-                         (call-all lstate make-snapshot)))))
-
-    (when-not (empty? did-update)
-      (unchecked-set prototype "componentDidUpdate"
-                     (fn [_ _ snapshot]
-                       (this-as this
-                         (let [lstate (get-local-state this)]
-                           (vswap! lstate call-all did-update snapshot))))))
-
-    (when-not (empty? did-catch)
-      (unchecked-set prototype "componentDidCatch"
-                     (fn [error info]
-                       (this-as this
-                         (let [lstate (get-local-state this)]
-                           (vswap! lstate call-all did-catch error
-                                   {::component-stack (gobj/get info "componentStack")})
-                           (.forceUpdate this))))))
-    ctor))
-
-(defn build-def
-  [render-body mixins display-name]
-  (let [render (fn [state] [(render-body state (::props state)) state])]
-    (build-class render mixins display-name)))
-
-(defn build-lazy
-  [render mixins display-name]
-  (let [klass (delay (build-def render mixins display-name))]
-    ;; The IFn protocol impl is only for backward compatibility (and
-    ;; on benchmarks seems like it does not imples overhead).
-    (specify! klass
-      cljs.core/IFn
-      (-invoke
-        ([this props]
-         (let [props (cond
-                       (map? props) (util/map->obj props)
-                       (nil? props) #js {}
-                       (object? props) props
-                       :else (throw (ex-info "Unexpected props" {:props props})))]
-           (create-element @klass props)))))))
-
-
-
 ;; --- Main Api
-
-(defn request-render
-  "Schedules react component to be rendered on next animation frame."
-  [component]
-  (letfn [(updater [state]
-            (unchecked-set state ":rumext.alpha/renders"
-                           (unchecked-inc (unchecked-get state ":rumext.alpha/renders")))
-            state)]
-    (.setState component updater)))
-
-(defn force-render
-  "Schedules react component to be rendered on next animation frame."
-  [component]
-  (.forceUpdate component))
 
 (defn mount
   "Add element to the DOM tree. Idempotent. Subsequent mounts will
@@ -193,25 +43,6 @@
   [element node]
   (js/ReactDOM.createPortal element node))
 
-(defn with-key
-  [element key]
-  (js/React.cloneElement element #js { "key" key } nil))
-
-(defn with-ref
-  [element ref]
-  (js/React.cloneElement element #js { "ref" ref } nil))
-
-(defn dom-node
-  "Given state, returns top-level DOM node of component. Call it
-  during lifecycle callbacks. Can’t be called during render."
-  [state]
-  (js/ReactDOM.findDOMNode (::react-component state)))
-
-(defn react-component
-  "Given state, returns react component associated with."
-  [state]
-  (::react-component state))
-
 (defn create-ref
   []
   (js/React.createRef))
@@ -224,83 +55,6 @@
 (defn set-ref-val!
   [ref val]
   (unchecked-set ref "current" val))
-
-(defn ref-node
-  "Given state and ref handle, returns DOM node associated with ref."
-  [ref]
-  (js/ReactDOM.findDOMNode (ref-val ref)))
-
-;; --- Mixins
-
-(def memo
-  "Mixin. Will avoid re-render if none of component’s arguments have
-  changed. Does equality check (`identical?`) on all arguments."
-  {:should-update (fn [old-props new-props]
-                    (not (util/props-equals? identical? old-props new-props)))})
-
-(def pure
-  "Mixin. Will avoid re-render if none of component’s arguments have
-  changed. Does equalty check (`=`) on all
-  arguments."
-  {:should-update (fn [old-props new-props]
-                    (not (util/props-equals? = old-props new-props)))})
-
-(def static
-  "Mixin. Will avoid re-render."
-  {:should-update (constantly false)})
-
-;; local mixin
-
-(defn local
-  ([] (local {} ::local))
-  ([initial] (local initial ::local))
-  ([initial key]
-   {:init
-    (fn [state props]
-      (let [lstate (atom initial)
-            component (::react-component state)]
-        (add-watch lstate key #(request-render component))
-        (assoc state key lstate)))}))
-
-(def ^:dynamic *reactions*)
-
-(def reactive
-  {:init
-   (fn [state props]
-     (assoc state ::reactions-key (gensym "reactive")))
-   :wrap-render
-   (fn [render-fn]
-     (fn [state]
-       (binding [*reactions* (volatile! #{})]
-         (let [comp             (::react-component state)
-               old-reactions    (::reactions state #{})
-               [dom next-state] (render-fn state)
-               new-reactions    (cljs.core/deref *reactions*)
-               key              (::reactions-key state)]
-           (run! (fn [ref]
-                   (when-not (contains? new-reactions ref)
-                     (remove-watch ref key))) old-reactions)
-           (run! (fn [ref]
-                   (when-not (contains? old-reactions ref)
-                     (add-watch ref key
-                                (fn [_ _ _ _]
-                                  (request-render comp))))) new-reactions)
-           [dom (assoc next-state ::reactions new-reactions)]))))
-
-   :will-unmount
-   (fn [{:keys [::reactions-key ::reactions] :as state}]
-     (run! (fn [ref] (remove-watch ref reactions-key)) reactions)
-     (dissoc state ::reactions ::reactions-key))
-   })
-
-(defn react
-  "Works in conjunction with [[reactive]] mixin. Use this function
-  instead of `deref` inside render, and your component will subscribe
-  to changes happening to the derefed atom."
-  [ref]
-  (assert *reactions* "rumext.alpha/react is only supported in conjunction with rumext.alpha/reactive")
-  (vswap! *reactions* conj ref)
-  (cljs.core/deref ref))
 
 ;; --- Raw Hooks
 
@@ -330,22 +84,29 @@
 
 ;; --- Hooks
 
-(defn deps
-  "A convenience function that translates the list of arguments into a
-  valid js array for use in the deps list of hooks.
+(defn- adapt
+  [o]
+  (if (uuid? o)
+    (str o)
+    (if (instance? cljs.core/INamed o)
+      (name o)
+      o)))
 
-  It translates INamed to Strings and uuid instances to strings for
-  correct equality check (react uses equivalent to `identical?` for
-  check the equality and uuid and INamed objects always returns false
-  to this check)."
-  [& items]
-  (->> items
-       (map (fn [o]
-              (cond
-                (instance? cljs.core/INamed o) (name o)
-                (uuid? o) (str o)
-                :else o)))
-       (to-array)))
+;; "A convenience function that translates the list of arguments into a
+;; valid js array for use in the deps list of hooks.
+
+;; It translates INamed to Strings and uuid instances to strings for
+;; correct equality check (react uses equivalent to `identical?` for
+;; check the equality and uuid and INamed objects always returns false
+;; to this check).
+
+;; NOTE: identity is a hack for avoid a wrong number of args warning.
+
+(def ^{:arglists '([& items])}
+  deps
+  (identity
+   #(amap (js-arguments) i ret
+          (adapt (aget ret i)))))
 
 ;; The cljs version of use-ref is identical to the raw (no
 ;; customizations/adaptations needed)
@@ -353,7 +114,9 @@
 
 (defn use-state
   [initial]
-  (let [[state set-state] (useState initial)]
+  (let [resp (useState initial)
+        state (aget resp 0)
+        set-state (aget resp 1)]
     (reify
       cljs.core/IReset
       (-reset! [_ new-value]
@@ -395,118 +158,36 @@
       cljs.core/IDeref
       (-deref [self] (ref-val ref)))))
 
-(defn- use-effect-impl
-  [f deps]
-  (useEffect
-   #(let [r (f)] (if (fn? r) r (constantly nil)))
-   (cond
-     (nil? deps) #js []
-     (array? deps) deps
-     (true? deps) nil
-     (vector? deps) (into-array deps)
-     :else #js [deps])))
-
 (defn use-effect
-  ([fn-or-opts]
-   (cond
-     (fn? fn-or-opts)
-     (use-effect-impl fn-or-opts nil)
-
-     (map? fn-or-opts)
-     (use-effect-impl (:fn fn-or-opts)
-                      (:deps fn-or-opts))
-     :else
-     (throw (ex-info "Invalid arguments" {}))))
-  ([f deps]
-   (use-effect-impl f deps)))
-
-(defn- use-layout-effect-impl
-  [f deps]
-  (useLayoutEffect
-   #(let [r (f)] (if (fn? r) r (constantly nil)))
-   (cond
-     (nil? deps) #js []
-     (array? deps) deps
-     (true? deps) nil
-     (vector? deps) (into-array deps)
-     :else #js [deps])))
+  ([f] (use-effect #js [] f))
+  ([deps f]
+   (useEffect #(let [r (f)] (if (fn? r) r identity)) deps)))
 
 (defn use-layout-effect
-  ([fn-or-opts]
-   (cond
-     (fn? fn-or-opts)
-     (use-layout-effect-impl fn-or-opts nil)
-
-     (map? fn-or-opts)
-     (use-layout-effect-impl (:fn fn-or-opts)
-                             (:deps fn-or-opts))
-     :else
-     (throw (ex-info "Invalid arguments" {}))))
-  ([f deps]
-   (use-layout-effect-impl f deps)))
-
-(defn- use-memo-impl
-  [f deps]
-  (useMemo
-   (fn [] (f))
-   (cond
-     (nil? deps) #js []
-     (array? deps) deps
-     (true? deps) nil
-     (vector? deps) (into-array deps)
-     :else #js [deps])))
+  ([f] (use-layout-effect #js [] f))
+  ([deps f]
+   (useLayoutEffect #(let [r (f)] (if (fn? r) r identity)) deps)))
 
 (defn use-memo
-  ([fn-or-opts]
-   (cond
-     (fn? fn-or-opts)
-     (use-memo-impl fn-or-opts nil)
-
-     (map? fn-or-opts)
-     (use-memo-impl (:fn fn-or-opts)
-                    (:deps fn-or-opts))
-     :else
-     (throw (ex-info "Invalid arguments" {}))))
-  ([f deps]
-   (use-memo-impl f deps)))
-
-(defn- use-callback-impl
-  [f deps]
-  (useCallback
-   (if (fn? f) f (fn [] (f)))
-   (cond
-     (nil? deps) #js []
-     (array? deps) deps
-     (true? deps) nil
-     (vector? deps) (into-array deps)
-     :else #js [deps])))
+  ([f] (useMemo #js [] f))
+  ([deps f] (useMemo f deps)))
 
 (defn use-callback
-  ([fn-or-opts]
-   (cond
-     (fn? fn-or-opts)
-     (use-callback-impl fn-or-opts nil)
-
-     (map? fn-or-opts)
-     (use-callback-impl (:fn fn-or-opts)
-                        (:deps fn-or-opts))
-     :else
-     (throw (ex-info "Invalid arguments" {}))))
-  ([f deps]
-   (use-callback-impl f deps)))
+  ([f] (useCallback #js [] f))
+  ([deps f] (useCallback f deps)))
 
 (defn deref
   [iref]
-  (let [[state set-state!] (useState 0)
-        key (useMemo (fn []
-                       (let [key (gensym "use-deref")]
-                         (add-watch iref key (fn [a b c d] (set-state! inc)))
-                         key))
-                     #js [iref])]
-    (useEffect (fn [] (fn [] (remove-watch iref key)))
-               #js [key])
-    (cljs.core/deref iref)))
+  (let [res (useState 0)
+        state (aget res 0)
+        set-state! (aget res 1)
 
+        key (use-memo #js [iref]
+                      #(let [key (gensym "use-deref")]
+                         (add-watch iref key (fn [a b c d] (set-state! inc)))
+                         key))]
+    (use-effect #js [key] #(fn [] (remove-watch iref key)))
+    (cljs.core/deref iref)))
 
 ;; --- Higher-Order Components
 
@@ -520,12 +201,10 @@
 
 (defn element
   ([klass]
-   (let [klass (if (delay? klass) @klass klass)]
-     (create-element klass #js {})))
+   (js/React.createElement klass #js {}))
   ([klass props]
-   (let [klass (if (delay? klass) @klass klass)
-         props (cond
-                 (map? props) (util/map->obj props)
+   (let [props (cond
                  (object? props) props
+                 (map? props) (util/map->obj props)
                  :else (throw (ex-info "Unexpected props" {:props props})))]
-     (create-element klass props))))
+     (js/React.createElement klass props))))

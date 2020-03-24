@@ -11,8 +11,10 @@
 
 (mf/defc cell
   [{:keys [x y] :as props}]
-  (let [ref (mf/use-memo {:fn #(l/derive (l/in [y x]) board)
-                          :deps [x y]})
+  (let [ref (mf/use-memo
+             (mf/deps x y)
+             (fn [] (l/derive (l/in [y x]) board)))
+
         cell (mf/deref ref)
         color @util/*color]
     [:div.art-cell

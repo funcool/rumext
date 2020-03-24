@@ -1,35 +1,32 @@
 (ns rumext.examples.refs
   (:require [goog.dom :as dom]
-            [rumext.core :as mx]))
+            [rumext.alpha :as mf]))
 
-(mx/defcs ta
-  {:init
-   (fn [own]
-     (assoc own ::ta (mx/create-ref)))
+(mf/defc textarea
+  [props]
+  (let [ref (mf/use-ref)
+        state (mf/use-state 0)]
+    (mf/use-layout-effect
+     (fn []
+       (let [node (mf/ref-val ref)]
+         (set! (.-height (.-style node)) "0")
+         (set! (.-height (.-style node)) (str (+ 2 (.-scrollHeight node)) "px")))))
 
-   :after-render
-   (fn [own]
-     (let [ta (mx/ref-node (::ta own))]
-       (set! (.-height (.-style ta)) "0")
-       (set! (.-height (.-style ta)) (str (+ 2 (.-scrollHeight ta)) "px")))
-     own)}
+    [:textarea
+     {:ref ref
+      :style {:width   "100%"
+              :padding "10px"
+              :font    "inherit"
+              :outline "none"
+              :resize  "none"}
+      :default-value "Auto-resizing\ntextarea"
+      :placeholder "Auto-resizing textarea"
+      :on-change (fn [_] (swap! state inc))}]))
 
-  [own]
-  [:textarea
-   {:ref (::ta own)
-    :style { :width   "100%"
-            :padding "10px"
-            :font    "inherit"
-            :outline "none"
-            :resize  "none"}
-    :default-value "Auto-resizing\ntextarea"
-    :placeholder "Auto-resizing textarea"
-    :on-change (fn [_] (-> (mx/react-component own)
-                           (mx/request-render)))}])
-
-(mx/defc refs
+(mf/defc refs
   []
-  [:div (ta)])
+  [:div
+   [:& textarea]])
 
 (defn mount! []
-  (mx/mount (refs) (dom/getElement "refs")))
+  (mf/mount (mf/element refs) (dom/getElement "refs")))

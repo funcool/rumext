@@ -18,23 +18,15 @@
 (defn el [id]
   (dom/getElement id))
 
-(defn periodic-refresh
-  [period]
-  {:did-mount
-   (fn [state]
-     (let [rcomp (::mf/react-component state)
-           sem (js/setInterval #(mf/request-render rcomp) period)]
-       (assoc state ::interval sem)))
-   :will-unmount
-   (fn [state]
-     (js/clearInterval (::interval state)))})
+(mf/defc watches-count
+  [{:keys [iref] :as props}]
+  (let [state (mf/use-state 0)]
+    (mf/use-effect
+     (mf/deps)
+     (fn []
+       (let [sem (js/setInterval #(swap! state inc) 1000)]
+         #(js/clearInterval sem))))
 
-;; Using custom mixin
-
-(mf/def watches-count
-  :mixins [(periodic-refresh 1000)]
-  :render
-  (fn [own {:keys [iref]}]
     [:span (count (.-watches iref))]))
 
 ;; Generic board utils
@@ -53,13 +45,13 @@
        (partition board-width)
        (mapv vec)))
 
-(mf/def board-stats
-  :mixins [mf/reactive]
-  :render
-  (fn [own [*board *renders]]
-    [:div.stats
-     "Renders: "       (mf/react *renders)
-     [:br]
-     "Board watches: " (watches-count *board)
-     [:br]
-     "Color watches: " (watches-count *color) ]))
+;; (mf/def board-stats
+;;   :mixins [mf/reactive]
+;;   :render
+;;   (fn [own [*board *renders]]
+;;     [:div.stats
+;;      "Renders: "       (mf/react *renders)
+;;      [:br]
+;;      "Board watches: " (watches-count *board)
+;;      [:br]
+;;      "Color watches: " (watches-count *color) ]))

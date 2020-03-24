@@ -1,7 +1,6 @@
 (ns rumext.examples.core
   (:require [clojure.string :as str]
             [goog.dom :as dom]
-            [rumext.core :as mx]
             [rumext.alpha :as mf]
             [rumext.examples.util :as util]
             [rumext.examples.binary-clock :as binary-clock]
@@ -9,11 +8,9 @@
             [rumext.examples.local-state :as local-state]
             [rumext.examples.refs :as refs]
             [rumext.examples.controls :as controls]
-            [rumext.examples.errors :as errors]
-            [rumext.examples.board-reactive :as board-reactive]
+            ;; [rumext.examples.errors :as errors]
             [rumext.examples.board :as board]
-            [rumext.examples.portals :as portals]
-            [rumext.examples.bench]
+            ;; [rumext.examples.portals :as portals]
             ))
 
 (enable-console-print!)
@@ -24,5 +21,4 @@
 
 (refs/mount!)
 (controls/mount!)
-(board-reactive/mount!)
 (board/mount!)

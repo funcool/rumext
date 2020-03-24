@@ -5,26 +5,18 @@
 
 (def *bclock-renders (atom 0))
 
-(mf/def render-count
-  :mixins [mf/reactive]
-  :render
-  (fn [own props]
-    [:div.stats "Renders: " (mf/react *bclock-renders)]))
+(mf/defc render-count
+  [props]
+  (let [renders (mf/deref *bclock-renders)]
+    [:div.stats "Renders: " renders]))
 
-(mf/def bit
-  :mixins [mf/memo mf/reactive]
-
-  :after-render
-  (fn [state]
-    (swap! *bclock-renders inc)
-    state)
-
-  :render
-  (fn [own {:keys [n b] :as props}]
-    (let [color (mf/react util/*color)]
-      (if (bit-test n b)
-        [:td.bclock-bit {:style {:background-color color}}]
-        [:td.bclock-bit {}]))))
+(mf/defc bit
+  [{:keys [n b] :as props}]
+  (mf/use-effect (mf/deps n b) #(swap! *bclock-renders inc))
+  (let [color (mf/deref util/*color)]
+    (if (bit-test n b)
+      [:td.bclock-bit {:style {:background-color color}}]
+      [:td.bclock-bit {}])))
 
 (mf/defc binary-clock
   []

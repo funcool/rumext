@@ -17,11 +17,15 @@
                                         :n 0}
                              :counter2 {:title "Counter 2"
                                         :n 0}})]
+
+    (mf/use-effect nil #(js/console.log "foo"))
+
     [:section {:class "counters"}
      [:& label {:state (:counter1 @local)}]
      [:& label {:state (:counter2 @local)}]
      [:button {:on-click #(swap! local update-in [:counter1 :n] inc)} "Increment Counter 1"]
      [:button {:on-click #(swap! local update-in [:counter2 :n] inc)} "Increment Counter 2"]]))
+
 
 (defn mount! []
   (mf/mount (mf/element local-state {:title "Clicks count"})
