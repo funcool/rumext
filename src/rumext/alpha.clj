@@ -91,20 +91,17 @@
          :body   (cons v n)
          :meta   (:metadata r)})))
 
-;; TODO: improve code reusability of this two macros
-
-(defmacro fnc
-  [& args]
-  (let [{:keys [cname docs arg body meta]} (parse-defc args)
-        argsym (gensym "args")
-
-        render `(fn ~cname [~argsym]
+(defn- prepare-render
+  [{:keys [cname meta arg body] :as ctx}]
+  (let [argsym (gensym "arg")
+        render `(fn ~cname [~@(if arg
+                                [argsym]
+                                [])]
                   (let [~@(cond
-                            (and (::wrap-props meta true)
-                                 (boolean arg))
+                            (and arg (::wrap-props meta true))
                             [arg `(rumext.util/wrap-props ~argsym)]
 
-                            (boolean arg)
+                            arg
                             [arg argsym]
 
                             :else
@@ -113,41 +110,21 @@
                     (html ~(last body))))
 
         wrap-with (or (::wrap meta)
-                      (:wrap meta))
+                      (:wrap meta))]
+    (cond-> render
+      (seq wrap-with)
+      (as-> f (reduce (fn [r fi] `(~fi ~r)) f (reverse wrap-with))))))
 
-        render (cond-> render
-                 (seq wrap-with)
-                 (as-> f (reduce (fn [r fi] `(~fi ~r)) f (reverse wrap-with))))]
-    `(let [ac# ~render]
+(defmacro fnc
+  [& args]
+  (let [{:keys [cname] :as ctx} (parse-defc args)]
+    `(let [ac# ~(prepare-render ctx)]
        (set! (.-displayName ac#) ~(str cname))
        ac#)))
 
 (defmacro defc
   [& args]
-  (let [{:keys [cname docs arg body meta]} (parse-defc args)
-
-        argsym (gensym "args")
-        render `(fn ~cname [~argsym]
-                  (let [~@(cond
-                            (and (::wrap-props meta true)
-                                 (boolean arg))
-                            [arg `(rumext.util/wrap-props ~argsym)]
-
-                            (boolean arg)
-                            [arg argsym]
-
-                            :else
-                            [])]
-                    ~@(butlast body)
-                    (html ~(last body))))
-
-        wrap-with (or (::wrap meta)
-                      (:wrap meta))
-
-        render (cond-> render
-                 (seq wrap-with)
-                 (as-> f (reduce (fn [r fi] `(~fi ~r)) f (reverse wrap-with))))]
+  (let [{:keys [cname docs] :as ctx} (parse-defc args)]
     `(do
-       (def ~cname ~docs ~render)
-       (set! (.-displayName ~cname) ~(str cname))
-       )))
+       (def ~cname ~docs ~(prepare-render ctx))
+       (set! (.-displayName ~cname) ~(str cname)))))

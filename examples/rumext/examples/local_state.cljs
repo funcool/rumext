@@ -12,8 +12,7 @@
 ;;      [:span title ": " n]]))
 
 (def label
-  (mf/fnc [{:keys [state] :as props}]
-    ;; (prn "label" props)
+  (mf/fnc label [{:keys [state] :as props}]
     (let [{:keys [title n]} state]
       [:div
        [:span title ": " n]])))
