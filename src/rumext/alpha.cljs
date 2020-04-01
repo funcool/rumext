@@ -195,19 +195,6 @@
     (use-effect #js [key] #(fn [] (remove-watch iref key)))
     (cljs.core/deref iref)))
 
-;; --- Higher-Order Components
-
-(defn memo
-  ([component] (react/memo component))
-  ([component eq?]
-   (react/memo component eq?)))
-
-(defn wrap-memo
-  ([component]
-   (react/memo component))
-  ([component eq?]
-   (react/memo component #(util/props-equals? eq? %1 %2))))
-
 ;; --- Other API
 
 (def create-element react/createElement)
@@ -221,3 +208,59 @@
                  (map? props) (util/map->obj props)
                  :else (throw (ex-info "Unexpected props" {:props props})))]
      (react/createElement klass props))))
+
+;; --- Higher-Order Components
+
+(defn memo'
+  "A raw variant of React.memo."
+  [component equals?]
+  (react/memo component equals?))
+
+(defn memo
+  ([component] (react/memo component))
+  ([component eq?]
+   (react/memo component #(util/props-equals? eq? %1 %2))))
+
+(defn catch
+  [component {:keys [fallback on-error]}]
+  (let [constructor
+        (fn [props]
+          (this-as this
+            (unchecked-set this "state" #js {})
+            (.call react/Component this props)))
+
+        did-catch
+        (fn [error info]
+          (when (fn? on-error)
+            (on-error error info)))
+
+        derive-state
+        (fn [error]
+          #js {:error error})
+
+        render
+        (fn []
+          (this-as this
+            (let [state (unchecked-get this "state")
+                  error (unchecked-get state "error")]
+              (if error
+                (element fallback #js {:error error})
+                (element component #js {})))))
+
+        _ (goog/inherits constructor js/React.Component)
+        prototype (unchecked-get constructor "prototype")]
+
+    (unchecked-set constructor "displayName" "ErrorBoundary")
+    (unchecked-set constructor "getDerivedStateFromError" derive-state)
+    (unchecked-set prototype "componentDidCatch" did-catch)
+    (unchecked-set prototype "render" render)
+    constructor))
+
+;; NOTE: deprecated
+(defn wrap-memo
+  ([component]
+   (react/memo component))
+  ([component eq?]
+   (react/memo component #(util/props-equals? eq? %1 %2))))
+
+

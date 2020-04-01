@@ -1,5 +1,15 @@
 # Changelog #
 
+## Version 2020.04.01-3
+
+- Simplify `defc` and `fnc` macros.
+- Add `catch` higher-order error boundary component.
+- Rename `memo` to `memo'`.
+- Rename `wrap-memo` to `memo`.
+- Keep `wrap-memo` as backward compatible alias.
+
+
+
 ## Version 2020.04.01-2
 
 - Add `rumext.alpha/memo` as a raw variant of `wrap-memo`.

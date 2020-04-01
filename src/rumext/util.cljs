@@ -22,9 +22,9 @@
 (defn wrap-props
   [props]
   (cond
+    (object? props) (obj->map props)
     (map? props) props
     (nil? props) {}
-    (object? props) (obj->map props)
     :else (throw (ex-info "Unexpected props" {:props props}))))
 
 (defn props-equals?
