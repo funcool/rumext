@@ -1,6 +1,11 @@
 # Changelog #
 
-## Version 2020.04.01
+## Version 2020.04.01-2
+
+- Add `rumext.alpha/memo` as a raw variant of `wrap-memo`.
+
+
+## Version 2020.04.01-1
 
 - Add `fnc` macro for define anonymous components (useful for define
   higher-order components).

@@ -197,6 +197,11 @@
 
 ;; --- Higher-Order Components
 
+(defn memo
+  ([component] (react/memo component))
+  ([component eq?]
+   (react/memo component eq?)))
+
 (defn wrap-memo
   ([component]
    (react/memo component))
