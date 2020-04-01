@@ -1,5 +1,5 @@
 (require '[clojure.java.shell :as shell])
-(require '[figwheel.main.api :as figwheel])
+;; (require '[figwheel.main.api :as figwheel])
 
 (require '[cljs.build.api :as api]
          '[cljs.repl :as repl]
@@ -67,6 +67,8 @@
 
                (= optimizations :advanced)
                (assoc :pseudo-names true
+                      :static-fns true
+                      :fn-invoke-direct true
                       :pretty-print true))))
 
 
@@ -80,11 +82,11 @@
     (do (println "Unknown argument to test task:" type)
         (System/exit 1))))
 
-(defmethod task "figwheel"
-  [args]
-  (figwheel/start
-   figwheel-options
-   {:id "dev" :options (assoc build-options :source-map true)}))
+;; (defmethod task "figwheel"
+;;   [args]
+;;   (figwheel/start
+;;    figwheel-options
+;;    {:id "dev" :options (assoc build-options :source-map true)}))
 
 ;; Build script entrypoint. This should be the last expression.
 

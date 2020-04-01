@@ -22,3 +22,7 @@
 (refs/mount!)
 (controls/mount!)
 (board/mount!)
+
+(defn main
+  [& args]
+  (js/console.log "main" args))

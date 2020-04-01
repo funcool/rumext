@@ -1,15 +1,23 @@
-(ns rumext.examples.local-state
+ (ns rumext.examples.local-state
   (:require [goog.dom :as dom]
             [rumext.alpha :as mf]
             [rumext.examples.util :as util]))
 
-(mf/defc label
-  {:wrap [mf/wrap-memo]}
-  [{:keys [state] :as props}]
-  ;; (prn "label" props)
-  (let [{:keys [title n]} state]
-    [:div
-     [:span title ": " n]]))
+;; (mf/defc label
+;;   {:wrap [mf/wrap-memo]}
+;;   [{:keys [state] :as props}]
+;;   ;; (prn "label" props)
+;;   (let [{:keys [title n]} state]
+;;     [:div
+;;      [:span title ": " n]]))
+
+(def label
+  (mf/fnc [{:keys [state] :as props}]
+    ;; (prn "label" props)
+    (let [{:keys [title n]} state]
+      [:div
+       [:span title ": " n]])))
+
 
 (mf/defc local-state
   [{:keys [title] :as props}]
@@ -17,8 +25,6 @@
                                         :n 0}
                              :counter2 {:title "Counter 2"
                                         :n 0}})]
-
-    (mf/use-effect nil #(js/console.log "foo"))
 
     [:section {:class "counters"}
      [:& label {:state (:counter1 @local)}]

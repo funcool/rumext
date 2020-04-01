@@ -1,5 +1,13 @@
 # Changelog #
 
+## Version 2020.04.01
+
+- Add `fnc` macro for define anonymous components (useful for define
+  higher-order components).
+- Depend directrly from react and react-dom from npm. No more cljsjs packages.
+- Add printability for Symbol.
+
+
 ## Version 2020.03.24
 
 - Refactor hooks (make they almost 0 runtime cost).

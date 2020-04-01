@@ -7,11 +7,17 @@
   (:refer-clojure :exclude [ref deref])
   (:require-macros rumext.alpha)
   (:require
-   [cljsjs.react]
-   [cljsjs.react.dom]
+   ["react" :as react]
+   ["react-dom" :as rdom]
    [rumext.util :as util]))
 
 ;; --- Impl
+
+(when (exists? js/Symbol)
+  (extend-protocol IPrintWithWriter
+    js/Symbol
+    (-pr-writer [sym writer _]
+      (-write writer (str "\"" (.toString sym) "\"")))))
 
 (extend-type cljs.core.UUID
   INamed
@@ -24,28 +30,28 @@
   "Add element to the DOM tree. Idempotent. Subsequent mounts will
   just update element."
   [element node]
-  (js/ReactDOM.render element node)
+  (rdom/render element node)
   nil)
 
 (defn unmount
   "Removes component from the DOM tree."
   [node]
-  (js/ReactDOM.unmountComponentAtNode node))
+  (rdom/unmountComponentAtNode node))
 
 (defn hydrate
   "Same as [[mount]] but must be called on DOM tree already rendered
   by a server via [[render-html]]."
   [element node]
-  (js/ReactDOM.hydrate element node))
+  (rdom/hydrate element node))
 
 (defn portal
   "Render `element` in a DOM `node` that is ouside of current DOM hierarchy."
   [element node]
-  (js/ReactDOM.createPortal element node))
+  (rdom/createPortal element node))
 
 (defn create-ref
   []
-  (js/React.createRef))
+  (react/createRef))
 
 (defn ref-val
   "Given state and ref handle, returns React component."
@@ -60,27 +66,27 @@
 
 (defn useRef
   [initial]
-  (js/React.useRef initial))
+  (react/useRef initial))
 
 (defn useState
   [initial]
-  (js/React.useState initial))
+  (react/useState initial))
 
 (defn useEffect
   [f deps]
-  (js/React.useEffect f deps))
+  (react/useEffect f deps))
 
 (defn useMemo
   [f deps]
-  (js/React.useMemo f deps))
+  (react/useMemo f deps))
 
 (defn useCallback
   [f deps]
-  (js/React.useCallback f deps))
+  (react/useCallback f deps))
 
 (defn useLayoutEffect
   [f deps]
-  (js/React.useLayoutEffect f deps))
+  (react/useLayoutEffect f deps))
 
 ;; --- Hooks
 
@@ -193,18 +199,20 @@
 
 (defn wrap-memo
   ([component]
-   (js/React.memo component))
+   (react/memo component))
   ([component eq?]
-   (js/React.memo component #(util/props-equals? eq? %1 %2))))
+   (react/memo component #(util/props-equals? eq? %1 %2))))
 
 ;; --- Other API
 
+(def create-element react/createElement)
+
 (defn element
   ([klass]
-   (js/React.createElement klass #js {}))
+   (react/createElement klass #js {}))
   ([klass props]
    (let [props (cond
                  (object? props) props
                  (map? props) (util/map->obj props)
                  :else (throw (ex-info "Unexpected props" {:props props})))]
-     (js/React.createElement klass props))))
+     (react/createElement klass props))))

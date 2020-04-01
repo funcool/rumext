@@ -38,7 +38,7 @@
 
 (defmacro html
   [body]
-  (let [opts {:create-element 'js/React.createElement
+  (let [opts {:create-element 'rumext.alpha/create-element
               :rewrite-for? true
               :array-children? false}]
     (-> body (hicada.compiler/compile opts handlers &env))))
@@ -74,8 +74,8 @@
          n (rest args)]
     (case s
       0 (if (symbol? v)
-          (recur (assoc r :name (str v)) (inc s) (first n) (rest n))
-          (recur (assoc r :name "anonymous") (inc s) (first n) (rest n)))
+          (recur (assoc r :cname v) (inc s) (first n) (rest n))
+          (recur (assoc r :cname (gensym "anonymous-")) (inc s) v n))
       1 (if (string? v)
           (recur (assoc r :doc v) (inc s) (first n) (rest n))
           (recur r (inc s) v n))
@@ -85,22 +85,20 @@
       3 (if (vector? v)
           (recur (assoc r :args v) (inc s) (first n) (rest n))
           (throw (ex-info "Invalid macro definition: expected component args vector" {})))
-      4 {:cname  (:name r)
+      4 {:cname  (:cname r)
          :docs   (str (:doc r))
          :arg    (first (:args r))
          :body   (cons v n)
          :meta   (:metadata r)})))
 
-(defmacro defc
-  [& args]
-  (let [{:keys [cname
-                docs
-                arg
-                body
-                meta]} (parse-defc args)
+;; TODO: improve code reusability of this two macros
 
+(defmacro fnc
+  [& args]
+  (let [{:keys [cname docs arg body meta]} (parse-defc args)
         argsym (gensym "args")
-        render `(fn [~argsym]
+
+        render `(fn ~cname [~argsym]
                   (let [~@(cond
                             (and (::wrap-props meta true)
                                  (boolean arg))
@@ -119,12 +117,37 @@
 
         render (cond-> render
                  (seq wrap-with)
-                 (as-> f (reduce (fn [r fi] `(~fi ~r)) f (reverse wrap-with))))
+                 (as-> f (reduce (fn [r fi] `(~fi ~r)) f (reverse wrap-with))))]
+    `(let [ac# ~render]
+       (set! (.-displayName ac#) ~(str cname))
+       ac#)))
 
-        dsym (symbol cname)
+(defmacro defc
+  [& args]
+  (let [{:keys [cname docs arg body meta]} (parse-defc args)
 
-        ]
+        argsym (gensym "args")
+        render `(fn ~cname [~argsym]
+                  (let [~@(cond
+                            (and (::wrap-props meta true)
+                                 (boolean arg))
+                            [arg `(rumext.util/wrap-props ~argsym)]
+
+                            (boolean arg)
+                            [arg argsym]
+
+                            :else
+                            [])]
+                    ~@(butlast body)
+                    (html ~(last body))))
+
+        wrap-with (or (::wrap meta)
+                      (:wrap meta))
+
+        render (cond-> render
+                 (seq wrap-with)
+                 (as-> f (reduce (fn [r fi] `(~fi ~r)) f (reverse wrap-with))))]
     `(do
-       (def ~dsym ~docs ~render)
-       (set! (.-displayName ~dsym) ~cname)
+       (def ~cname ~docs ~render)
+       (set! (.-displayName ~cname) ~(str cname))
        )))
