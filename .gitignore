@@ -15,3 +15,4 @@ pom.xml.asc
 /nashorn_code_cache
 /.rebel_readline_history
 /.cpcache
+/.shadow-cljs

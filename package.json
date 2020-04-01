@@ -1,0 +1,24 @@
+{
+  "name": "rumext",
+  "version": "1.0.0",
+  "description": "Simple and Decomplected UI library based on React.",
+  "dependencies": {
+    "react": "^16.13.1",
+    "react-dom": "^16.13.1",
+    "shadow-cljs": "^2.8.94"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/funcool/rumext.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/funcool/rumext/issues"
+  },
+  "homepage": "https://github.com/funcool/rumext#readme"
+}
