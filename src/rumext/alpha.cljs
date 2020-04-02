@@ -175,11 +175,11 @@
    (useLayoutEffect #(let [r (f)] (if (fn? r) r identity)) deps)))
 
 (defn use-memo
-  ([f] (useMemo #js [] f))
+  ([f] (useMemo f #js []))
   ([deps f] (useMemo f deps)))
 
 (defn use-callback
-  ([f] (useCallback #js [] f))
+  ([f] (useCallback f #js []))
   ([deps f] (useCallback f deps)))
 
 (defn deref
@@ -242,10 +242,11 @@
         (fn []
           (this-as this
             (let [state (unchecked-get this "state")
+                  props (unchecked-get this "props")
                   error (unchecked-get state "error")]
               (if error
-                (element fallback #js {:error error})
-                (element component #js {})))))
+                (react/createElement fallback #js {:error error})
+                (react/createElement component props)))))
 
         _ (goog/inherits constructor js/React.Component)
         prototype (unchecked-get constructor "prototype")]

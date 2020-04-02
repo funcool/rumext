@@ -1,5 +1,11 @@
 # Changelog #
 
+## Version 2020.04.02-1
+
+- Fix bugs on use-memo and use-callback.
+- Fix bugs on catch higher-order component.
+
+
 ## Version 2020.04.01-3
 
 - Simplify `defc` and `fnc` macros.
