@@ -248,7 +248,7 @@
                 (react/createElement fallback #js {:error error})
                 (react/createElement component props)))))
 
-        _ (goog/inherits constructor js/React.Component)
+        _ (goog/inherits constructor react/Component)
         prototype (unchecked-get constructor "prototype")]
 
     (unchecked-set constructor "displayName" "ErrorBoundary")

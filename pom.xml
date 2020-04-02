@@ -4,7 +4,7 @@
   <groupId>funcool</groupId>
   <artifactId>rumext</artifactId>
   <packaging>jar</packaging>
-  <version>2020.04.02-1</version>
+  <version>2020.04.02-2</version>
   <name>rumext</name>
   <description>Simple and Decomplected UI library based on React (originated as fork from rum).</description>
   <url>https://github.com/funcool/rumext</url>

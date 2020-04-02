@@ -1,5 +1,10 @@
 # Changelog #
 
+## Version 2020.04.02-2
+
+- Fix bugs on catch higher-order component.
+
+
 ## Version 2020.04.02-1
 
 - Fix bugs on use-memo and use-callback.
