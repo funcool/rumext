@@ -1,5 +1,10 @@
 # Changelog #
 
+## Version 2020.04.02-3
+
+- Fix bugs with Fragments.
+
+
 ## Version 2020.04.02-2
 
 - Fix bugs on catch higher-order component.

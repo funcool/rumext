@@ -11,6 +11,9 @@
    ["react-dom" :as rdom]
    [rumext.util :as util]))
 
+(def Component react/Component)
+(def Fragment react/Fragment)
+
 ;; --- Impl
 
 (when (exists? js/Symbol)
@@ -227,7 +230,7 @@
         (fn [props]
           (this-as this
             (unchecked-set this "state" #js {})
-            (.call react/Component this props)))
+            (.call Component this props)))
 
         did-catch
         (fn [error info]
@@ -248,7 +251,7 @@
                 (react/createElement fallback #js {:error error})
                 (react/createElement component props)))))
 
-        _ (goog/inherits constructor react/Component)
+        _ (goog/inherits constructor Component)
         prototype (unchecked-get constructor "prototype")]
 
     (unchecked-set constructor "displayName" "ErrorBoundary")

@@ -34,7 +34,12 @@
          (let [klass klass]
            (if (map? props)
              [klass (to-js-map props) children]
-             [klass (list 'rumext.util/map->obj props) children]))))})
+             [klass (list 'rumext.util/map->obj props) children]))))
+
+   :* (fn [_ attrs & children]
+        (if (map? attrs)
+          ['rumext.alpha/Fragment attrs children]
+          ['rumext.alpha/Fragment {} (cons attrs children)]))})
 
 (defmacro html
   [body]

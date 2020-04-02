@@ -14,8 +14,9 @@
 (def label
   (mf/fnc label [{:keys [state] :as props}]
     (let [{:keys [title n]} state]
-      [:div
-       [:span title ": " n]])))
+      [:*
+       [:div
+        [:span title ": " n]]])))
 
 
 (mf/defc local-state
