@@ -12,7 +12,10 @@
 ;;      [:span title ": " n]]))
 
 (def label
-  (mf/fnc label [{:keys [state] :as props}]
+  (mf/fnc label
+    {::mf/wrap [mf/memo]}
+    [{:keys [state] :as props}]
+
     (let [{:keys [title n]} state]
       [:*
        [:div
@@ -20,6 +23,8 @@
 
 
 (mf/defc local-state
+  "test docstring"
+  {::mf/wrap [mf/memo]}
   [{:keys [title] :as props}]
   (let [local (mf/use-state {:counter1 {:title "Counter 1"
                                         :n 0}

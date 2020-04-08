@@ -98,38 +98,42 @@
 
 (defn- prepare-render
   [{:keys [cname meta arg body] :as ctx}]
-  (let [argsym (gensym "arg")
-        render `(fn ~cname [~@(if arg
-                                [argsym]
-                                [])]
-                  (let [~@(cond
-                            (and arg (::wrap-props meta true))
-                            [arg `(rumext.util/wrap-props ~argsym)]
+  (let [argsym (gensym "arg")]
+    `(fn ~cname [~@(if arg
+                     [argsym]
+                     [])]
+       (let [~@(cond
+                 (and arg (::wrap-props meta true))
+                 [arg `(rumext.util/wrap-props ~argsym)]
 
-                            arg
-                            [arg argsym]
+                 arg
+                 [arg argsym]
 
-                            :else
-                            [])]
-                    ~@(butlast body)
-                    (html ~(last body))))
-
-        wrap-with (or (::wrap meta)
-                      (:wrap meta))]
-    (cond-> render
-      (seq wrap-with)
-      (as-> f (reduce (fn [r fi] `(~fi ~r)) f (reverse wrap-with))))))
+                 :else
+                 [])]
+         ~@(butlast body)
+         (html ~(last body))))))
 
 (defmacro fnc
   [& args]
-  (let [{:keys [cname] :as ctx} (parse-defc args)]
-    `(let [ac# ~(prepare-render ctx)]
-       (set! (.-displayName ac#) ~(str cname))
-       ac#)))
+  (let [{:keys [cname meta] :as ctx} (parse-defc args)
+        wrap-with (or (::wrap meta)
+                      (:wrap meta))
+        rfs (gensym "component")]
+    `(let [~rfs ~(prepare-render ctx)]
+       (set! (.-displayName ~rfs) ~(str cname))
+       ~(if (seq wrap-with)
+          (reduce (fn [r fi] `(~fi ~r)) rfs (reverse wrap-with))
+          rfs))))
 
 (defmacro defc
   [& args]
-  (let [{:keys [cname docs] :as ctx} (parse-defc args)]
-    `(do
-       (def ~cname ~docs ~(prepare-render ctx))
-       (set! (.-displayName ~cname) ~(str cname)))))
+  (let [{:keys [cname docs meta] :as ctx} (parse-defc args)
+         wrap-with (or (::wrap meta)
+                       (:wrap meta))
+        rfs (gensym "component")]
+    `(let [~rfs ~(prepare-render ctx)]
+       (set! (.-displayName ~rfs) ~(str cname))
+       (def ~cname ~docs ~(if (seq wrap-with)
+                            (reduce (fn [r fi] `(~fi ~r)) rfs (reverse wrap-with))
+                            rfs)))))
