@@ -1,5 +1,13 @@
 # Changelog #
 
+## Version 2020.04.11-0
+
+- Use `Symbol` instead of `gensym` on `deref` (faster and more
+  compatible with `funcool/okulary`).
+- Expose `Profiler`.
+- Remove hydrante function.
+
+
 ## Version 2020.04.08-1
 
 - Fix component naming issues when wrap is used.

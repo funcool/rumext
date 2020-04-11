@@ -11,8 +11,10 @@
    ["react-dom" :as rdom]
    [rumext.util :as util]))
 
+(def create-element react/createElement)
 (def Component react/Component)
 (def Fragment react/Fragment)
+(def Profiler react/Profiler)
 
 ;; --- Impl
 
@@ -40,12 +42,6 @@
   "Removes component from the DOM tree."
   [node]
   (rdom/unmountComponentAtNode node))
-
-(defn hydrate
-  "Same as [[mount]] but must be called on DOM tree already rendered
-  by a server via [[render-html]]."
-  [element node]
-  (rdom/hydrate element node))
 
 (defn portal
   "Render `element` in a DOM `node` that is ouside of current DOM hierarchy."
@@ -190,17 +186,14 @@
   (let [res (useState 0)
         state (aget res 0)
         set-state! (aget res 1)
-
         key (use-memo #js [iref]
-                      #(let [key (gensym "use-deref")]
+                      #(let [key (js/Symbol "rumext.alpha/deref")]
                          (add-watch iref key (fn [a b c d] (set-state! inc)))
                          key))]
     (use-effect #js [key] #(fn [] (remove-watch iref key)))
     (cljs.core/deref iref)))
 
 ;; --- Other API
-
-(def create-element react/createElement)
 
 (defn element
   ([klass]
