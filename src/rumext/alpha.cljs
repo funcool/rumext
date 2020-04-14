@@ -189,8 +189,7 @@
         set-state! (aget res 1)
         key (useMemo
              #(let [key (js/Symbol "rumext.alpha/deref")]
-                (js/queueMicrotask
-                 (fn [] (add-watch iref key (fn [_ _ _ _] (set-state! inc)))))
+                (add-watch iref key (fn [_ _ _ _] (set-state! inc)))
                 key)
              #js [iref])]
 

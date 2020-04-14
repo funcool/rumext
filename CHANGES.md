@@ -1,5 +1,10 @@
 # Changelog #
 
+## Version 2020.04.14-1
+
+- Revert microtask changes.
+
+
 ## Version 2020.04.14-0
 
 - Schedule a microtask for adding watcher in `deref` hook.
