@@ -7,6 +7,7 @@
   (let [ref (mf/use-ref)
         state (mf/use-state 0)]
     (mf/use-layout-effect
+     nil
      (fn []
        (let [node (mf/ref-val ref)]
          (set! (.-height (.-style node)) "0")

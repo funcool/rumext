@@ -1,5 +1,11 @@
 # Changelog #
 
+## Version 2020.04.14-0
+
+- Schedule a microtask for adding watcher in `deref` hook.
+- Properly return value on use-var hook impl functions.
+
+
 ## Version 2020.04.11-0
 
 - Use `Symbol` instead of `gensym` on `deref` (faster and more

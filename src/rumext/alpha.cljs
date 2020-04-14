@@ -59,7 +59,8 @@
 
 (defn set-ref-val!
   [ref val]
-  (unchecked-set ref "current" val))
+  (unchecked-set ref "current" val)
+  val)
 
 ;; --- Raw Hooks
 
@@ -186,11 +187,15 @@
   (let [res (useState 0)
         state (aget res 0)
         set-state! (aget res 1)
-        key (use-memo #js [iref]
-                      #(let [key (js/Symbol "rumext.alpha/deref")]
-                         (add-watch iref key (fn [a b c d] (set-state! inc)))
-                         key))]
-    (use-effect #js [key] #(fn [] (remove-watch iref key)))
+        key (useMemo
+             #(let [key (js/Symbol "rumext.alpha/deref")]
+                (js/queueMicrotask
+                 (fn [] (add-watch iref key (fn [_ _ _ _] (set-state! inc)))))
+                key)
+             #js [iref])]
+
+    (useEffect #(fn [] (remove-watch iref key))
+               #js [iref key])
     (cljs.core/deref iref)))
 
 ;; --- Other API
