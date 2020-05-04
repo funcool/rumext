@@ -33,7 +33,7 @@ released as separated project for conveniendce. Don't expect
 compromise for backward compatibility.
 
 
-## Function Components
+## Components
 
 Function components as it's name says, are defined using plain
 functions. Rumext exposes a lighweigh macro over a `fn` that convert
@@ -68,7 +68,7 @@ the props conversion passing `::mf/wrap-props false` as metadata:
 This is the way you have to extend/add additional functionality to a
 function component. Rumext exposes one:
 
-- `mf/wrap-memo`: analogous to `React.memo`, adds memoization to the
+- `mf/memo`: analogous to `React.memo`, adds memoization to the
   component based on props comparison.
 
 In order to use the high-order components, you need wrap the component manually
@@ -89,6 +89,18 @@ how you can pass a custom compare function:
   {::mf/wrap [#(mf/wrap-memo % =)]}
   [props]
   [:div {:class "label"} (:name props)])
+```
+
+If you want create a own high-order component you can use `mf/fnc` macro:
+
+```clojure
+(defn some-factory
+  [component param]
+  (mf/fnc myhighordercomponent
+    {::mf/wrap-props false}
+    [props]
+    [:section
+      [:> component props]]))
 ```
 
 
