@@ -1,14 +1,16 @@
-;; This Source Code Form is subject to the terms of the Eclipse Public
-;; License - v 1.0
+;; This Source Code Form is subject to the terms of the Mozilla Public
+;; License, v. 2.0. If a copy of the MPL was not distributed with this
+;; file, You can obtain one at http://mozilla.org/MPL/2.0/.
 ;;
 ;; Copyright (c) 2016-2020 Andrey Antukh <niwi@niwi.nz>
 
 (ns rumext.alpha
   (:refer-clojure :exclude [ref deref])
-  (:require-macros rumext.alpha)
+  (:require-macros [rumext.alpha :refer [defc fnc]])
   (:require
    ["react" :as react]
    ["react-dom" :as rdom]
+   [goog.functions :as gf]
    [rumext.util :as util]))
 
 (def create-element react/createElement)
@@ -120,9 +122,9 @@
 
 (defn use-state
   [initial]
-  (let [resp (useState initial)
-        state (aget resp 0)
-        set-state (aget resp 1)]
+  (let [tmp (useState initial)
+        state (aget tmp 0)
+        set-state (aget tmp 1)]
     (reify
       cljs.core/IReset
       (-reset! [_ new-value]
@@ -167,12 +169,12 @@
 (defn use-effect
   ([f] (use-effect #js [] f))
   ([deps f]
-   (useEffect #(let [r (f)] (if (fn? r) r identity)) deps)))
+   (useEffect #(let [r (^js f)] (if (fn? r) r identity)) deps)))
 
 (defn use-layout-effect
   ([f] (use-layout-effect #js [] f))
   ([deps f]
-   (useLayoutEffect #(let [r (f)] (if (fn? r) r identity)) deps)))
+   (useLayoutEffect #(let [r (^js f)] (if (fn? r) r identity)) deps)))
 
 (defn use-memo
   ([f] (useMemo f #js []))
@@ -184,12 +186,12 @@
 
 (defn deref
   [iref]
-  (let [res (useState 0)
-        state (aget res 0)
-        set-state! (aget res 1)
+  (let [tmp (useState 0)
+        state (aget tmp 0)
+        set-state (aget tmp 1)
         key (useMemo
              #(let [key (js/Symbol "rumext.alpha/deref")]
-                (add-watch iref key (fn [_ _ _ _] (set-state! inc)))
+                (add-watch iref key (fn [_ _ _ _] (^js set-state inc)))
                 key)
              #js [iref])]
 
@@ -201,13 +203,13 @@
 
 (defn element
   ([klass]
-   (react/createElement klass #js {}))
+   (create-element klass #js {}))
   ([klass props]
    (let [props (cond
                  (object? props) props
                  (map? props) (util/map->obj props)
                  :else (throw (ex-info "Unexpected props" {:props props})))]
-     (react/createElement klass props))))
+     (create-element klass props))))
 
 ;; --- Higher-Order Components
 
@@ -256,3 +258,32 @@
     (unchecked-set prototype "componentDidCatch" did-catch)
     (unchecked-set prototype "render" render)
     constructor))
+
+(def ^:private schedule
+  (or (and (exists? js/window) js/window.requestAnimationFrame)
+      #(js/setTimeout % 16)))
+
+(defn deferred
+  ([component] (deferred component schedule))
+  ([component sfn]
+   (fnc deferred
+     {::wrap-props false}
+     [props]
+     (let [tmp (useState false)
+           ^boolean render? (aget tmp 0)
+           ^js set-render (aget tmp 1)]
+       (use-effect (fn [] (^js sfn #(set-render true))))
+       (when render? (create-element component props))))))
+
+(defn throttle
+  [component ms]
+  (fnc throttle
+    {::wrap-props false}
+    [props]
+    (let [tmp (useState props)
+          state (aget tmp 0)
+          ^js set-state (aget tmp 1)
+          set-state* (use-memo #(gf/throttle set-state ms))]
+      (use-effect nil #(set-state* props))
+      (create-element component state))))
+

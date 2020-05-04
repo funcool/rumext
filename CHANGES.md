@@ -1,5 +1,15 @@
 # Changelog #
 
+## Version 2020.05.04-0
+
+- Do not reverse wrappers.
+- Minor performance optimizations.
+- Add throttle higher-order component.
+- Add deferred higher-order component.
+- Update documentation.
+- Change license to MPL 2.0.
+
+
 ## Version 2020.04.14-1
 
 - Revert microtask changes.

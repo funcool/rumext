@@ -222,6 +222,12 @@ functions. For this purpose, rumext exposes the following functions:
 `useState`, `useRef`, `useMemo`, `useCallback`, `useLayoutEffect` and
 `useEffect`.
 
+#### Other undocumented stuff
+
+- Error boundaries: `mf/catch` high-order component.
+- Raw `React.memo`: `mf/memo'`.
+- Create element: `mf/element` and `mf/create-element`.
+
 
 ## License ##
 
