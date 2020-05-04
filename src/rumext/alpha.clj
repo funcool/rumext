@@ -123,7 +123,7 @@
     `(let [~rfs ~(prepare-render ctx)]
        (set! (.-displayName ~rfs) ~(str cname))
        ~(if (seq wrap-with)
-          (reduce (fn [r fi] `(~fi ~r)) rfs (reverse wrap-with))
+          (reduce (fn [r fi] `(~fi ~r)) rfs wrap-with)
           rfs))))
 
 (defmacro defc
@@ -135,5 +135,5 @@
     `(let [~rfs ~(prepare-render ctx)]
        (set! (.-displayName ~rfs) ~(str cname))
        (def ~cname ~docs ~(if (seq wrap-with)
-                            (reduce (fn [r fi] `(~fi ~r)) rfs (reverse wrap-with))
+                            (reduce (fn [r fi] `(~fi ~r)) rfs wrap-with)
                             rfs)))))

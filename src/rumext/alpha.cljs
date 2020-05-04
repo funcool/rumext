@@ -256,12 +256,3 @@
     (unchecked-set prototype "componentDidCatch" did-catch)
     (unchecked-set prototype "render" render)
     constructor))
-
-;; NOTE: deprecated
-(defn wrap-memo
-  ([component]
-   (react/memo component))
-  ([component eq?]
-   (react/memo component #(util/props-equals? eq? %1 %2))))
-
-
