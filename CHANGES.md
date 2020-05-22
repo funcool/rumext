@@ -1,5 +1,9 @@
 # Changelog #
 
+## Version 2020.05.22-1
+
+- Bugfixes.
+
 ## Version 2020.05.22-0
 
 - Add context api.

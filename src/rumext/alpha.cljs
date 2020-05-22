@@ -303,7 +303,7 @@
           state     (aget tmp 0)
           set-state (aget tmp 1)
 
-          ref    (mf/use-ref false)
+          ref    (use-ref false)
           render (use-memo #(gf/throttle
                              (fn [v]
                                (when-not (ref-val ref)
