@@ -64,6 +64,18 @@
   (unchecked-set ref "current" val)
   val)
 
+;; --- Context API
+
+(defn create-context
+  ([]
+   (react/createContext nil))
+  ([value]
+   (react/createContext value)))
+
+(defn provider
+  [ctx]
+  (unchecked-get ctx "Provider"))
+
 ;; --- Raw Hooks
 
 (defn useRef
@@ -89,6 +101,10 @@
 (defn useLayoutEffect
   [f deps]
   (react/useLayoutEffect f deps))
+
+(defn useContext
+  [ctx]
+  (react/useContext ctx))
 
 ;; --- Hooks
 
@@ -116,9 +132,11 @@
    #(amap (js-arguments) i ret
           (adapt (aget ret i)))))
 
-;; The cljs version of use-ref is identical to the raw (no
+;; The cljs version of use-ref and use-ctx is identical to the raw (no
 ;; customizations/adaptations needed)
+
 (def use-ref useRef)
+(def use-ctx useContext)
 
 (defn use-state
   [initial]
@@ -198,6 +216,7 @@
     (useEffect #(fn [] (remove-watch iref key))
                #js [iref key])
     (cljs.core/deref iref)))
+
 
 ;; --- Other API
 
@@ -280,10 +299,17 @@
   (fnc throttle
     {::wrap-props false}
     [props]
-    (let [tmp (useState props)
-          state (aget tmp 0)
-          ^js set-state (aget tmp 1)
-          set-state* (use-memo #(gf/throttle set-state ms))]
-      (use-effect nil #(set-state* props))
+    (let [tmp       (useState props)
+          state     (aget tmp 0)
+          set-state (aget tmp 1)
+
+          ref    (mf/use-ref false)
+          render (use-memo #(gf/throttle
+                             (fn [v]
+                               (when-not (ref-val ref)
+                                 (^js set-state v)))
+                             ms))]
+      (use-effect nil #(render props))
+      (use-effect (fn [] #(set-ref-val! ref "true")))
       (create-element component state))))
 

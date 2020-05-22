@@ -1,5 +1,11 @@
 # Changelog #
 
+## Version 2020.05.22-0
+
+- Add context api.
+- Fix a memory leak warning on throttle higher-order component.
+
+
 ## Version 2020.05.04-0
 
 - Do not reverse wrappers.

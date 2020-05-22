@@ -35,6 +35,9 @@ compromise for backward compatibility.
 
 ## Components
 
+
+### How to define a component
+
 Function components as it's name says, are defined using plain
 functions. Rumext exposes a lighweigh macro over a `fn` that convert
 props from js-object to cljs map (shallow) and exposes a facility for
@@ -61,6 +64,39 @@ the props conversion passing `::mf/wrap-props false` as metadata:
   (let [name (gobj/get props "name")]
     [:div {:class "label"} name]))
 ```
+
+### First steps with hicada hiccup
+
+Yoy may be already familiar with hiccup syntax for defining the react
+dom. The intention on this section is explain only the essential
+part of it.
+
+Lets start with simple generic components like `:div`:
+
+```clojure
+[:div {:class "foobar"
+       :style {:background-color "red"}
+       :on-click some-on-click-fn}
+  "Hello World"]
+```
+
+As you can observe, looks very familiar. On default components the
+props are transformed **recursively** at compile time to a js object
+transforming all keys from kebab-case to camelCase (and rename
+`:class` to `className`); so the result will look aproximatelly like
+this in jsx:
+
+```js
+const h = React.createElement;
+
+h("div", {className: "foobar", 
+          style: {"backgroundColor": "red"},
+          onClick=someFn},
+          "Hello World");
+```
+
+TODO
+
 
 
 ### Higher-Order Components
