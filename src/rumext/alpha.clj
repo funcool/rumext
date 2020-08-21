@@ -136,4 +136,6 @@
        (set! (.-displayName ~rfs) ~(str cname))
        (def ~cname ~docs ~(if (seq wrap-with)
                             (reduce (fn [r fi] `(~fi ~r)) rfs wrap-with)
-                            rfs)))))
+                            rfs))
+       ~(when-let [registry (::register meta)]
+          `(swap! ~registry (fn [state#] (assoc state# ~(::register-as meta (keyword (str cname))) ~cname)))))))

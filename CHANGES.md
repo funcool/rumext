@@ -1,5 +1,11 @@
 # Changelog #
 
+## Version 2020.08.21-0
+
+- Add `:rumext.alpha/register` and `:rumext.alpha/register-as` component metadata for automatically
+  register the component on some atom.
+
+
 ## Version 2020.05.22-1
 
 - Bugfixes.

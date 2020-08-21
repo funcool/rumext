@@ -312,4 +312,3 @@
       (use-effect nil #(render props))
       (use-effect (fn [] #(set-ref-val! ref "true")))
       (create-element component state))))
-
