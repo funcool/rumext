@@ -1,8 +1,9 @@
 (ns rumext.examples.board
-  (:require [goog.dom :as dom]
-            [rumext.alpha :as mf]
-            [rumext.examples.util :as util]
-            [lentes.core :as l]))
+  (:require
+   [goog.dom :as dom]
+   [rumext.alpha :as mf]
+   [rumext.examples.util :as util]
+   [okulary.core :as l]))
 
 ;; Reactive drawing board
 
@@ -13,13 +14,13 @@
   [{:keys [x y] :as props}]
   (let [ref (mf/use-memo
              (mf/deps x y)
-             (fn [] (l/derive (l/in [y x]) board)))
+             (fn [] (l/derived (l/in [y x]) board)))
 
         cell (mf/deref ref)
         color @util/*color]
     [:div.art-cell
      {:style {:background-color (when cell color)}
-      :on-mouse-over (fn [_] (swap! ref not) nil)}]))
+      :on-mouse-over (fn [_] (swap! board update-in [y x] not) nil)}]))
 
 (mf/defc board-reactive
   []

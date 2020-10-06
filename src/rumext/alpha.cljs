@@ -13,18 +13,35 @@
    [goog.functions :as gf]
    [rumext.util :as util]))
 
-(def create-element react/createElement)
 (def Component react/Component)
 (def Fragment react/Fragment)
 (def Profiler react/Profiler)
 
-;; --- Impl
+(defn create-element
+  ([type props] (create-element type props nil))
+  ([type props children]
+   (let [props (js* "~{} || {}" props)
+         key   (unchecked-get props "key")
+         ref   (unchecked-get props "ref")]
 
-(when (exists? js/Symbol)
-  (extend-protocol IPrintWithWriter
-    js/Symbol
-    (-pr-writer [sym writer _]
-      (-write writer (str "\"" (.toString sym) "\"")))))
+     (when ^boolean children
+       (unchecked-set props "children" children))
+
+     (when ^boolean key
+       (unchecked-set props "key" nil))
+
+     (when ^boolean ref
+       (unchecked-set props "ref" nil))
+
+     #js {:$$typeof (util/symbol-for "react.element")
+          :type type
+          :key (js* "~{} ? \"\" + ~{}: null" key key)
+          :ref (js* "~{} || null" ref)
+          :props props
+          :_owner nil})))
+
+
+;; --- Impl
 
 (extend-type cljs.core.UUID
   INamed
@@ -124,13 +141,17 @@
 ;; check the equality and uuid and INamed objects always returns false
 ;; to this check).
 
-;; NOTE: identity is a hack for avoid a wrong number of args warning.
-
-(def ^{:arglists '([& items])}
-  deps
-  (identity
-   #(amap (js-arguments) i ret
-          (adapt (aget ret i)))))
+(defn  deps
+  ([] #js [])
+  ([a] #js [(adapt a)])
+  ([a b] #js [(adapt a) (adapt b)])
+  ([a b c] #js [(adapt a) (adapt b) (adapt c)])
+  ([a b c d] #js [(adapt a) (adapt b) (adapt c) (adapt d)])
+  ([a b c d e] #js [(adapt a) (adapt b) (adapt c) (adapt d) (adapt e)])
+  ([a b c d e f] #js [(adapt a) (adapt b) (adapt c) (adapt d) (adapt e) (adapt f)])
+  ([a b c d e f g] #js [(adapt a) (adapt b) (adapt c) (adapt d) (adapt e) (adapt f) (adapt g)])
+  ([a b c d e f g h] #js [(adapt a) (adapt b) (adapt c) (adapt d) (adapt e) (adapt f) (adapt g) (adapt h)])
+  ([a b c d e f g h & rest] (into-array (map adapt (into [a b c d e f g h] rest)))))
 
 ;; The cljs version of use-ref and use-ctx is identical to the raw (no
 ;; customizations/adaptations needed)
@@ -161,28 +182,31 @@
      cljs.core/IDeref
      (-deref [self] state))))
 
+
 (defn use-var
   "A custom hook for define mutable variables that persists
   on renders (based on useRef hook)."
   [initial]
   (let [ref (useRef initial)]
-    (reify
-      cljs.core/IReset
-      (-reset! [_ new-value]
-        (set-ref-val! ref new-value))
+    (useMemo
+     #(reify
+        cljs.core/IReset
+        (-reset! [_ new-value]
+          (set-ref-val! ref new-value))
 
-      cljs.core/ISwap
-      (-swap! [self f]
-        (set-ref-val! ref (f (ref-val ref))))
-      (-swap! [self f x]
-        (set-ref-val! ref (f (ref-val ref) x)))
-      (-swap! [self f x y]
-        (set-ref-val! ref (f (ref-val ref) x y)))
-      (-swap! [self f x y more]
-        (set-ref-val! ref (apply f (ref-val ref) x y more)))
+        cljs.core/ISwap
+        (-swap! [self f]
+          (set-ref-val! ref (f (ref-val ref))))
+        (-swap! [self f x]
+          (set-ref-val! ref (f (ref-val ref) x)))
+        (-swap! [self f x y]
+          (set-ref-val! ref (f (ref-val ref) x y)))
+        (-swap! [self f x y more]
+          (set-ref-val! ref (apply f (ref-val ref) x y more)))
 
-      cljs.core/IDeref
-      (-deref [self] (ref-val ref)))))
+        cljs.core/IDeref
+        (-deref [self] (ref-val ref)))
+     #js [])))
 
 (defn use-effect
   ([f] (use-effect #js [] f))
@@ -202,16 +226,21 @@
   ([f] (useCallback f #js []))
   ([deps f] (useCallback f deps)))
 
+(defn use-fn
+  "A convenient alias to useCallback"
+  ([f] (useCallback f #js []))
+  ([deps f] (useCallback f deps)))
+
 (defn deref
   [iref]
-  (let [tmp (useState 0)
-        state (aget tmp 0)
+  (let [tmp       (useState 0)
+        state     (aget tmp 0)
         set-state (aget tmp 1)
-        key (useMemo
-             #(let [key (js/Symbol "rumext.alpha/deref")]
-                (add-watch iref key (fn [_ _ _ _] (^js set-state inc)))
-                key)
-             #js [iref])]
+        key       (useMemo
+                   #(let [key (js/Symbol "rumext.alpha/deref")]
+                      (add-watch iref key (fn [_ _ _ _] (^js set-state inc)))
+                      key)
+                   #js [iref])]
 
     (useEffect #(fn [] (remove-watch iref key))
                #js [iref key])

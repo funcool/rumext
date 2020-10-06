@@ -45,7 +45,7 @@
   [body]
   (let [opts {:create-element 'rumext.alpha/create-element
               :rewrite-for? true
-              :array-children? false}]
+              :array-children? true}]
     (-> body (hicada.compiler/compile opts handlers &env))))
 
 (defmethod hc/compile-form "cond"

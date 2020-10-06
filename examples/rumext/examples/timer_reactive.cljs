@@ -3,7 +3,10 @@
             [rumext.alpha :as mf]
             [rumext.examples.util :as util]))
 
+(defonce components (atom {}))
+
 (mf/defc timer1
+  {::mf/register-on components}
   [props]
   (let [ts (mf/deref util/*clock)]
     [:div "Timer (deref)" ": "

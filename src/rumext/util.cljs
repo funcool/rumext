@@ -50,3 +50,7 @@
               false))
           true))
       false)))
+
+(defn symbol-for
+  [v]
+  (.for js/Symbol v))

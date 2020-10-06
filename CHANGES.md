@@ -1,5 +1,13 @@
 # Changelog #
 
+
+## Version 2020.10.06-0
+
+- Add highly optimized version of create-element.
+- Properly memoize result of use-var.
+- Update deps.
+
+
 ## Version 2020.08.21-0
 
 - Add `:rumext.alpha/register` and `:rumext.alpha/register-as` component metadata for automatically
