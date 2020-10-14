@@ -1,5 +1,10 @@
 # Changelog #
 
+## Version 2020.10.14-1
+
+- Fix issues in previous release.
+
+
 ## Version 2020.10.14-0
 
 - Fix minor issues on previous version related

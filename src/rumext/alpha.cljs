@@ -10,7 +10,7 @@
   (:require
    ["react" :as react]
    ["react-dom" :as rdom]
-   ["react/jsx-runtime" :as jsx-runtime]
+   ["react/cjs/react-jsx-runtime.production.min" :as jsx-runtime]
    [goog.functions :as gf]
    [rumext.util :as util]))
 
