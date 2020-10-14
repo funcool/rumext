@@ -1,5 +1,10 @@
 # Changelog #
 
+## Version 2020.10.14-0
+
+- Fix minor issues on previous version related
+  to the optimized `create-element` function.
+
 
 ## Version 2020.10.06-0
 

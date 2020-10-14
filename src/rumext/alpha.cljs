@@ -10,6 +10,7 @@
   (:require
    ["react" :as react]
    ["react-dom" :as rdom]
+   ["react/jsx-runtime" :as jsx-runtime]
    [goog.functions :as gf]
    [rumext.util :as util]))
 
@@ -20,26 +21,8 @@
 (defn create-element
   ([type props] (create-element type props nil))
   ([type props children]
-   (let [props (js* "~{} || {}" props)
-         key   (unchecked-get props "key")
-         ref   (unchecked-get props "ref")]
-
-     (when ^boolean children
-       (unchecked-set props "children" children))
-
-     (when ^boolean key
-       (unchecked-set props "key" nil))
-
-     (when ^boolean ref
-       (unchecked-set props "ref" nil))
-
-     #js {:$$typeof (util/symbol-for "react.element")
-          :type type
-          :key (js* "~{} ? \"\" + ~{}: null" key key)
-          :ref (js* "~{} || null" ref)
-          :props props
-          :_owner nil})))
-
+   (let [props (js/Object.assign #js {} props (when ^boolean children #js {:children children}))]
+     (jsx-runtime/jsx type props (unchecked-get props "key")))))
 
 ;; --- Impl
 
