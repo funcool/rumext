@@ -90,29 +90,32 @@
       3 (if (vector? v)
           (recur (assoc r :args v) (inc s) (first n) (rest n))
           (throw (ex-info "Invalid macro definition: expected component args vector" {})))
-      4 {:cname  (:cname r)
-         :docs   (str (:doc r))
-         :arg    (first (:args r))
-         :body   (cons v n)
-         :meta   (:metadata r)})))
+      4 {:cname     (:cname r)
+         :docs      (str (:doc r))
+         :arg-props (first (:args r))
+         :arg-rest  (rest (:args r))
+         :body      (cons v n)
+         :meta      (:metadata r)})))
 
 (defn- prepare-render
-  [{:keys [cname meta arg body] :as ctx}]
-  (let [argsym (gensym "arg")]
-    `(fn ~cname [~@(if arg
-                     [argsym]
-                     [])]
-       (let [~@(cond
-                 (and arg (::wrap-props meta true))
-                 [arg `(rumext.util/wrap-props ~argsym)]
+  [{:keys [cname meta arg-props arg-rest body] :as ctx}]
+  (let [argsym (gensym "arg")
+        args   (cons argsym arg-rest)
+        fnbody `(fn ~cname [~@(if arg-props args [])]
+                  (let [~@(cond
+                            (and arg-props (::wrap-props meta true))
+                            [arg-props `(rumext.util/wrap-props ~argsym)]
 
-                 arg
-                 [arg argsym]
+                            (some? arg-props)
+                            [arg-props argsym]
 
-                 :else
-                 [])]
-         ~@(butlast body)
-         (html ~(last body))))))
+                            :else [])]
+                    ~@(butlast body)
+                    (html ~(last body))))]
+
+    (if (::forward-ref meta)
+      `(rumext.alpha/forward-ref ~fnbody)
+      fnbody)))
 
 (defmacro fnc
   [& args]

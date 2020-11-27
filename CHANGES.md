@@ -1,5 +1,10 @@
 # Changelog #
 
+## Version 2020.11.27-0
+
+- Add `::mf/forward-ref` metadata and support for multiple arguments for components.
+
+
 ## Version 2020.10.14-1
 
 - Fix issues in previous release.

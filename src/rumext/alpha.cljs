@@ -24,6 +24,10 @@
    (let [props (js/Object.assign #js {} props (when ^boolean children #js {:children children}))]
      (jsx-runtime/jsx type props (unchecked-get props "key")))))
 
+(defn forward-ref
+  [component]
+  (react/forwardRef component))
+
 ;; --- Impl
 
 (extend-type cljs.core.UUID

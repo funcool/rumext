@@ -10,7 +10,7 @@
     com.bhauman/rebel-readline-cljs {:mvn/version "RELEASE"}
     com.bhauman/rebel-readline {:mvn/version "RELEASE"}
 
-    thheller/shadow-cljs {:mvn/version "2.11.4"}
+    thheller/shadow-cljs {:mvn/version "2.11.8"}
     funcool/okulary {:mvn/version "2020.04.14-0"}
     org.clojure/clojurescript {:mvn/version "1.10.773"}
     org.clojure/clojure {:mvn/version "1.10.1"}

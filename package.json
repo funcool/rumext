@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "description": "Simple and Decomplected UI library based on React.",
   "dependencies": {
-    "react": "17.0.0-rc.0",
-    "react-dom": "17.0.0-rc.0",
-    "shadow-cljs": "2.11.4"
+    "react": "17.0.1",
+    "react-dom": "17.0.1",
+    "shadow-cljs": "2.11.8"
   },
   "devDependencies": {},
   "scripts": {

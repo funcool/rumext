@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -ex
+
+clojure -A:dev -J-Xms128m -J-Xmx128m -M -m rebel-readline.main
