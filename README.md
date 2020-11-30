@@ -29,7 +29,7 @@ This is the list of the main differences:
 
 **WARNING**: this is not intended for general use, it is mainly
 implemented to be used in [uxbox](https://github.com/uxbox/uxbox) and
-released as separated project for conveniendce. Don't expect
+released as separated project for convenience. Don't expect
 compromise for backward compatibility.
 
 
