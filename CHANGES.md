@@ -1,5 +1,10 @@
 # Changelog #
 
+## Version 2021.01.26-0
+
+- Add `check-props` helper.
+
+
 ## Version 2020.11.27-0
 
 - Add `::mf/forward-ref` metadata and support for multiple arguments for components.

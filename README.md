@@ -8,7 +8,7 @@ Simple and Decomplected UI library based on React.
 Add to deps.edn:
 
 ```
-funcool/rumext {:mvn/version "2020.11.27-0"}
+funcool/rumext {:mvn/version "2021.01.26-0"}
 ```
 
 ## Differences with rum
@@ -28,8 +28,8 @@ This is the list of the main differences:
   overhead on top of React.
 
 **WARNING**: this is not intended for general use, it is mainly
-implemented to be used in [uxbox](https://github.com/uxbox/uxbox) and
-released as separated project for conveniendce. Don't expect
+implemented to be used in [penpot](https://github.com/penpot/penpot)
+and released as separated project for conveniendce. Don't expect
 compromise for backward compatibility.
 
 
@@ -66,9 +66,9 @@ the props conversion passing `::mf/wrap-props false` as metadata:
 
 ### First steps with hicada hiccup
 
-Yoy may be already familiar with hiccup syntax for defining the react
-dom. The intention on this section is explain only the essential
-part of it.
+You may be already familiar with hiccup syntax for defining the react
+dom. The intention on this section is explain only the essential part
+of it and the peculiarities of hiccada and rumext.
 
 Lets start with simple generic components like `:div`:
 
@@ -78,6 +78,9 @@ Lets start with simple generic components like `:div`:
        :on-click some-on-click-fn}
   "Hello World"]
 ```
+
+Until here, nothing new, looks like any hiccup template. The 
+
 
 As you can observe, looks very familiar. On default components the
 props are transformed **recursively** at compile time to a js object

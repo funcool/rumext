@@ -6,8 +6,9 @@
 (defonce components (atom {}))
 
 (mf/defc timer1
-  {::mf/register-on components}
-  [props]
+  {::mf/register-on components
+   ::mf/forward-ref true}
+  [props ref]
   (let [ts (mf/deref util/*clock)]
     [:div "Timer (deref)" ": "
      [:span {:style {:color @util/*color}}
