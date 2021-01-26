@@ -328,3 +328,21 @@
       (use-effect nil #(render props))
       (use-effect (fn [] #(set-ref-val! ref "true")))
       (create-element component state))))
+
+(defn check-props
+  "Utility function to use with `memo'`.
+  Will check the `props` keys to see if they are equal.
+
+  Usage:
+
+  (mf/defc my-component
+    {::mf/wrap [#(mf/memo' % (checkprops [\"prop1\" \"prop2\"]))]}
+    [props]
+  )"
+
+  ([props] (check-props props =))
+  ([props eqfn?]
+   (fn [np op]
+     (every? #(eqfn? (unchecked-get np %)
+                     (unchecked-get op %))
+             props))))
