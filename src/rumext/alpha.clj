@@ -2,7 +2,7 @@
 ;; License, v. 2.0. If a copy of the MPL was not distributed with this
 ;; file, You can obtain one at http://mozilla.org/MPL/2.0/.
 ;;
-;; Copyright (c) 2016-2020 Andrey Antukh <niwi@niwi.nz>
+;; Copyright (c) Andrey Antukh <niwi@niwi.nz>
 
 (ns rumext.alpha
   (:require [hicada.compiler :as hc]))
@@ -26,7 +26,10 @@
 (create-ns 'rumext.util)
 
 (def handlers
-  {:& (fn
+  {:> (fn [_ klass attrs & children]
+        [klass attrs children])
+
+   :& (fn
         ([_ klass]
          (let [klass klass]
            [klass {} nil]))
@@ -48,24 +51,9 @@
               :array-children? true}]
     (-> body (hicada.compiler/compile opts handlers &env))))
 
-(defmethod hc/compile-form "cond"
-  [[_ & clauses]]
-  `(cond ~@(doall
-            (mapcat
-             (fn [[check expr]] [check (hc/compile-html expr)])
-             (partition 2 clauses)))))
-
 (defmethod hc/compile-form "letfn"
   [[_ bindings & body]]
   `(letfn ~bindings ~@(butlast body) ~(hc/emitter (last body))))
-
-(defmethod hc/compile-form "when-let"
-  [[_ bindings & body]]
-  `(when-let ~bindings ~@(butlast body) ~(hc/emitter (last body))))
-
-(defmethod hc/compile-form "if-let"
-  [[_ bindings & body]]
-  `(if-let ~bindings ~@(doall (for [x body] (hc/emitter x)))))
 
 (defmethod hc/compile-form "fn"
   [[_ params & body]]
