@@ -1,5 +1,10 @@
 # Changelog #
 
+## Version 2021.05.12-0
+
+- Fix bug in `adapt` with keywords.
+
+
 ## Version 2021.01.26-0
 
 - Add `check-props` helper.

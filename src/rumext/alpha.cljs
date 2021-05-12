@@ -2,7 +2,7 @@
 ;; License, v. 2.0. If a copy of the MPL was not distributed with this
 ;; file, You can obtain one at http://mozilla.org/MPL/2.0/.
 ;;
-;; Copyright (c) 2016-2020 Andrey Antukh <niwi@niwi.nz>
+;; Copyright (c) Andrey Antukh <niwi@niwi.nz>
 
 (ns rumext.alpha
   (:refer-clojure :exclude [ref deref])
@@ -114,19 +114,13 @@
 
 (defn- adapt
   [o]
-  (if (uuid? o)
+  (if (or (uuid? o)
+          (keyword? o))
     (str o)
-    (if (instance? cljs.core/INamed o)
-      (name o)
-      o)))
+    o))
 
 ;; "A convenience function that translates the list of arguments into a
 ;; valid js array for use in the deps list of hooks.
-
-;; It translates INamed to Strings and uuid instances to strings for
-;; correct equality check (react uses equivalent to `identical?` for
-;; check the equality and uuid and INamed objects always returns false
-;; to this check).
 
 (defn  deps
   ([] #js [])
