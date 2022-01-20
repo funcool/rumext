@@ -142,8 +142,8 @@
 
 (defn use-state
   [initial]
-  (let [tmp (useState initial)
-        state (aget tmp 0)
+  (let [tmp       (useState initial)
+        state     (aget tmp 0)
         set-state (aget tmp 1)]
     (reify
       cljs.core/IReset

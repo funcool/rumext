@@ -5,7 +5,8 @@
 ;; Copyright (c) Andrey Antukh <niwi@niwi.nz>
 
 (ns rumext.alpha
-  (:require [hicada.compiler :as hc]))
+  (:require
+   [hicada.compiler :as hc]))
 
 (defn- to-js-map
   "Convert a map into a JavaScript object."
@@ -130,3 +131,39 @@
                             rfs))
        ~(when-let [registry (::register meta)]
           `(swap! ~registry (fn [state#] (assoc state# ~(::register-as meta (keyword (str cname))) ~cname)))))))
+
+
+(defmacro with-memo
+  [deps & body]
+  (cond
+    (vector? deps)
+    `(rumext.alpha/use-memo
+      (rumext.alpha/deps ~@deps)
+      (fn [] ~@body))
+
+
+    (nil? deps)
+    `(rumext.alpha/use-memo
+      nil
+      (fn [] ~@body))
+
+    :else
+    `(rumext.alpha/use-memo
+      (fn [] ~@(cons deps body)))))
+
+(defmacro with-effect
+  [deps & body]
+  (cond
+    (vector? deps)
+    `(rumext.alpha/use-effect
+      (rumext.alpha/deps ~@deps)
+      (fn [] ~@body))
+
+    (nil? deps)
+    `(rumext.alpha/use-effect
+      nil
+      (fn [] ~@body))
+
+    :else
+    `(rumext.alpha/use-effect
+      (fn [] ~@(cons deps body)))))
