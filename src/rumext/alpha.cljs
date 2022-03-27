@@ -11,6 +11,7 @@
    ["react" :as react]
    ["react-dom" :as rdom]
    ["react/cjs/react-jsx-runtime.production.min" :as jsx-runtime]
+   [cljs.core :as c]
    [goog.functions :as gf]
    [rumext.util :as util]))
 
@@ -112,12 +113,18 @@
 
 ;; --- Hooks
 
-(defn- adapt
-  [o]
-  (if (or (uuid? o)
-          (keyword? o))
-    (str o)
-    o))
+(defprotocol IDepsAdapter
+  (adapt [o] "adapt dep if proceed"))
+
+(extend-protocol IDepsAdapter
+  default
+  (adapt [o] o)
+
+  cljs.core.UUID
+  (adapt [o] (.toString ^js o))
+
+  cljs.core.Keyword
+  (adapt [o] (.toString ^js o)))
 
 ;; "A convenience function that translates the list of arguments into a
 ;; valid js array for use in the deps list of hooks.
@@ -142,40 +149,42 @@
 
 (defn use-state
   [initial]
-  (let [tmp       (useState initial)
-        state     (aget tmp 0)
-        set-state (aget tmp 1)]
-    (reify
-      cljs.core/IReset
-      (-reset! [_ new-value]
-        (set-state new-value))
+  (let [tmp    (useState initial)
+        state  (aget tmp 0)
+        update (aget tmp 1)]
+    (mf/use-memo
+     #js [state]
+     #(reify
+        c/IReset
+        (-reset! [_ value]
+          (update value))
 
-      cljs.core/ISwap
-      (-swap! [self f]
-        (set-state f))
-      (-swap! [self f x]
-        (set-state #(f % x)))
-      (-swap! [self f x y]
-        (set-state #(f % x y)))
-      (-swap! [self f x y more]
-        (set-state #(apply f % x y more)))
+        c/ISwap
+        (-swap! [self f]
+          (update f))
+        (-swap! [self f x]
+          (update #(f % x)))
+        (-swap! [self f x y]
+          (update #(f % x y)))
+        (-swap! [self f x y more]
+          (update #(apply f % x y more)))
 
-     cljs.core/IDeref
-     (-deref [self] state))))
-
+        c/IDeref
+        (-deref [_] state)))))
 
 (defn use-var
   "A custom hook for define mutable variables that persists
   on renders (based on useRef hook)."
   [initial]
   (let [ref (useRef initial)]
-    (useMemo
-     #(reify
-        cljs.core/IReset
+    (mf/use-memo
+     #js []
+     #(specify! (fn [val] (set-ref-val! ref val))
+        c/IReset
         (-reset! [_ new-value]
           (set-ref-val! ref new-value))
 
-        cljs.core/ISwap
+        c/ISwap
         (-swap! [self f]
           (set-ref-val! ref (f (ref-val ref))))
         (-swap! [self f x]
@@ -185,9 +194,8 @@
         (-swap! [self f x y more]
           (set-ref-val! ref (apply f (ref-val ref) x y more)))
 
-        cljs.core/IDeref
-        (-deref [self] (ref-val ref)))
-     #js [])))
+        c/IDeref
+        (-deref [self] (ref-val ref))))))
 
 (defn use-effect
   ([f] (use-effect #js [] f))
@@ -225,7 +233,7 @@
 
     (useEffect #(fn [] (remove-watch iref key))
                #js [iref key])
-    (cljs.core/deref iref)))
+    (c/deref iref)))
 
 
 ;; --- Other API
