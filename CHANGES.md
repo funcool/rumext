@@ -1,5 +1,10 @@
 # Changelog #
 
+## Version 2022.03.28-xxx
+
+- Make the state return value stable if the state value does not changes.
+- Allow use use-var return value on VDOM ref attrs.
+
 
 ## Version 2022.01.20.128
 

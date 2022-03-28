@@ -147,56 +147,6 @@
 (def use-ref useRef)
 (def use-ctx useContext)
 
-(defn use-state
-  [initial]
-  (let [tmp    (useState initial)
-        state  (aget tmp 0)
-        update (aget tmp 1)]
-    (mf/use-memo
-     #js [state]
-     #(reify
-        c/IReset
-        (-reset! [_ value]
-          (update value))
-
-        c/ISwap
-        (-swap! [self f]
-          (update f))
-        (-swap! [self f x]
-          (update #(f % x)))
-        (-swap! [self f x y]
-          (update #(f % x y)))
-        (-swap! [self f x y more]
-          (update #(apply f % x y more)))
-
-        c/IDeref
-        (-deref [_] state)))))
-
-(defn use-var
-  "A custom hook for define mutable variables that persists
-  on renders (based on useRef hook)."
-  [initial]
-  (let [ref (useRef initial)]
-    (mf/use-memo
-     #js []
-     #(specify! (fn [val] (set-ref-val! ref val))
-        c/IReset
-        (-reset! [_ new-value]
-          (set-ref-val! ref new-value))
-
-        c/ISwap
-        (-swap! [self f]
-          (set-ref-val! ref (f (ref-val ref))))
-        (-swap! [self f x]
-          (set-ref-val! ref (f (ref-val ref) x)))
-        (-swap! [self f x y]
-          (set-ref-val! ref (f (ref-val ref) x y)))
-        (-swap! [self f x y more]
-          (set-ref-val! ref (apply f (ref-val ref) x y more)))
-
-        c/IDeref
-        (-deref [self] (ref-val ref))))))
-
 (defn use-effect
   ([f] (use-effect #js [] f))
   ([deps f]
@@ -235,6 +185,59 @@
                #js [iref key])
     (c/deref iref)))
 
+(defn use-state
+  ([] (use-state nil))
+  ([initial]
+   (let [tmp    (useState initial)
+         state  (aget tmp 0)
+         update (aget tmp 1)]
+     (use-memo
+      #js [state]
+      (fn []
+        (reify
+          c/IReset
+          (-reset! [_ value]
+            (update value))
+
+          c/ISwap
+          (-swap! [self f]
+            (update f))
+          (-swap! [self f x]
+            (update #(f % x)))
+          (-swap! [self f x y]
+            (update #(f % x y)))
+          (-swap! [self f x y more]
+            (update #(apply f % x y more)))
+
+          c/IDeref
+          (-deref [_] state)))))))
+
+(defn use-var
+  "A custom hook for define mutable variables that persists
+  on renders (based on useRef hook)."
+  ([] (use-var nil))
+  ([initial]
+   (let [ref (useRef initial)]
+     (use-memo
+      #js []
+      #(specify! (fn [val] (set-ref-val! ref val))
+         c/IReset
+         (-reset! [_ new-value]
+           (set-ref-val! ref new-value))
+
+         c/ISwap
+         (-swap!
+           ([self f]
+            (set-ref-val! ref (f (ref-val ref))))
+           ([self f x]
+            (set-ref-val! ref (f (ref-val ref) x)))
+           ([self f x y]
+            (set-ref-val! ref (f (ref-val ref) x y)))
+           ([self f x y more]
+            (set-ref-val! ref (apply f (ref-val ref) x y more))))
+
+         c/IDeref
+         (-deref [self] (ref-val ref)))))))
 
 ;; --- Other API
 

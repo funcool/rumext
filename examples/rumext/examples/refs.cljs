@@ -4,12 +4,12 @@
 
 (mf/defc textarea
   [props]
-  (let [ref (mf/use-ref)
+  (let [ref   (mf/use-var)
         state (mf/use-state 0)]
     (mf/use-layout-effect
      nil
      (fn []
-       (let [node (mf/ref-val ref)]
+       (let [node @ref]
          (set! (.-height (.-style node)) "0")
          (set! (.-height (.-style node)) (str (+ 2 (.-scrollHeight node)) "px")))))
 
