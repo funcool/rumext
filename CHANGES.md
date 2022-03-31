@@ -1,5 +1,9 @@
 # Changelog #
 
+## Version 2022.03.31-133
+
+- Avoid call internal deref on the deref hook.
+
 ## Version 2022.03.28-131
 
 - Make the state return value stable if the state value does not changes.
