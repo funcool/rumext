@@ -172,18 +172,20 @@
 
 (defn deref
   [iref]
-  (let [tmp       (useState 0)
+  (let [tmp       (useState #(c/deref iref))
         state     (aget tmp 0)
         set-state (aget tmp 1)
         key       (useMemo
                    #(let [key (js/Symbol "rumext.alpha/deref")]
-                      (add-watch iref key (fn [_ _ _ _] (^js set-state inc)))
+                      (add-watch iref key (fn [_ _ _ newv]
+                                            (^js set-state newv)))
                       key)
                    #js [iref])]
 
     (useEffect #(fn [] (remove-watch iref key))
                #js [iref key])
-    (c/deref iref)))
+
+    state))
 
 (defn use-state
   ([] (use-state nil))
