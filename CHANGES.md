@@ -1,5 +1,10 @@
 # Changelog #
 
+## Version 2022.04.08-135
+
+- Upgrade to react-18
+
+
 ## Version 2022.03.31-133
 
 - Avoid call internal deref on the deref hook.
