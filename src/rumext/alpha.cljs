@@ -9,11 +9,13 @@
   (:require-macros [rumext.alpha :refer [defc fnc]])
   (:require
    ["react" :as react]
-   ["react-dom" :as rdom]
+   ["react-dom/client" :as rdom]
    ["react/cjs/react-jsx-runtime.production.min" :as jsx-runtime]
    [cljs.core :as c]
    [goog.functions :as gf]
    [rumext.util :as util]))
+
+(def noop (constantly nil))
 
 (def Component react/Component)
 (def Fragment react/Fragment)
@@ -33,22 +35,29 @@
 
 (extend-type cljs.core.UUID
   INamed
-  (-name [this] (str this))
+  (-name [this] (js* "\"\" + ~{}" this))
   (-namespace [_] ""))
 
 ;; --- Main Api
 
+(defn create-root
+  [node]
+  (rdom/createRoot node))
+
+(defn hydrate-root
+  [node element]
+  (rdom/hydrateRoot node))
+
 (defn mount
   "Add element to the DOM tree. Idempotent. Subsequent mounts will
   just update element."
-  [element node]
-  (rdom/render element node)
-  nil)
+  [root element]
+  (.render ^js root element))
 
 (defn unmount
   "Removes component from the DOM tree."
-  [node]
-  (rdom/unmountComponentAtNode node))
+  [root]
+  (.unmount ^js root))
 
 (defn portal
   "Render `element` in a DOM `node` that is ouside of current DOM hierarchy."
@@ -111,6 +120,10 @@
   [ctx]
   (react/useContext ctx))
 
+(defn useTransition
+  []
+  (react/useTransition))
+
 ;; --- Hooks
 
 (defprotocol IDepsAdapter
@@ -141,21 +154,27 @@
   ([a b c d e f g h] #js [(adapt a) (adapt b) (adapt c) (adapt d) (adapt e) (adapt f) (adapt g) (adapt h)])
   ([a b c d e f g h & rest] (into-array (map adapt (into [a b c d e f g h] rest)))))
 
-;; The cljs version of use-ref and use-ctx is identical to the raw (no
-;; customizations/adaptations needed)
+(defn use-ref
+  ([] (react/useRef nil))
+  ([initial] (react/useRef initial)))
 
-(def use-ref useRef)
-(def use-ctx useContext)
+(defn use-ctx
+  [ctx]
+  (react/useContext ctx))
+
+(defn start-transition
+  [f]
+  (react/startTransition f))
 
 (defn use-effect
   ([f] (use-effect #js [] f))
   ([deps f]
-   (useEffect #(let [r (^js f)] (if (fn? r) r identity)) deps)))
+   (useEffect #(let [r (f)] (if (fn? r) r noop)) deps)))
 
 (defn use-layout-effect
   ([f] (use-layout-effect #js [] f))
   ([deps f]
-   (useLayoutEffect #(let [r (^js f)] (if (fn? r) r identity)) deps)))
+   (useLayoutEffect #(let [r (f)] (if (fn? r) r noop)) deps)))
 
 (defn use-memo
   ([f] (useMemo f #js []))
@@ -170,46 +189,60 @@
   ([f] (useCallback f #js []))
   ([deps f] (useCallback f deps)))
 
+(defn use-transition
+  []
+  (let [tmp        (useTransition)
+        is-pending (aget tmp 0)
+        start-fn   (aget tmp 1)]
+    (use-memo
+     #js [is-pending]
+     (fn []
+       (specify! (fn [cb-fn]
+                   (^function start-fn cb-fn))
+         cljs.core/IDeref
+         (-deref [_] is-pending))))))
+
+(defn use-id
+  []
+  (react/useId))
+
 (defn deref
   [iref]
-  (let [tmp       (useState #(c/deref iref))
-        state     (aget tmp 0)
-        set-state (aget tmp 1)
-        key       (useMemo
-                   #(let [key (js/Symbol "rumext.alpha/deref")]
-                      (add-watch iref key (fn [_ _ _ newv]
-                                            (^js set-state newv)))
-                      key)
-                   #js [iref])]
-
-    (useEffect #(fn [] (remove-watch iref key))
-               #js [iref key])
-
-    state))
+  (let [state     (use-ref (c/deref iref))
+        key       (use-id)
+        get-state (use-fn #(unchecked-get state "current"))
+        subscribe (use-fn
+                   #js [iref]
+                   (fn [^function listener-fn]
+                     (add-watch iref key (fn [_ _ _ newv]
+                                           (unchecked-set state "current" newv)
+                                           (listener-fn)))
+                     #(remove-watch iref key)))]
+    (react/useSyncExternalStore subscribe get-state)))
 
 (defn use-state
   ([] (use-state nil))
   ([initial]
-   (let [tmp    (useState initial)
-         state  (aget tmp 0)
-         update (aget tmp 1)]
+   (let [tmp       (useState initial)
+         state     (aget tmp 0)
+         update-fn (aget tmp 1)]
      (use-memo
       #js [state]
       (fn []
         (reify
           c/IReset
           (-reset! [_ value]
-            (update value))
+            (^function update-fn value))
 
           c/ISwap
           (-swap! [self f]
-            (update f))
+            (^function update-fn f))
           (-swap! [self f x]
-            (update #(f % x)))
+            (^function update-fn #(f % x)))
           (-swap! [self f x y]
-            (update #(f % x y)))
+            (^function update-fn #(f % x y)))
           (-swap! [self f x y more]
-            (update #(apply f % x y more)))
+            (^function update-fn #(apply f % x y more)))
 
           c/IDeref
           (-deref [_] state)))))))
