@@ -9,8 +9,8 @@
   (:require-macros [rumext.alpha :refer [defc fnc]])
   (:require
    ["react" :as react]
+   ["react/jsx-runtime" :as jsxrt]
    ["react-dom/client" :as rdom]
-   ["react/cjs/react-jsx-runtime.production.min" :as jsx-runtime]
    [cljs.core :as c]
    [goog.functions :as gf]
    [rumext.util :as util]))
@@ -24,8 +24,8 @@
 (defn create-element
   ([type props] (create-element type props nil))
   ([type props children]
-   (let [props (js/Object.assign #js {} props (when ^boolean children #js {:children children}))]
-     (jsx-runtime/jsx type props (unchecked-get props "key")))))
+   (let [props (js/Object.assign #js {:children children} props)]
+     (jsxrt/jsx type props (unchecked-get props "key")))))
 
 (defn forward-ref
   [component]
