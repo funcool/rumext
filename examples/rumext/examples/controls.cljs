@@ -32,6 +32,8 @@
    [:dd (util/watches-count {:iref util/*clock}) " watches"]
    ])
 
+(defonce root (mf/create-root (dom/getElement "controls")))
+
 (defn mount! []
-  (mf/mount (mf/element controls) (dom/getElement "controls")))
+  (mf/mount root (mf/element controls)))
 

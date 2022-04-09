@@ -31,10 +31,11 @@
         ;; this is how one can specify React key for component
         [:& cell {:key x :x x :y y}])])])
 
+
+(defonce root (mf/create-root (dom/getElement "board")))
+
 (defn mount! []
-  (mf/mount (mf/element board-reactive)
-            (dom/getElement "board"))
+  (mf/mount root (mf/element board-reactive))
   (js/setTimeout (fn []
-                   (mf/mount (mf/element board-reactive)
-                             (dom/getElement "board")))
+                   (mf/mount root (mf/element board-reactive)))
                  2000))

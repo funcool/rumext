@@ -20,16 +20,15 @@
    [:span {:style {:color @util/*color}}
     (util/format-time ts)]])
 
-(defn mount! []
-  (mf/mount (mf/element timer1)
-            (dom/getElement "timer1"))
-  (mf/mount (mf/element timer2 {:ts @util/*clock})
-            (dom/getElement "timer2"))
+(defonce root1 (mf/create-root (dom/getElement "timer1")))
+(defonce root2 (mf/create-root (dom/getElement "timer2")))
 
+(defn mount! []
+  (mf/mount root1 (mf/element timer1))
+  (mf/mount root2 (mf/element timer2 {:ts @util/*clock}))
   (add-watch util/*clock :timer-static
              (fn [_ _ _ ts]
-               (mf/mount (mf/element timer2 {:ts ts})
-                         (dom/getElement "timer2")))))
+               (mf/mount root2 (mf/element timer2 {:ts ts})))))
 
 
 

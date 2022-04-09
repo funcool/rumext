@@ -89,6 +89,8 @@
        [:th {:col-span 8}
         [:& render-count]]]]]))
 
+(defonce root (mf/create-root (dom/getElement "binary-clock")))
+
 (defn mount! []
-  (mf/mount (mf/element binary-clock) (dom/getElement "binary-clock")))
+  (mf/mount root (mf/element binary-clock)))
 

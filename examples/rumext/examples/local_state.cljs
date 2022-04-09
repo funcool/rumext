@@ -3,14 +3,6 @@
             [rumext.alpha :as mf]
             [rumext.examples.util :as util]))
 
-;; (mf/defc label
-;;   {:wrap [mf/wrap-memo]}
-;;   [{:keys [state] :as props}]
-;;   ;; (prn "label" props)
-;;   (let [{:keys [title n]} state]
-;;     [:div
-;;      [:span title ": " n]]))
-
 (def label
   (mf/fnc label
     {::mf/wrap [mf/memo]}
@@ -38,8 +30,10 @@
      [:button {:on-click #(swap! local update-in [:counter2 :n] inc)} "Increment Counter 2"]]))
 
 
+(defonce root (mf/create-root (dom/getElement "local-state-1")))
+
 (defn mount! []
-  (mf/mount (mf/element local-state {:title "Clicks count"})
-            (dom/getElement "local-state-1")))
+  ;; (mf/unmount root)
+  (mf/mount root (mf/element local-state {:title "Clicks count"})))
 
 

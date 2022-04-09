@@ -6,6 +6,7 @@
   [props]
   (let [ref   (mf/use-var)
         state (mf/use-state 0)]
+
     (mf/use-layout-effect
      nil
      (fn []
@@ -29,5 +30,7 @@
   [:div
    [:& textarea]])
 
+(defonce root (mf/create-root (dom/getElement "refs")))
+
 (defn mount! []
-  (mf/mount (mf/element refs) (dom/getElement "refs")))
+  (mf/mount root (mf/element refs)))
