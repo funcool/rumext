@@ -24,8 +24,15 @@
 (defn create-element
   ([type props] (create-element type props nil))
   ([type props children]
-   (let [props (js/Object.assign #js {:children children} props)]
-     (jsxrt/jsx type props (unchecked-get props "key")))))
+   (let [props (js/Object.assign
+                (if (nil? children)
+                  #js {}
+                  (if (array? children)
+                    #js {:children children}
+                    #js {:children #js [children]}))
+                props)
+         key   (unchecked-get props "key")]
+     (jsxrt/jsxs type props key))))
 
 (defn forward-ref
   [component]
