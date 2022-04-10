@@ -4,7 +4,46 @@
 ;;
 ;; Copyright (c) 2016-2020 Andrey Antukh <niwi@niwi.nz>
 
-(ns rumext.util)
+(ns rumext.util
+  (:require
+   [clojure.string :as str]
+   [clojure.set :as set]))
+
+(defmulti to-js
+  "Compiles to JS"
+  (fn [x]
+    (cond
+      (:server-render? *config*) :server-render ;; ends up in default but let user handle it
+      (map? x) :map
+      (vector? x) :vector
+      (keyword? x) :keyword
+      :else (#?(:clj class :cljs type) x))))
+
+(defn to-js
+  "Create a js ready data sturcture form from the clojure form at compile time."
+  [form]
+  (cond
+    (map? form)
+    (when-not (empty? form)
+      (let [key-strs (mapv to-js (keys form))
+            non-str (remove string? key-strs)
+            _ (assert (empty? non-str)
+                      (str "Rumext: Props can't be dynamic:"
+                           (pr-str non-str) "in: " (pr-str form)))
+            kvs-str (->> (mapv #(-> (str \' % "':~{}")) key-strs)
+                         (interpose ",")
+                         (apply str))]
+        (vary-meta
+         (list* 'js* (str "{" kvs-str "}") (mapv to-js (vals form)))
+         assoc :tag 'object)))
+
+    (vector? form)
+    (apply list 'cljs.core/array (mapv to-js xs))
+
+    (keyword? form)
+    (name form)
+
+    :else form))
 
 (defn obj->map
   "Convert shallowly an js object to cljs map."
@@ -54,3 +93,60 @@
 (defn symbol-for
   [v]
   (.for js/Symbol v))
+
+
+(defn join-classes-js
+  "Joins strings space separated"
+  ([] "")
+  ([& xs]
+   (let [strs (->> (repeat (count xs) "~{}")
+                   (interpose ",")
+                   (apply str))]
+     (list* 'js* (str "[" strs "].join(' ')") xs))))
+
+(defn camel-case
+  "Returns camel case version of the key, e.g. :http-equiv becomes :httpEquiv."
+  [k]
+  (if (or (keyword? k)
+          (string? k)
+          (symbol? k))
+    (let [[first-word & words] (str/split (name k) #"-")]
+      (if (or (empty? words)
+              (= "aria" first-word)
+              (= "data" first-word))
+        k
+        (-> (map str/capitalize words)
+            (conj first-word)
+            str/join
+            keyword)))
+    k))
+
+(defn camel-case-keys
+  "Recursively transforms all map keys into camel case."
+  [m]
+  (cond
+    (map? m)
+    (reduce-kv
+      (fn [m k v]
+        (assoc m (camel-case k) v))
+      {} m)
+    ;; React native accepts :style [{:foo-bar ..} other-styles] so camcase those keys:
+    (vector? m)
+    (mapv camel-case-keys m)
+    :else
+    m))
+
+(defn element?
+  "- is x a vector?
+  AND
+   - first element is a keyword?"
+  [x]
+  (and (vector? x) (keyword? (first x))))
+
+(defn join-classes
+  "Join the `classes` with a whitespace."
+  [classes]
+  (->> (map #(if (string? %) % (seq %)) classes)
+       (flatten)
+       (remove nil?)
+       (str/join " ")))
