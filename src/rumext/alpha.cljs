@@ -24,16 +24,21 @@
   (-name [this] (js* "\"\" + ~{}" this))
   (-namespace [_] ""))
 
-(defn create-element
-  ([type props] (create-element type props nil))
+(defn jsx
+  ([type props]
+   (jsxrt/jsx type props (unchecked-get props "key")))
   ([type props children]
-   (let [props (js/Object.assign
-                (if (nil? children)
-                  #js {}
-                  #js {:children children})
-                props)
-         key   (unchecked-get props "key")]
-     (jsxrt/jsxs type props key))))
+   (jsxrt/jsx type
+              (js/Object.assign #js {:children children} props)
+              (unchecked-get props "key"))))
+
+(defn jsxs
+  ([type props]
+   (jsxrt/jsxs type props (unchecked-get props "key")))
+  ([type props children]
+   (jsxrt/jsxs type
+               (js/Object.assign #js {:children children} props)
+               (unchecked-get props "key"))))
 
 (defn forward-ref
   [component]
@@ -249,13 +254,13 @@
 
 (defn element
   ([klass]
-   (create-element klass #js {}))
+   (jsx klass #js {}))
   ([klass props]
    (let [props (cond
                  (object? props) props
                  (map? props) (util/map->obj props)
                  :else (throw (ex-info "Unexpected props" {:props props})))]
-     (create-element klass props))))
+     (jsx klass props))))
 
 ;; --- Higher-Order Components
 
@@ -293,8 +298,8 @@
                   props (unchecked-get this "props")
                   error (unchecked-get state "error")]
               (if error
-                (react/createElement fallback #js {:error error})
-                (react/createElement component props)))))
+                (jsx fallback #js {:error error})
+                (jsx component props)))))
 
         _ (goog/inherits constructor Component)
         prototype (unchecked-get constructor "prototype")]
@@ -319,7 +324,7 @@
            ^boolean render? (aget tmp 0)
            ^js set-render (aget tmp 1)]
        (use-effect (fn [] (^js sfn #(set-render true))))
-       (when render? (create-element component props))))))
+       (when render? (jsx component props))))))
 
 (defn throttle
   [component ms]
@@ -338,7 +343,7 @@
                              ms))]
       (use-effect nil #(render props))
       (use-effect (fn [] #(set-ref-val! ref "true")))
-      (create-element component state))))
+      (jsx component state))))
 
 (defn check-props
   "Utility function to use with `memo'`.

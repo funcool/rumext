@@ -13,7 +13,8 @@
   [form]
   (cond
     (map? form)
-    (when-not (empty? form)
+    (if (empty? form)
+      (list 'js* "{}")
       (let [key-strs (mapv compile-to-js (keys form))
             non-str (remove string? key-strs)
             _ (assert (empty? non-str)

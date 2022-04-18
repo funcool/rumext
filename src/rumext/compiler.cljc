@@ -29,21 +29,11 @@
           ['rumext.alpha/Fragment attrs children]
           ['rumext.alpha/Fragment {} (cons attrs children)]))})
 
-(defn default-emit-fn
-  ([tag attrs]
-   (let [create-element-sym (:create-element *config*)]
-     (list create-element-sym tag attrs)))
-  ([tag attrs children]
-   (let [create-element-sym (:create-element *config*)]
-     (list create-element-sym tag attrs children))))
-
 (def default-config
   {:array-children? true
-   :emit-fn default-emit-fn
    :rewrite-for? true
    :camelcase-key-pred (some-fn keyword? symbol?)
-   :transform-fn identity
-   :create-element 'rumext.alpha/create-element})
+   :transform-fn identity})
 
 (declare emit-react)
 
@@ -120,7 +110,7 @@
   (if (:rewrite-for? *config*)
     (if (== 2 (count bindings))
       (let [[item coll] bindings]
-        `(reduce (fn ~'rumext-for-reducer [out-arr# ~item]
+        `(reduce (fn [out-arr# ~item]
                    (.push out-arr# ~(compile* body))
                    out-arr#)
                  (cljs.core/array) ~coll))
@@ -252,41 +242,37 @@
     (util/literal? content) content
     :else                   (compile-form content)))
 
-;; (defn- collapse-one
-;;   "We can collapse children to a non-vector if there is only one."
-;;   [xs]
-;;   (cond-> xs
-;;     (== 1 (count xs)) first))
-
 (defn tag->el
-  "A :div is translated to \"div\" and symbol 'ReactRouter stays."
   [x]
   (assert (or (symbol? x) (keyword? x) (string? x) (seq? x))
           (str "Got: " (#?(:clj class :cljs type) x)))
   (if (keyword? x)
-    (if (:no-string-tags? *config*)
-      (symbol (or (namespace x) (some-> (:default-ns *config*) name)) (name x))
-      (name x))
+    (name x)
     x))
 
 (defn emit-react
   "Emits the final react js code"
   [tag attrs children]
-  (let [{:keys [transform-fn emit-fn create-element]} *config*
+  (let [transform-fn         (:transform-fn *config*)
         [tag attrs children] (transform-fn [tag attrs children])
-        el       (tag->el tag)
-        attrs    (util/compile-to-js (compile-attrs attrs))
-        children (filter some? children)]
-    (if (seq children)
-      (emit-fn el attrs (apply list 'cljs.core/array children))
-      (emit-fn el attrs))))
+        el                   (tag->el tag)
+        attrs                (util/compile-to-js (compile-attrs attrs))
+        children             (into [] (filter some?) children)]
+    (cond
+      (= 0 (count children))
+      (list 'rumext.alpha/jsx el attrs)
+
+      (= 1 (count children))
+      (list 'rumext.alpha/jsx el attrs (first children))
+
+      :else
+      (list 'rumext.alpha/jsxs el attrs (apply list 'cljs.core/array children)))))
 
 (defn compile
   "Arguments:
   - content: The hiccup to compile
   - opts
    o :array-children? - for product build of React only or you'll enojoy a lot of warnings :)
-   o :create-element 'js/React.createElement - you can also use your own function here.
    o :wrap-input? - if inputs should be wrapped. Try without!
    o :rewrite-for? - rewrites simple (for [x xs] ...) into efficient reduce pushing into
                           a JS array.
@@ -295,10 +281,6 @@
                            string keys, are NOT by default converted from kebab-case to camelCase!
    o :transform-fn - Called with [[tag attrs children]] before emitting, to get
                      transformed element as [tag attrs children]
-
-   React Native special recommended options:
-   o :no-string-tags? - Never output string tags (don't exits in RN)
-   o :default-ns - Any unprefixed component will get prefixed with this ns.
   - handlers:
    A map to handle special tags. See default-handlers in this namespace.
   - env: The macro environment. Not used currently."

@@ -1,5 +1,10 @@
 # Changelog #
 
+## Version 2022.04.18-140
+
+- More fixes related to jsx entry point changes.
+
+
 ## Version 2022.04.18-139
 
 - Fix void elements type `<hr />` (bug introduced in prev version).
