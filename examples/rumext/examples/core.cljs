@@ -11,7 +11,6 @@
    [rumext.examples.controls :as controls]
    ;; [rumext.examples.errors :as errors]
    [rumext.examples.board :as board]
-   ;; [rumext.examples.portals :as portals]
    ))
 
 (enable-console-print!)

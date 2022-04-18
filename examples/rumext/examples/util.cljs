@@ -1,10 +1,12 @@
 (ns rumext.examples.util
-  (:require [rumext.alpha :as mf]
-            [goog.dom :as dom]))
+  (:require
+   [rumext.alpha :as mf]
+   [goog.dom :as dom]
+   [okulary.core :as l]))
 
-(defonce *clock (atom (.getTime (js/Date.))))
-(defonce *color (atom "#FA8D97"))
-(defonce *speed (atom 160))
+(defonce *clock (l/atom (.getTime (js/Date.))))
+(defonce *color (l/atom "#FA8D97"))
+(defonce *speed (l/atom 160))
 
 ;; Start clock ticking
 (defn tick []
@@ -22,12 +24,13 @@
   [{:keys [iref] :as props}]
   (let [state (mf/use-state 0)]
     (mf/use-effect
-     (mf/deps)
+     (mf/deps iref)
      (fn []
        (let [sem (js/setInterval #(swap! state inc) 1000)]
-         #(js/clearInterval sem))))
+         #(do
+            (js/clearInterval sem)))))
 
-    [:span (count (.-watches iref))]))
+    [:span (.-size (.-watches iref))]))
 
 ;; Generic board utils
 

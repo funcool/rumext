@@ -1,5 +1,4 @@
-{:deps
- {hicada/hicada {:mvn/version "0.1.9"}}
+{:deps {}
  :paths ["src"]
  :aliases
  {:dev

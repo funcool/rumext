@@ -3,7 +3,7 @@
   Mostly from sablono + hiccup project.
   "
   (:require
-    [hicada.util :as util]))
+    [rumext.util :as util]))
 
 (defn compact-map
   "Removes all map entries where the value of the entry is empty."

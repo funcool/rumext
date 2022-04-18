@@ -9,8 +9,8 @@
    [rumext.normalize :as norm]
    [rumext.util :as util]))
 
-(def ^:dynamic *config* default-config)
-(def ^:dynamic *handlers* default-handlers)
+(def ^:dynamic *config* nil)
+(def ^:dynamic *handlers* nil)
 
 (def default-handlers
   {:> (fn [_ klass attrs & children]
@@ -29,35 +29,23 @@
           ['rumext.alpha/Fragment attrs children]
           ['rumext.alpha/Fragment {} (cons attrs children)]))})
 
+(defn default-emit-fn
+  ([tag attrs]
+   (let [create-element-sym (:create-element *config*)]
+     (list create-element-sym tag attrs)))
+  ([tag attrs children]
+   (let [create-element-sym (:create-element *config*)]
+     (list create-element-sym tag attrs children))))
+
 (def default-config
   {:array-children? true
-   :emit-fn nil
+   :emit-fn default-emit-fn
    :rewrite-for? true
    :camelcase-key-pred (some-fn keyword? symbol?)
    :transform-fn identity
    :create-element 'rumext.alpha/create-element})
 
 (declare emit-react)
-
-;; (defn- compile-jsx-element
-;;   "Render an element vector as a JSX/React element."
-;;   [element]
-;;   (let [[tag attrs content] (norm/element element)]
-;;     (emit-react tag attrs (when content (compile-jsx-form content)))))
-
-;; (defn- compile-jsx-form
-;;   [form]
-;;   (cond
-;;     (and (vector? form)
-;;          (util/element? form))
-;;     (compile-jsx-element form)
-
-;;     (or (vector? form)
-;;         (seq? form))
-;;     (mapv compile-jsx-form form)
-
-;;     :else
-;;     form))
 
 (defn- compile-class-attr
   [value]
@@ -83,7 +71,7 @@
     (cond
       (= key :class)       [:className (compile-class-attr val)]
       (= key :style)       [key (util/camel-case-keys val)]
-      (to-camel-case? key) [(util/came-case key) val]
+      (to-camel-case? key) [(util/camel-case key) val]
       :else                kvpair)))
 
 (defn compile-attrs
@@ -176,11 +164,11 @@
   [[_ bindings & body]]
   `(if-let ~bindings ~@(doall (for [x body] (compile* x)))))
 
-(defmethod hc/compile-form "letfn"
+(defmethod compile-form "letfn"
   [[_ bindings & body]]
   `(letfn ~bindings ~@(butlast body) ~(compile* (last body))))
 
-(defmethod hc/compile-form "fn"
+(defmethod compile-form "fn"
   [[_ params & body]]
   `(fn ~params ~@(butlast body) ~(compile* (last body))))
 
@@ -284,23 +272,13 @@
 (defn emit-react
   "Emits the final react js code"
   [tag attrs children]
-  (let [{:keys [transform-fn emit-fn create-element array-children? server-render?]} *config*
+  (let [{:keys [transform-fn emit-fn create-element]} *config*
         [tag attrs children] (transform-fn [tag attrs children])
-        children (if (and array-children?
-                          (not (empty? children))
-                          (< 1 (count children)))
-                   ;; In production:
-                   ;; React.createElement will just copy all arguments into
-                   ;; the children array. We can avoid this by just passing
-                   ;; one argument and make it the array already. Faster.
-                   ;; Though, in debug builds of react this will warn about "no keys".
-                   [(apply list 'cljs.core/array children)]
-                   children)
-        el     (tag->el tag)
-        attrs  (if server-render? attrs (util/compile-to-js (compile-attrs attrs)))]
-    (if emit-fn
-      (emit-fn el cfg children)
-      (apply list create-element el cfg children))))
+        el       (tag->el tag)
+        attrs    (util/compile-to-js (compile-attrs attrs))]
+    (if (seq children)
+      (emit-fn el attrs (apply list 'cljs.core/array children))
+      (emit-fn el attrs))))
 
 (defn compile
   "Arguments:

@@ -12,12 +12,10 @@
 
 (mf/defc cell
   [{:keys [x y] :as props}]
-  (let [ref (mf/use-memo
-             (mf/deps x y)
-             (fn [] (l/derived (l/in [y x]) board)))
-
-        cell (mf/deref ref)
-        color @util/*color]
+  (let [ref   (mf/with-memo [x y]
+                (l/derived (l/in [y x]) board))
+        cell  (mf/deref ref)
+        color (mf/deref util/*color)]
     [:div.art-cell
      {:style {:background-color (when cell color)}
       :on-mouse-over (fn [_] (swap! board update-in [y x] not) nil)}]))

@@ -10,7 +10,6 @@
   (:require
    ["react" :as react]
    ["react-dom" :as rdom]
-   ["react/cjs/react-jsx-runtime.production.min" :as jsx-runtime]
    ["react/jsx-runtime" :as jsxrt]
    [cljs.core :as c]
    [goog.functions :as gf]
@@ -20,22 +19,25 @@
 (def Fragment react/Fragment)
 (def Profiler react/Profiler)
 
+(extend-type cljs.core.UUID
+  INamed
+  (-name [this] (js* "\"\" + ~{}" this))
+  (-namespace [_] ""))
+
 (defn create-element
   ([type props] (create-element type props nil))
   ([type props children]
-   (let [props (js/Object.assign #js {} props (when ^boolean children #js {:children children}))]
-     (jsx-runtime/jsx type props (unchecked-get props "key")))))
+   (let [props (js/Object.assign
+                (if (nil? children)
+                  #js {}
+                  #js {:children children})
+                props)
+         key   (unchecked-get props "key")]
+     (jsxrt/jsxs type props key))))
 
 (defn forward-ref
   [component]
   (react/forwardRef component))
-
-;; --- Impl
-
-(extend-type cljs.core.UUID
-  INamed
-  (-name [this] (str this))
-  (-namespace [_] ""))
 
 ;; --- Main Api
 
@@ -183,7 +185,8 @@
                       key)
                    #js [iref])]
 
-    (useEffect #(fn [] (remove-watch iref key))
+    (useEffect #(fn []
+                  (remove-watch iref key))
                #js [iref key])
 
     state))

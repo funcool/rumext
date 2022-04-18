@@ -1,5 +1,25 @@
 # Changelog #
 
+## Version 2022.04.18-xxx
+
+- Revert all react-18 changes (will be released as separated package).
+- Bundle simplified hicada compiler with simplier defaults.
+- Start using public api of JSX runtime instead of require the private production API.
+
+
+## Version 2022.04.10-141
+
+- Fix key warnings.
+
+## Version 2022.04.08-137
+
+- Use proper jsx runtime import
+
+
+## Version 2022.04.08-135
+
+- Upgrade to react-18
+
 ## Version 2022.03.31-133
 
 - Avoid call internal deref on the deref hook.

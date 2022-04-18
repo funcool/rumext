@@ -41,5 +41,3 @@
 (defn mount! []
   (mf/mount (mf/element local-state {:title "Clicks count"})
             (dom/getElement "local-state-1")))
-
-

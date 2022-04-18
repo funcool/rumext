@@ -6,59 +6,11 @@
 
 (ns rumext.alpha
   (:require
-   [hicada.compiler :as hc]))
-
-(defn- to-js-map
-  "Convert a map into a JavaScript object."
-  [m]
-  (when-not (empty? m)
-    (let [key-strs (mapv hc/to-js (keys m))
-          non-str (remove string? key-strs)
-          _ (assert (empty? non-str)
-                    (str "Hicada: Props can't be dynamic:"
-                         (pr-str non-str) "in: " (pr-str m)))
-          kvs-str (->> (mapv #(-> (str \' % "':~{}")) key-strs)
-                       (interpose ",")
-                       (apply str))]
-      (vary-meta
-        (list* 'js* (str "{" kvs-str "}") (mapv identity (vals m)))
-        assoc :tag 'object))))
-
-(create-ns 'rumext.util)
-
-(def handlers
-  {:> (fn [_ klass attrs & children]
-        [klass attrs children])
-
-   :& (fn
-        ([_ klass]
-         (let [klass klass]
-           [klass {} nil]))
-        ([_ klass props & children]
-         (let [klass klass]
-           (if (map? props)
-             [klass (to-js-map props) children]
-             [klass (list 'rumext.util/map->obj props) children]))))
-
-   :* (fn [_ attrs & children]
-        (if (map? attrs)
-          ['rumext.alpha/Fragment attrs children]
-          ['rumext.alpha/Fragment {} (cons attrs children)]))})
+   [rumext.compiler :as hc]))
 
 (defmacro html
   [body]
-  (let [opts {:create-element 'rumext.alpha/create-element
-              :rewrite-for? true
-              :array-children? true}]
-    (-> body (hicada.compiler/compile opts handlers &env))))
-
-;; (defmethod hc/compile-form "letfn"
-;;   [[_ bindings & body]]
-;;   `(letfn ~bindings ~@(butlast body) ~(hc/emitter (last body))))
-
-;; (defmethod hc/compile-form "fn"
-;;   [[_ params & body]]
-;;   `(fn ~params ~@(butlast body) ~(hc/emitter (last body))))
+  (hc/compile body {} {} &env))
 
 (defn parse-defc
   [args]
@@ -131,7 +83,6 @@
                             rfs))
        ~(when-let [registry (::register meta)]
           `(swap! ~registry (fn [state#] (assoc state# ~(::register-as meta (keyword (str cname))) ~cname)))))))
-
 
 (defmacro with-memo
   [deps & body]

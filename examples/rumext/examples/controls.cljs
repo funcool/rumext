@@ -24,12 +24,12 @@
    [:dd
     (mf/element input {:color util/*color})]
    [:dt "Color: "]
-   [:dd (util/watches-count {:iref util/*color}) " watches"]
+   [:dd {} (util/watches-count {:iref util/*color}) " watches"]
 
    [:dt "Tick: "]
    [:dd [:& input {:color util/*speed}] " ms"]
    [:dt "Time:"]
-   [:dd (util/watches-count {:iref util/*clock}) " watches"]
+   [:dd {} (util/watches-count {:iref util/*clock}) " watches"]
    ])
 
 (defn mount! []
