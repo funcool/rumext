@@ -1,6 +1,6 @@
 # Changelog #
 
-## Version 2022.04.18-xxx
+## Version 2022.04.18-138
 
 - Revert all react-18 changes (will be released as separated package).
 - Bundle simplified hicada compiler with simplier defaults.
