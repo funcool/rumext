@@ -1,5 +1,9 @@
 # Changelog #
 
+## Version 2022.04.18-139
+
+- Fix void elements type `<hr />` (bug introduced in prev version).
+
 ## Version 2022.04.18-138
 
 - Revert all react-18 changes (will be released as separated package).

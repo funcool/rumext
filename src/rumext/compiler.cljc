@@ -275,7 +275,8 @@
   (let [{:keys [transform-fn emit-fn create-element]} *config*
         [tag attrs children] (transform-fn [tag attrs children])
         el       (tag->el tag)
-        attrs    (util/compile-to-js (compile-attrs attrs))]
+        attrs    (util/compile-to-js (compile-attrs attrs))
+        children (filter some? children)]
     (if (seq children)
       (emit-fn el attrs (apply list 'cljs.core/array children))
       (emit-fn el attrs))))

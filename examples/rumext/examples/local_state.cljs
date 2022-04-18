@@ -32,6 +32,7 @@
                                         :n 0}})]
 
     [:section {:class "counters"}
+     [:hr]
      [:& label {:state (:counter1 @local)}]
      [:& label {:state (:counter2 @local)}]
      [:button {:on-click #(swap! local update-in [:counter1 :n] inc)} "Increment Counter 1"]
