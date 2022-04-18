@@ -317,9 +317,7 @@
 (defn deferred
   ([component] (deferred component schedule))
   ([component sfn]
-   (fnc deferred
-     {::wrap-props false}
-     [props]
+   (fn [props]
      (let [tmp (useState false)
            ^boolean render? (aget tmp 0)
            ^js set-render (aget tmp 1)]
@@ -328,9 +326,7 @@
 
 (defn throttle
   [component ms]
-  (fnc throttle
-    {::wrap-props false}
-    [props]
+  (fn [props]
     (let [tmp       (useState props)
           state     (aget tmp 0)
           set-state (aget tmp 1)
@@ -342,7 +338,7 @@
                                  (^js set-state v)))
                              ms))]
       (use-effect nil #(render props))
-      (use-effect (fn [] #(set-ref-val! ref "true")))
+      (use-effect (fn [] #(set-ref-val! ref true)))
       (jsx component state))))
 
 (defn check-props

@@ -8,7 +8,7 @@ Simple and Decomplected UI library based on React.
 Add to deps.edn:
 
 ```
-funcool/rumext {:mvn/version "2022.04.18-141"}
+funcool/rumext {:mvn/version "2022.04.18-142"}
 ```
 
 ## Differences with rum

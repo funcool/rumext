@@ -1,5 +1,10 @@
 # Changelog #
 
+## Version 2022.04.18-142
+
+- Minor fix on throttle and deferred higher-order components
+
+
 ## Version 2022.04.18-141
 
 - Fix `nil` props handling.
