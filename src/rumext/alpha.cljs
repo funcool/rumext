@@ -26,19 +26,19 @@
 
 (defn jsx
   ([type props]
-   (jsxrt/jsx type props (unchecked-get props "key")))
+   (let [props (js* "~{} || {}" props)]
+     (jsxrt/jsx type props (unchecked-get props "key"))))
   ([type props children]
-   (jsxrt/jsx type
-              (js/Object.assign #js {:children children} props)
-              (unchecked-get props "key"))))
+   (let [props (js/Object.assign #js {:children children} props)]
+     (jsxrt/jsx type props (unchecked-get props "key")))))
 
 (defn jsxs
   ([type props]
-   (jsxrt/jsxs type props (unchecked-get props "key")))
+   (let [props (js* "~{} || {}" props)]
+     (jsxrt/jsxs type props (unchecked-get props "key"))))
   ([type props children]
-   (jsxrt/jsxs type
-               (js/Object.assign #js {:children children} props)
-               (unchecked-get props "key"))))
+   (let [props (js/Object.assign #js {:children children} props)]
+     (jsxrt/jsxs type props (unchecked-get props "key")))))
 
 (defn forward-ref
   [component]

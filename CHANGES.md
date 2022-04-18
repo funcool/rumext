@@ -1,5 +1,10 @@
 # Changelog #
 
+## Version 2022.04.18-141
+
+- Fix `nil` props handling.
+
+
 ## Version 2022.04.18-140
 
 - More fixes related to jsx entry point changes.
