@@ -52,13 +52,13 @@
               :array-children? true}]
     (-> body (hicada.compiler/compile opts handlers &env))))
 
-(defmethod hc/compile-form "letfn"
-  [[_ bindings & body]]
-  `(letfn ~bindings ~@(butlast body) ~(hc/emitter (last body))))
+;; (defmethod hc/compile-form "letfn"
+;;   [[_ bindings & body]]
+;;   `(letfn ~bindings ~@(butlast body) ~(hc/emitter (last body))))
 
-(defmethod hc/compile-form "fn"
-  [[_ params & body]]
-  `(fn ~params ~@(butlast body) ~(hc/emitter (last body))))
+;; (defmethod hc/compile-form "fn"
+;;   [[_ params & body]]
+;;   `(fn ~params ~@(butlast body) ~(hc/emitter (last body))))
 
 (defn parse-defc
   [args]

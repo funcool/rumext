@@ -11,6 +11,7 @@
    ["react" :as react]
    ["react-dom" :as rdom]
    ["react/cjs/react-jsx-runtime.production.min" :as jsx-runtime]
+   ["react/jsx-runtime" :as jsxrt]
    [cljs.core :as c]
    [goog.functions :as gf]
    [rumext.util :as util]))

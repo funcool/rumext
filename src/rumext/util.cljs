@@ -9,18 +9,7 @@
    [clojure.string :as str]
    [clojure.set :as set]))
 
-(defmulti to-js
-  "Compiles to JS"
-  (fn [x]
-    (cond
-      (:server-render? *config*) :server-render ;; ends up in default but let user handle it
-      (map? x) :map
-      (vector? x) :vector
-      (keyword? x) :keyword
-      :else (#?(:clj class :cljs type) x))))
-
-(defn to-js
-  "Create a js ready data sturcture form from the clojure form at compile time."
+(defn compile=to-js
   [form]
   (cond
     (map? form)
@@ -44,6 +33,21 @@
     (name form)
 
     :else form))
+
+(defn compile-to-js*
+  [m]
+  (when-not (empty? m)
+    (let [key-strs (mapv hc/to-js (keys m))
+          non-str (remove string? key-strs)
+          _ (assert (empty? non-str)
+                    (str "Rumext: Props can't be dynamic:"
+                         (pr-str non-str) "in: " (pr-str m)))
+          kvs-str (->> (mapv #(-> (str \' % "':~{}")) key-strs)
+                       (interpose ",")
+                       (apply str))]
+      (vary-meta
+        (list* 'js* (str "{" kvs-str "}") (mapv identity (vals m)))
+        assoc :tag 'object))))
 
 (defn obj->map
   "Convert shallowly an js object to cljs map."
@@ -142,6 +146,23 @@
    - first element is a keyword?"
   [x]
   (and (vector? x) (keyword? (first x))))
+
+(defn unevaluated?
+  "True if the expression has not been evaluated.
+   - expr is a symbol? OR
+   - it's something like (foo bar)"
+  [expr]
+  (or (symbol? expr)
+      (and (seq? expr)
+           (not= (first expr) `quote))))
+
+(defn literal?
+  "True if x is a literal value that can be rendered as-is."
+  [x]
+  (and (not (unevaluated? x))
+       (or (not (or (vector? x) (map? x)))
+           (and (every? literal? x)
+                (not (keyword? (first x)))))))
 
 (defn join-classes
   "Join the `classes` with a whitespace."
