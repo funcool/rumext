@@ -1,5 +1,11 @@
 # Changelog #
 
+## Version 2022.04.19-145
+
+- Refactor jsx compiler to extract key before call jsx functions.
+- Fix race condition on `rumext.alpha/deref` hook.
+
+
 ## Version 2022.04.18-142
 
 - Minor fix on throttle and deferred higher-order components
