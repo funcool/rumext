@@ -186,13 +186,16 @@
         key       (useMemo
                    #(let [key (js/Symbol "rumext.alpha/deref")]
                       (add-watch iref key (fn [_ _ _ newv]
-                                            (^js set-state newv)))
+                                            (^function set-state newv)))
                       key)
                    #js [iref])]
 
-    (useEffect #(fn []
-                  (remove-watch iref key))
-               #js [iref key])
+    (useEffect
+     #(do
+        (^function set-state (c/deref iref))
+        (fn []
+          (remove-watch iref key)))
+     #js [iref key])
 
     state))
 
