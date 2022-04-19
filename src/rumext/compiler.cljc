@@ -64,24 +64,13 @@
       (to-camel-case? key) [(util/camel-case key) val]
       :else                kvpair)))
 
-(defn compile-attrs
-  "Compile a JSX attributes map."
-  [attrs]
-  (cond->> attrs
-    (map? attrs)
-    (into {} (map compile-attr))))
-
-(defn- form-name
-  "Get the name of the supplied form."
-  [form]
-  (when (and (seq? form) (symbol? (first form)))
-    (name (first form))))
-
 (declare compile*)
 
 (defmulti compile-form
   "Pre-compile certain standard forms, where possible."
-  form-name)
+  (fn [form]
+    (when (and (seq? form) (symbol? (first form)))
+      (name (first form)))))
 
 (defmethod compile-form "do"
   [[_ & forms]]
@@ -201,10 +190,6 @@
           [klass attrs children] (apply f element)]
       (emit-react klass attrs (mapv compile* children)))
 
-    ;; e.g. [:span "foo"]
-    ;(every? literal? element)
-    ;(compile-jsx-form-element element)
-
     ;; e.g. [:span {} x]
     (and (util/literal? tag) (map? attrs))
     (let [[tag attrs _] (norm/element [tag attrs])]
@@ -250,23 +235,31 @@
     (name x)
     x))
 
+(def props-xform
+  (comp
+   (remove (fn [[k v]] (= k :key)))
+   (map compile-attr)))
+
 (defn emit-react
   "Emits the final react js code"
   [tag attrs children]
-  (let [transform-fn         (:transform-fn *config*)
-        [tag attrs children] (transform-fn [tag attrs children])
-        el                   (tag->el tag)
-        attrs                (util/compile-to-js (compile-attrs attrs))
-        children             (into [] (filter some?) children)]
+  (let [tag         (tag->el tag)
+        children    (into [] (filter some?) children)
+        [key props] (if (map? attrs)
+                      [(or (:key attrs)
+                           'rumext.alpha/undefined)
+                       (->> (into {} props-xform attrs)
+                            (util/compile-to-js))]
+                       ['rumext.alpha/undefined attrs])]
     (cond
       (= 0 (count children))
-      (list 'rumext.alpha/jsx el attrs)
+      (list 'rumext.alpha/jsx tag props key)
 
       (= 1 (count children))
-      (list 'rumext.alpha/jsx el attrs (first children))
+      (list 'rumext.alpha/jsx tag props key (first children))
 
       :else
-      (list 'rumext.alpha/jsxs el attrs (apply list 'cljs.core/array children)))))
+      (list 'rumext.alpha/jsxs tag props key (apply list 'cljs.core/array children)))))
 
 (defn compile
   "Arguments:

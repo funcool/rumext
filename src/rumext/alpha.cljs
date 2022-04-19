@@ -15,6 +15,8 @@
    [goog.functions :as gf]
    [rumext.util :as util]))
 
+(def ^:const undefined (js* "(void 0)"))
+
 (def Component react/Component)
 (def Fragment react/Fragment)
 (def Profiler react/Profiler)
@@ -25,20 +27,18 @@
   (-namespace [_] ""))
 
 (defn jsx
-  ([type props]
-   (let [props (js* "~{} || {}" props)]
-     (jsxrt/jsx type props (unchecked-get props "key"))))
-  ([type props children]
+  ([type props maybe-key]
+   (jsxrt/jsx type props maybe-key))
+  ([type props maybe-key children]
    (let [props (js/Object.assign #js {:children children} props)]
-     (jsxrt/jsx type props (unchecked-get props "key")))))
+     (jsxrt/jsx type props maybe-key))))
 
 (defn jsxs
-  ([type props]
-   (let [props (js* "~{} || {}" props)]
-     (jsxrt/jsxs type props (unchecked-get props "key"))))
-  ([type props children]
+  ([type props maybe-key]
+   (jsxrt/jsxs type props maybe-key))
+  ([type props maybe-key children]
    (let [props (js/Object.assign #js {:children children} props)]
-     (jsxrt/jsxs type props (unchecked-get props "key")))))
+     (jsxrt/jsxs type props maybe-key))))
 
 (defn forward-ref
   [component]
@@ -254,13 +254,13 @@
 
 (defn element
   ([klass]
-   (jsx klass #js {}))
+   (jsx klass #js {} undefined))
   ([klass props]
    (let [props (cond
                  (object? props) props
                  (map? props) (util/map->obj props)
                  :else (throw (ex-info "Unexpected props" {:props props})))]
-     (jsx klass props))))
+     (jsx klass props undefined))))
 
 ;; --- Higher-Order Components
 
@@ -298,8 +298,8 @@
                   props (unchecked-get this "props")
                   error (unchecked-get state "error")]
               (if error
-                (jsx fallback #js {:error error})
-                (jsx component props)))))
+                (jsx fallback #js {:error error} undefined)
+                (jsx component props undefined)))))
 
         _ (goog/inherits constructor Component)
         prototype (unchecked-get constructor "prototype")]
@@ -317,12 +317,15 @@
 (defn deferred
   ([component] (deferred component schedule))
   ([component sfn]
-   (fn [props]
+   (fnc test
+     {::wrap-props false}
+     [props]
      (let [tmp (useState false)
            ^boolean render? (aget tmp 0)
            ^js set-render (aget tmp 1)]
        (use-effect (fn [] (^js sfn #(set-render true))))
-       (when render? (jsx component props))))))
+       (when render?
+         (jsx component props undefined))))))
 
 (defn throttle
   [component ms]
@@ -331,15 +334,15 @@
           state     (aget tmp 0)
           set-state (aget tmp 1)
 
-          ref    (use-ref false)
-          render (use-memo #(gf/throttle
-                             (fn [v]
-                               (when-not (ref-val ref)
-                                 (^js set-state v)))
-                             ms))]
+          ref       (use-ref false)
+          render    (use-memo #(gf/throttle
+                                (fn [v]
+                                  (when-not (ref-val ref)
+                                    (^js set-state v)))
+                                ms))]
       (use-effect nil #(render props))
       (use-effect (fn [] #(set-ref-val! ref true)))
-      (jsx component state))))
+      (component state))))
 
 (defn check-props
   "Utility function to use with `memo'`.
