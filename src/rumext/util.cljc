@@ -11,6 +11,9 @@
 
 (defn compile-to-js
   [form]
+  "Compile a statically known data sturcture, recursivelly to js
+  expression. Mainly used by macros for create js data structures at
+  compile time."
   (cond
     (map? form)
     (if (empty? form)
@@ -35,9 +38,13 @@
 
     :else form))
 
-(defn compile-to-js*
+(defn compile-map->object
+  "Compile a statically known clojure map to js object
+  expression. Mainly used by macros for create js objects at
+  compile time (component props)."
   [m]
-  (when-not (empty? m)
+  (if (empty? m)
+    (list 'js* "{}")
     (let [key-strs (mapv compile-to-js (keys m))
           non-str (remove string? key-strs)
           _ (assert (empty? non-str)
@@ -76,8 +83,8 @@
      [props]
      (cond
        (object? props) (obj->map props)
-       (map? props) props
-       (nil? props) {}
+       (map? props)    props
+       (nil? props)    {}
        :else (throw (ex-info "Unexpected props" {:props props})))))
 
 #?(:cljs
@@ -103,15 +110,6 @@
    (defn symbol-for
      [v]
      (.for js/Symbol v)))
-
-(defn join-classes-js
-  "Joins strings space separated"
-  ([] "")
-  ([& xs]
-   (let [strs (->> (repeat (count xs) "~{}")
-                   (interpose ",")
-                   (apply str))]
-     (list* 'js* (str "[" strs "].join(' ')") xs))))
 
 (defn camel-case
   "Returns camel case version of the key, e.g. :http-equiv becomes :httpEquiv."
@@ -176,3 +174,13 @@
        (flatten)
        (remove nil?)
        (str/join " ")))
+
+(defn compile-join-classes
+  "Joins strings space separated"
+  ([] "")
+  ([& xs]
+   (let [strs (->> (repeat (count xs) "~{}")
+                   (interpose ",")
+                   (apply str))]
+     (list* 'js* (str "[" strs "].join(' ')") xs))))
+

@@ -30,7 +30,6 @@
                                         :n 0}
                              :counter2 {:title "Counter 2"
                                         :n 0}})]
-
     [:section {:class "counters"}
      [:hr]
      [:& label {:state (:counter1 @local)}]

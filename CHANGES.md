@@ -1,8 +1,15 @@
 # Changelog #
 
+## Version 2022.04.19-147
+
+- Fix empty props handling on `[:&` handler
+- Minor optimizations with type hints
+- Remove unused code
+
 ## Version 2022.04.19-146
 
 - Fix throttle higher-order component
+
 
 
 ## Version 2022.04.19-145

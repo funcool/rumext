@@ -10,7 +10,7 @@
 
 (defmacro html
   [body]
-  (hc/compile body {} {} &env))
+  (hc/compile body))
 
 (defn parse-defc
   [args]

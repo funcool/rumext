@@ -158,12 +158,12 @@
 (defn use-effect
   ([f] (use-effect #js [] f))
   ([deps f]
-   (useEffect #(let [r (^js f)] (if (fn? r) r identity)) deps)))
+   (useEffect #(let [r (^function f)] (if (fn? r) r identity)) deps)))
 
 (defn use-layout-effect
   ([f] (use-layout-effect #js [] f))
   ([deps f]
-   (useLayoutEffect #(let [r (^js f)] (if (fn? r) r identity)) deps)))
+   (useLayoutEffect #(let [r (^function f)] (if (fn? r) r identity)) deps)))
 
 (defn use-memo
   ([f] (useMemo f #js []))
@@ -211,17 +211,17 @@
         (reify
           c/IReset
           (-reset! [_ value]
-            (update value))
+            (^function update value))
 
           c/ISwap
           (-swap! [self f]
-            (update f))
+            (^function update f))
           (-swap! [self f x]
-            (update #(f % x)))
+            (^function update #(f % x)))
           (-swap! [self f x y]
-            (update #(f % x y)))
+            (^function update #(f % x y)))
           (-swap! [self f x y more]
-            (update #(apply f % x y more)))
+            (^function update #(apply f % x y more)))
 
           c/IDeref
           (-deref [_] state)))))))
@@ -323,12 +323,12 @@
    (fnc deferred
      {::wrap-props false}
      [props]
-     (let [tmp (useState false)
-           ^boolean render? (aget tmp 0)
-           ^js set-render (aget tmp 1)]
-       (use-effect (fn [] (^js sfn #(set-render true))))
-       (when render?
-         (jsx component props undefined))))))
+     (let [tmp        (useState false)
+           render?    (aget tmp 0)
+           set-render (aget tmp 1)]
+       (use-effect (fn [] (^function sfn #(^function set-render true))))
+       (when ^boolean render?
+         [:> component props])))))
 
 (defn throttle
   [component ms]
@@ -343,11 +343,11 @@
           render    (useMemo
                      #(gf/throttle
                        (fn [v]
-                         (when-not (ref-val ref)
+                         (when-not ^boolean (ref-val ref)
                            (^function set-state v)))
                        ms)
                      #js [])]
-      (useEffect #(render props) #js [props])
+      (useEffect #(^function render props) #js [props])
       (useEffect #(fn [] (set-ref-val! ref true)) #js [])
       [:> component state])))
 

@@ -9,7 +9,6 @@
    [rumext.normalize :as norm]
    [rumext.util :as util]))
 
-(def ^:dynamic *config* nil)
 (def ^:dynamic *handlers* nil)
 
 (def default-handlers
@@ -22,18 +21,12 @@
         ([_ klass props & children]
          (let [klass klass]
            (if (map? props)
-             [klass (rumext.util/compile-to-js* props) children]
+             [klass (rumext.util/compile-map->object props) children]
              [klass (list 'rumext.util/map->obj props) children]))))
    :* (fn [_ attrs & children]
         (if (map? attrs)
           ['rumext.alpha/Fragment attrs children]
           ['rumext.alpha/Fragment {} (cons attrs children)]))})
-
-(def default-config
-  {:array-children? true
-   :rewrite-for? true
-   :camelcase-key-pred (some-fn keyword? symbol?)
-   :transform-fn identity})
 
 (declare emit-react)
 
@@ -51,18 +44,18 @@
     (util/join-classes value)
 
     (vector? value)
-    (apply util/join-classes-js value)
+    (apply util/compile-join-classes value)
 
     :else value))
 
 (defn compile-attr
   [[key val :as kvpair]]
-  (let [to-camel-case? (:camelcase-key-pred *config*)]
-    (cond
-      (= key :class)       [:className (compile-class-attr val)]
-      (= key :style)       [key (util/camel-case-keys val)]
-      (to-camel-case? key) [(util/camel-case key) val]
-      :else                kvpair)))
+  (cond
+    (= key :class)       [:className (compile-class-attr val)]
+    (= key :style)       [key (util/camel-case-keys val)]
+    (or (keyword? key)
+        (symbol? key))   [(util/camel-case key) val]
+    :else                kvpair))
 
 (declare compile*)
 
@@ -96,16 +89,14 @@
   [[_ bindings body]]
   ;; Special optimization: For a simple (for [x xs] ...) we rewrite the for
   ;; to a fast reduce outputting a JS array:
-  (if (:rewrite-for? *config*)
-    (if (== 2 (count bindings))
-      (let [[item coll] bindings]
-        `(reduce (fn [out-arr# ~item]
-                   (.push out-arr# ~(compile* body))
-                   out-arr#)
-                 (cljs.core/array) ~coll))
-      ;; Still optimize a little by giving React an array:
-      (list 'cljs.core/into-array `(for ~bindings ~(compile* body))))
-    `(for ~bindings ~(compile* body))))
+  (if (== 2 (count bindings))
+    (let [[item coll] bindings]
+      `(reduce (fn [out-arr# ~item]
+                 (.push out-arr# ~(compile* body))
+                 out-arr#)
+               (cljs.core/array) ~coll))
+    ;; Still optimize a little by giving React an array:
+    (list 'cljs.core/into-array `(for ~bindings ~(compile* body)))))
 
 (defmethod compile-form "if"
   [[_ condition & body]]
@@ -264,26 +255,10 @@
 (defn compile
   "Arguments:
   - content: The hiccup to compile
-  - opts
-   o :array-children? - for product build of React only or you'll enojoy a lot of warnings :)
-   o :wrap-input? - if inputs should be wrapped. Try without!
-   o :rewrite-for? - rewrites simple (for [x xs] ...) into efficient reduce pushing into
-                          a JS array.
-   o :emit-fn - optinal: called with [type config-js child-or-children]
-   o :camelcase-key-pred - defaults to (some-fn keyword? symbol?), ie. map keys that have
-                           string keys, are NOT by default converted from kebab-case to camelCase!
-   o :transform-fn - Called with [[tag attrs children]] before emitting, to get
-                     transformed element as [tag attrs children]
-  - handlers:
-   A map to handle special tags. See default-handlers in this namespace.
-  - env: The macro environment. Not used currently."
+  - handlers: A map to handle special tags. See default-handlers in this namespace.
+  "
   ([content]
-   (compile content default-config))
-  ([content opts]
-   (compile content opts default-handlers))
-  ([content opts handlers]
-   (compile content opts handlers nil))
-  ([content opts handlers env]
-   (binding [*config*   (merge default-config opts)
-             *handlers* (merge default-handlers handlers)]
+   (compile content nil))
+  ([content handlers]
+   (binding [*handlers* (merge default-handlers handlers)]
      (compile* content))))
