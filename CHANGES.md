@@ -1,5 +1,10 @@
 # Changelog #
 
+## Version 2022.04.19-148
+
+- Fix htmlFor attr handling
+
+
 ## Version 2022.04.19-147
 
 - Fix empty props handling on `[:&` handler
@@ -9,7 +14,6 @@
 ## Version 2022.04.19-146
 
 - Fix throttle higher-order component
-
 
 
 ## Version 2022.04.19-145

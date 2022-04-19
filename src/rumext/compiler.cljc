@@ -53,6 +53,7 @@
   (cond
     (= key :class)       [:className (compile-class-attr val)]
     (= key :style)       [key (util/camel-case-keys val)]
+    (= key :for)         [:htmlFor val]
     (or (keyword? key)
         (symbol? key))   [(util/camel-case key) val]
     :else                kvpair))
