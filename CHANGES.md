@@ -1,5 +1,10 @@
 # Changelog #
 
+## Version 2022.04.19-146
+
+- Fix throttle higher-order component
+
+
 ## Version 2022.04.19-145
 
 - Refactor jsx compiler to extract key before call jsx functions.

@@ -320,7 +320,7 @@
 (defn deferred
   ([component] (deferred component schedule))
   ([component sfn]
-   (fnc test
+   (fnc deferred
      {::wrap-props false}
      [props]
      (let [tmp (useState false)
@@ -332,20 +332,24 @@
 
 (defn throttle
   [component ms]
-  (fn [props]
+  (fnc throttle
+    {::wrap-props false}
+    [props]
     (let [tmp       (useState props)
           state     (aget tmp 0)
           set-state (aget tmp 1)
 
-          ref       (use-ref false)
-          render    (use-memo #(gf/throttle
-                                (fn [v]
-                                  (when-not (ref-val ref)
-                                    (^js set-state v)))
-                                ms))]
-      (use-effect nil #(render props))
-      (use-effect (fn [] #(set-ref-val! ref true)))
-      (component state))))
+          ref       (useRef false)
+          render    (useMemo
+                     #(gf/throttle
+                       (fn [v]
+                         (when-not (ref-val ref)
+                           (^function set-state v)))
+                       ms)
+                     #js [])]
+      (useEffect #(render props) #js [props])
+      (useEffect #(fn [] (set-ref-val! ref true)) #js [])
+      [:> component state])))
 
 (defn check-props
   "Utility function to use with `memo'`.

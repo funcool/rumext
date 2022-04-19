@@ -15,6 +15,7 @@
       (util/format-time ts)]]))
 
 (mf/defc timer2
+  {::mf/wrap [#(mf/throttle % 1000)]}
   [{:keys [ts] :as props}]
   [:div "Timer (props)" ": "
    [:span {:style {:color @util/*color}}
@@ -30,7 +31,3 @@
              (fn [_ _ _ ts]
                (mf/mount (mf/element timer2 {:ts ts})
                          (dom/getElement "timer2")))))
-
-
-
-
