@@ -1,7 +1,8 @@
 (ns rumext.examples.timer-reactive
-  (:require [goog.dom :as dom]
-            [rumext.alpha :as mf]
-            [rumext.examples.util :as util]))
+  (:require
+   [goog.dom :as dom]
+   [rumext.v2 :as mf]
+   [rumext.examples.util :as util]))
 
 (defonce components (atom {}))
 
@@ -21,13 +22,12 @@
    [:span {:style {:color @util/*color}}
     (util/format-time ts)]])
 
-(defn mount! []
-  (mf/mount (mf/element timer1)
-            (dom/getElement "timer1"))
-  (mf/mount (mf/element timer2 {:ts @util/*clock})
-            (dom/getElement "timer2"))
+(def root1 (mf/create-root (dom/getElement "timer1")))
+(def root2 (mf/create-root (dom/getElement "timer2")))
 
+(defn mount! []
+  (mf/render! root1 (mf/element timer1))
+  (mf/render! root2 (mf/element timer2 {:ts @util/*clock}))
   (add-watch util/*clock :timer-static
              (fn [_ _ _ ts]
-               (mf/mount (mf/element timer2 {:ts ts})
-                         (dom/getElement "timer2")))))
+               (mf/render! root2 (mf/element timer2 {:ts ts})))))

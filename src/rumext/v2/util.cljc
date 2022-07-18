@@ -4,7 +4,7 @@
 ;;
 ;; Copyright (c) 2016-2020 Andrey Antukh <niwi@niwi.nz>
 
-(ns rumext.util
+(ns rumext.v2.util
   (:require
    [clojure.string :as str]
    [clojure.set :as set]))

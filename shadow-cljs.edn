@@ -1,5 +1,5 @@
 {:deps {:aliases [:dev]}
- :dev-http {9500 "classpath:public"}
+ :dev-http {9500 ["public" "classpath:public"]}
 
  :builds
  {:examples

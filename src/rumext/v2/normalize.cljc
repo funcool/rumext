@@ -1,9 +1,9 @@
-(ns rumext.normalize
+(ns rumext.v2.normalize
   "
   Mostly from sablono + hiccup project.
   "
   (:require
-    [rumext.util :as util]))
+    [rumext.v2.util :as util]))
 
 (defn compact-map
   "Removes all map entries where the value of the entry is empty."

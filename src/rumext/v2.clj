@@ -4,9 +4,9 @@
 ;;
 ;; Copyright (c) Andrey Antukh <niwi@niwi.nz>
 
-(ns rumext.alpha
+(ns rumext.v2
   (:require
-   [rumext.compiler :as hc]))
+   [rumext.v2.compiler :as hc]))
 
 (defmacro html
   [body]
@@ -45,7 +45,7 @@
         fnbody `(fn ~cname [~@(if arg-props args [])]
                   (let [~@(cond
                             (and arg-props (::wrap-props meta true))
-                            [arg-props `(rumext.util/wrap-props ~argsym)]
+                            [arg-props `(rumext.v2.util/wrap-props ~argsym)]
 
                             (some? arg-props)
                             [arg-props argsym]
@@ -55,7 +55,7 @@
                     (html ~(last body))))]
 
     (if (::forward-ref meta)
-      `(rumext.alpha/forward-ref ~fnbody)
+      `(rumext.v2/forward-ref ~fnbody)
       fnbody)))
 
 (defmacro fnc
@@ -88,33 +88,50 @@
   [deps & body]
   (cond
     (vector? deps)
-    `(rumext.alpha/use-memo
-      (rumext.alpha/deps ~@deps)
+    `(rumext.v2/use-memo
+      (rumext.v2/deps ~@deps)
       (fn [] ~@body))
 
 
     (nil? deps)
-    `(rumext.alpha/use-memo
+    `(rumext.v2/use-memo
       nil
       (fn [] ~@body))
 
     :else
-    `(rumext.alpha/use-memo
+    `(rumext.v2/use-memo
       (fn [] ~@(cons deps body)))))
 
 (defmacro with-effect
   [deps & body]
   (cond
     (vector? deps)
-    `(rumext.alpha/use-effect
-      (rumext.alpha/deps ~@deps)
+    `(rumext.v2/use-effect
+      (rumext.v2/deps ~@deps)
       (fn [] ~@body))
 
     (nil? deps)
-    `(rumext.alpha/use-effect
+    `(rumext.v2/use-effect
       nil
       (fn [] ~@body))
 
     :else
-    `(rumext.alpha/use-effect
+    `(rumext.v2/use-effect
+      (fn [] ~@(cons deps body)))))
+
+(defmacro with-layout-effect
+  [deps & body]
+  (cond
+    (vector? deps)
+    `(rumext.v2/use-layout-effect
+      (rumext.v2/deps ~@deps)
+      (fn [] ~@body))
+
+    (nil? deps)
+    `(rumext.v2/use-layout-effect
+      nil
+      (fn [] ~@body))
+
+    :else
+    `(rumext.v2/use-layout-effect
       (fn [] ~@(cons deps body)))))

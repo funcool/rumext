@@ -1,6 +1,6 @@
 # rumext #
 
-Simple and Decomplected UI library based on React.
+Simple and Decomplected UI library based on React >= 18.
 
 
 ## Using rumext
@@ -8,7 +8,7 @@ Simple and Decomplected UI library based on React.
 Add to deps.edn:
 
 ```
-funcool/rumext {:mvn/version "2022.04.19-148"}
+funcool/rumext {:mvn/version "v2-149"}
 ```
 
 ## Differences with rum
@@ -78,9 +78,6 @@ Lets start with simple generic components like `:div`:
        :on-click some-on-click-fn}
   "Hello World"]
 ```
-
-Until here, nothing new, looks like any hiccup template. The 
-
 
 As you can observe, looks very familiar. On default components the
 props are transformed **recursively** at compile time to a js object

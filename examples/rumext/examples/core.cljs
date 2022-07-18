@@ -1,6 +1,5 @@
 (ns rumext.examples.core
   (:require
-   [rumext.alpha :as mf]
    [rumext.examples.binary-clock :as binary-clock]
    [rumext.examples.timer-reactive :as timer-reactive]
    [rumext.examples.local-state :as local-state]

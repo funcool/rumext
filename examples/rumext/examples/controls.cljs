@@ -1,6 +1,6 @@
 (ns rumext.examples.controls
   (:require [goog.dom :as dom]
-            [rumext.alpha :as mf]
+            [rumext.v2 :as mf]
             [rumext.examples.util :as util]))
 
 ;; generic “atom editor” component
@@ -32,6 +32,8 @@
    [:dd {} (util/watches-count {:iref util/*clock}) " watches"]
    ])
 
+(def root (mf/create-root (dom/getElement "controls")))
+
 (defn mount! []
-  (mf/mount (mf/element controls) (dom/getElement "controls")))
+  (mf/render! root (mf/element controls)))
 

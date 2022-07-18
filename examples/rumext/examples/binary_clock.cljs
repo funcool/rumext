@@ -1,7 +1,8 @@
 (ns rumext.examples.binary-clock
-  (:require [goog.dom :as dom]
-            [rumext.alpha :as mf]
-            [rumext.examples.util :as util]))
+  (:require
+   [goog.dom :as dom]
+   [rumext.v2 :as mf]
+   [rumext.examples.util :as util]))
 
 (def *bclock-renders (atom 0))
 
@@ -89,6 +90,8 @@
        [:th {:col-span 8}
         [:& render-count]]]]]))
 
+(def root (mf/create-root (dom/getElement "binary-clock")))
+
 (defn mount! []
-  (mf/mount (mf/element binary-clock) (dom/getElement "binary-clock")))
+  (mf/render! root (mf/element binary-clock)))
 

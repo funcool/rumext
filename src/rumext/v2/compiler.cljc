@@ -1,4 +1,4 @@
-(ns rumext.compiler
+(ns rumext.v2.compiler
   "
   Hicada - Hiccup compiler aus dem Allgaeu
 
@@ -6,8 +6,8 @@
   weavejester/hiccup -> r0man/sablono -> Hicada -> rumext"
   (:refer-clojure :exclude [compile])
   (:require
-   [rumext.normalize :as norm]
-   [rumext.util :as util]))
+   [rumext.v2.normalize :as norm]
+   [rumext.v2.util :as util]))
 
 (def ^:dynamic *handlers* nil)
 
@@ -21,12 +21,12 @@
         ([_ klass props & children]
          (let [klass klass]
            (if (map? props)
-             [klass (rumext.util/compile-map->object props) children]
-             [klass (list 'rumext.util/map->obj props) children]))))
+             [klass (rumext.v2.util/compile-map->object props) children]
+             [klass (list 'rumext.v2.util/map->obj props) children]))))
    :* (fn [_ attrs & children]
         (if (map? attrs)
-          ['rumext.alpha/Fragment attrs children]
-          ['rumext.alpha/Fragment {} (cons attrs children)]))})
+          ['rumext.v2/Fragment attrs children]
+          ['rumext.v2/Fragment {} (cons attrs children)]))})
 
 (declare emit-react)
 
@@ -239,19 +239,19 @@
         children    (into [] (filter some?) children)
         [key props] (if (map? attrs)
                       [(or (:key attrs)
-                           'rumext.alpha/undefined)
+                           'rumext.v2/undefined)
                        (->> (into {} props-xform attrs)
                             (util/compile-to-js))]
-                       ['rumext.alpha/undefined attrs])]
+                       ['rumext.v2/undefined attrs])]
     (cond
       (= 0 (count children))
-      (list 'rumext.alpha/jsx tag props key)
+      (list 'rumext.v2/jsx tag props key)
 
       (= 1 (count children))
-      (list 'rumext.alpha/jsx tag props key (first children))
+      (list 'rumext.v2/jsx tag props key (first children))
 
       :else
-      (list 'rumext.alpha/jsxs tag props key (apply list 'cljs.core/array children)))))
+      (list 'rumext.v2/jsxs tag props key (apply list 'cljs.core/array children)))))
 
 (defn compile
   "Arguments:
