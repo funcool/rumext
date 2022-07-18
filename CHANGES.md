@@ -1,5 +1,11 @@
 # Changelog #
 
+## Version v2-149
+
+- Change version numbering: simplified.
+- Add v2 namespace that compatible with React18.
+
+
 ## Version 2022.04.19-148
 
 - Fix htmlFor attr handling

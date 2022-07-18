@@ -1,6 +1,7 @@
 (ns rumext.examples.refs
-  (:require [goog.dom :as dom]
-            [rumext.alpha :as mf]))
+  (:require
+   [goog.dom :as dom]
+   [rumext.v2 :as mf]))
 
 (mf/defc textarea
   [props]
@@ -29,5 +30,7 @@
   [:div
    [:& textarea]])
 
+(def root (mf/create-root (dom/getElement "refs")))
+
 (defn mount! []
-  (mf/mount (mf/element refs) (dom/getElement "refs")))
+  (mf/render! root (mf/element refs)))

@@ -4,16 +4,16 @@
 ;;
 ;; Copyright (c) Andrey Antukh <niwi@niwi.nz>
 
-(ns rumext.alpha
+(ns rumext.v2
   (:refer-clojure :exclude [ref deref])
-  (:require-macros [rumext.alpha :refer [defc fnc]])
+  (:require-macros [rumext.v2 :refer [defc fnc]])
   (:require
    ["react" :as react]
-   ["react-dom" :as rdom]
+   ["react-dom/client" :as rdom]
    ["react/jsx-runtime" :as jsxrt]
    [cljs.core :as c]
    [goog.functions :as gf]
-   [rumext.util :as util]))
+   [rumext.v2.util :as util]))
 
 (def ^:const undefined (js* "(void 0)"))
 
@@ -46,17 +46,23 @@
 
 ;; --- Main Api
 
-(defn mount
-  "Add element to the DOM tree. Idempotent. Subsequent mounts will
-  just update element."
-  [element node]
-  (rdom/render element node)
-  nil)
 
-(defn unmount
-  "Removes component from the DOM tree."
+(defn create-root
   [node]
-  (rdom/unmountComponentAtNode node))
+  (rdom/createRoot node))
+
+(defn hydrate-root
+  [node element]
+  (rdom/hydrateRoot node))
+
+(defn render!
+  [root element]
+  (.render ^js root element))
+
+(defn unmount!
+  "Removes component from the DOM tree."
+  [root]
+  (.unmount ^js root))
 
 (defn portal
   "Render `element` in a DOM `node` that is ouside of current DOM hierarchy."
@@ -119,6 +125,10 @@
   [ctx]
   (react/useContext ctx))
 
+(defn useTransition
+  []
+  (react/useTransition))
+
 ;; --- Hooks
 
 (defprotocol IDepsAdapter
@@ -149,25 +159,50 @@
   ([a b c d e f g h] #js [(adapt a) (adapt b) (adapt c) (adapt d) (adapt e) (adapt f) (adapt g) (adapt h)])
   ([a b c d e f g h & rest] (into-array (map adapt (into [a b c d e f g h] rest)))))
 
-;; The cljs version of use-ref and use-ctx is identical to the raw (no
-;; customizations/adaptations needed)
+(defn use-ref
+  ([] (react/useRef nil))
+  ([initial] (react/useRef initial)))
 
-(def use-ref useRef)
-(def use-ctx useContext)
+(defn use-ctx
+  [ctx]
+  (react/useContext ctx))
+
+(defn use-id
+  []
+  (react/useId))
+
+(defn start-transition
+  [f]
+  (react/startTransition f))
+
+(def noop (constantly nil))
 
 (defn use-effect
   ([f] (use-effect #js [] f))
   ([deps f]
-   (useEffect #(let [r (^function f)] (if (fn? r) r identity)) deps)))
+   (useEffect #(let [r (^function f)] (if (fn? r) r noop)) deps)))
 
 (defn use-layout-effect
   ([f] (use-layout-effect #js [] f))
   ([deps f]
-   (useLayoutEffect #(let [r (^function f)] (if (fn? r) r identity)) deps)))
+   (useLayoutEffect #(let [r (^function f)] (if (fn? r) r noop)) deps)))
 
 (defn use-memo
   ([f] (useMemo f #js []))
   ([deps f] (useMemo f deps)))
+
+(defn use-transition
+  []
+  (let [tmp        (useTransition)
+        is-pending (aget tmp 0)
+        start-fn   (aget tmp 1)]
+    (use-memo
+     #js [is-pending]
+     (fn []
+       (specify! (fn [cb-fn]
+                   (^function start-fn cb-fn))
+         cljs.core/IDeref
+         (-deref [_] is-pending))))))
 
 (defn use-callback
   ([f] (useCallback f #js []))
@@ -180,24 +215,16 @@
 
 (defn deref
   [iref]
-  (let [tmp       (useState #(c/deref iref))
-        state     (aget tmp 0)
-        set-state (aget tmp 1)
-        key       (useMemo
-                   #(let [key (js/Symbol "rumext.alpha/deref")]
-                      (add-watch iref key (fn [_ _ _ newv]
-                                            (^function set-state newv)))
-                      key)
-                   #js [iref])]
-
-    (useEffect
-     #(do
-        (^function set-state (c/deref iref))
-        (fn []
-          (remove-watch iref key)))
-     #js [iref key])
-
-    state))
+  (let [state     (use-ref (c/deref iref))
+        key       (use-id)
+        get-state (use-fn #(unchecked-get state "current"))
+        subscribe (use-fn #js [iref]
+                          (fn [listener-fn]
+                            (add-watch iref key (fn [_ _ _ newv]
+                                                  (unchecked-set state "current" newv)
+                                                  (^function listener-fn)))
+                            #(remove-watch iref key)))]
+    (react/useSyncExternalStore subscribe get-state)))
 
 (defn use-state
   ([] (use-state nil))

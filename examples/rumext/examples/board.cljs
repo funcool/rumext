@@ -1,7 +1,7 @@
 (ns rumext.examples.board
   (:require
    [goog.dom :as dom]
-   [rumext.alpha :as mf]
+   [rumext.v2 :as mf]
    [rumext.examples.util :as util]
    [okulary.core :as l]))
 
@@ -29,10 +29,11 @@
         ;; this is how one can specify React key for component
         [:& cell {:key x :x x :y y}])])])
 
+
+(def root (mf/create-root (dom/getElement "board")))
+
 (defn mount! []
-  (mf/mount (mf/element board-reactive)
-            (dom/getElement "board"))
+  (mf/render! root (mf/element board-reactive))
   (js/setTimeout (fn []
-                   (mf/mount (mf/element board-reactive)
-                             (dom/getElement "board")))
+                   (mf/render! root (mf/element board-reactive)))
                  2000))

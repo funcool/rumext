@@ -1,6 +1,6 @@
 (ns rumext.examples.util
   (:require
-   [rumext.alpha :as mf]
+   [rumext.v2 :as mf]
    [goog.dom :as dom]
    [okulary.core :as l]))
 

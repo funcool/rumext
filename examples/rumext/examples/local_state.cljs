@@ -1,7 +1,8 @@
- (ns rumext.examples.local-state
-  (:require [goog.dom :as dom]
-            [rumext.alpha :as mf]
-            [rumext.examples.util :as util]))
+(ns rumext.examples.local-state
+  (:require
+   [goog.dom :as dom]
+   [rumext.v2 :as mf]
+   [rumext.examples.util :as util]))
 
 ;; (mf/defc label
 ;;   {:wrap [mf/wrap-memo]}
@@ -21,7 +22,6 @@
        [:div
         [:span title ": " n]]])))
 
-
 (mf/defc local-state
   "test docstring"
   {::mf/wrap [mf/memo]}
@@ -37,7 +37,7 @@
      [:button {:on-click #(swap! local update-in [:counter1 :n] inc)} "Increment Counter 1"]
      [:button {:on-click #(swap! local update-in [:counter2 :n] inc)} "Increment Counter 2"]]))
 
+(def root (mf/create-root (dom/getElement "local-state-1")))
 
 (defn mount! []
-  (mf/mount (mf/element local-state {:title "Clicks count"})
-            (dom/getElement "local-state-1")))
+  (mf/render! root (mf/element local-state {:title "Clicks count"})))
