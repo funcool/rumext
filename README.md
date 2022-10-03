@@ -7,8 +7,11 @@ Simple and Decomplected UI library based on React >= 18.
 
 Add to deps.edn:
 
-```
-funcool/rumext {:mvn/version "v2-149"}
+```clojure
+funcool/rumext
+{:git/tag "v2.1"
+ :git/sha "6343102"
+ :git/url "https://github.com/funcool/rumext.git"}
 ```
 
 ## Differences with rum
