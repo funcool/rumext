@@ -17,6 +17,12 @@
 
 (def ^:const undefined (js* "(void 0)"))
 
+(def react>=18?
+  (exists? react/useSyncExternalStore))
+
+(def browser-context?
+  (exists? js/window))
+
 (def Component react/Component)
 (def Fragment react/Fragment)
 (def Profiler react/Profiler)
@@ -178,9 +184,15 @@
   [ctx]
   (react/useContext ctx))
 
-(defn use-id
-  []
-  (react/useId))
+(def ^:private internal-id 0)
+
+(if react>=18?
+  (defn use-id
+    []
+    (react/useId))
+  (defn use-id
+    []
+    (useMemo #(js* "\"rumext-id-\" + (++~{})" internal-id) #js [])))
 
 (defn start-transition
   [f]
@@ -197,6 +209,16 @@
   ([f] (use-layout-effect #js [] f))
   ([deps f]
    (useLayoutEffect #(let [r (^function f)] (if (fn? r) r noop)) deps)))
+
+(defn use-ssr-effect
+  "An EXPERIMENTAL use-effect version that detects if we are in a NON
+  browser context and runs the effect fn inmediatelly."
+  [deps effect-fn]
+  (if ^boolean browser-context?
+    (use-effect deps effect-fn)
+    (let [ret (effect-fn)]
+      (when (fn? ret)
+        (ret)))))
 
 (defn use-memo
   ([f] (useMemo f #js []))
@@ -224,7 +246,7 @@
   ([f] (useCallback f #js []))
   ([deps f] (useCallback f deps)))
 
-(if (exists? react/useSyncExternalStore)
+(if react>=18?
   (defn deref
     [iref]
     (let [state     (use-ref (c/deref iref))
@@ -426,3 +448,17 @@
      (every? #(eqfn? (unchecked-get np %)
                      (unchecked-get op %))
              props))))
+
+(defn use-debounce
+  [ms value]
+  (let [[state update-fn] (useState value)
+        update-fn (useMemo #(gf/debounce update-fn ms) #js [ms])]
+    (useEffect #(update-fn value) #js [value])
+    state))
+
+(defn use-equal-memo
+  [val]
+  (let [ref (use-ref nil)]
+    (when-not (= (ref-val ref) val)
+      (set-ref-val! ref val))
+    (ref-val ref)))

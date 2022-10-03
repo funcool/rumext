@@ -1,9 +1,16 @@
 # Changelog #
 
-## Version v2-149
+## Version v2.1
+
+- Make `use-id` available for react < 18.
+- Add `use-equal-memo` hook.
+- Add `use-debouce` hook.
+- Add experimental `use-ssr-effect`.
+
+## Version v2.0
 
 - Change version numbering: simplified.
-- Add v2 namespace that compatible with React18.
+- Add v2 namespace that compatible with React18 (still some warnings that will be addressed in next versions)
 
 
 ## Version 2022.04.19-148
