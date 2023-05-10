@@ -10,7 +10,7 @@
     org.clojure/tools.namespace {:mvn/version "RELEASE"}
     org.clojure/test.check {:mvn/version "RELEASE"}
     ;; org.clojure/tools.deps.alpha {:mvn/version "RELEASE"}
-    org.clojure/clojure {:mvn/version "1.10.3"}
+    org.clojure/clojure {:mvn/version "1.11.1"}
     }}
 
   :shadow-cljs
