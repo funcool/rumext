@@ -6,6 +6,7 @@
 
 (ns rumext.v2
   (:require
+   [cljs.core :as-alias c]
    [rumext.v2.compiler :as hc]))
 
 (defmacro html
@@ -31,32 +32,51 @@
       3 (if (vector? v)
           (recur (assoc r :args v) (inc s) (first n) (rest n))
           (throw (ex-info "Invalid macro definition: expected component args vector" {})))
-      4 {:cname     (:cname r)
-         :docs      (str (:doc r))
-         :arg-props (first (:args r))
-         :arg-rest  (rest (:args r))
-         :body      (cons v n)
-         :meta      (:metadata r)})))
+      4 {:cname (:cname r)
+         :docs  (str (:doc r))
+         :arg-1  (first (:args r))
+         :arg-n  (rest (:args r))
+         :body  (cons v n)
+         :meta  (:metadata r)})))
 
 (defn- prepare-render
-  [{:keys [cname meta arg-props arg-rest body] :as ctx}]
-  (let [argsym (gensym "arg")
-        args   (cons argsym arg-rest)
-        fnbody `(fn ~cname [~@(if arg-props args [])]
-                  (let [~@(cond
-                            (and arg-props (::wrap-props meta true))
-                            [arg-props `(rumext.v2.util/wrap-props ~argsym)]
+  [{:keys [cname meta arg-1 arg-n body] :as ctx}]
+  (let [props-sym (gensym "props-")
+        args      (cons props-sym arg-n)
+        f         `(fn ~cname [~@(if arg-1 args [])]
+                     (let [~@(cond
+                               (and (some? arg-1) (::wrap-props meta true))
+                               [arg-1 `(rumext.v2.util/wrap-props ~props-sym)]
 
-                            (some? arg-props)
-                            [arg-props argsym]
+                               (symbol? arg-1)
+                               [arg-1 props-sym]
 
-                            :else [])]
-                    ~@(butlast body)
-                    (html ~(last body))))]
+                               (and (map? arg-1) (not (::wrap-props meta true)))
+                               (let [alias (get arg-1 :as)
+                                     alts  (get arg-1 :or)
+                                     items (some-> (get arg-1 :keys) set)]
+                                 (cond->> []
+                                   (symbol? alias)
+                                   (into [alias props-sym])
+
+                                   (set? items)
+                                   (concat
+                                    (mapcat (fn [k]
+                                              [(symbol (name k))
+                                               (if (contains? alts k)
+                                                 `(~'js* "~{} ?? ~{}" (c/unchecked-get ~props-sym ~(name k)) ~(get alts k))
+                                                 `(c/unchecked-get ~props-sym ~(name k)))])
+                                            items)))))]
+
+                       ~@(butlast body)
+                       (html ~(last body)))
+                     )]
 
     (if (::forward-ref meta)
-      `(rumext.v2/forward-ref ~fnbody)
-      fnbody)))
+      `(rumext.v2/forward-ref ~f)
+      f)))
+
+
 
 (defmacro fnc
   [& args]
@@ -73,8 +93,8 @@
 (defmacro defc
   [& args]
   (let [{:keys [cname docs meta] :as ctx} (parse-defc args)
-         wrap-with (or (::wrap meta)
-                       (:wrap meta))
+        wrap-with (or (::wrap meta)
+                      (:wrap meta))
         rfs (gensym "component")]
     `(let [~rfs ~(prepare-render ctx)]
        (set! (.-displayName ~rfs) ~(str cname))

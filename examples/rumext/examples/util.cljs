@@ -30,7 +30,7 @@
          #(do
             (js/clearInterval sem)))))
 
-    [:span (.-size (.-watches iref))]))
+    [:span (.-size (.-watches ^js iref))]))
 
 ;; Generic board utils
 
