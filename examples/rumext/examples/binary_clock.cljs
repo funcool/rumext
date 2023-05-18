@@ -12,7 +12,8 @@
     [:div.stats "Renders: " renders]))
 
 (mf/defc bit
-  [{:keys [n b] :as props}]
+  {::mf/wrap-props false}
+  [{:keys [n b]}]
   (mf/use-effect (mf/deps n b) #(swap! *bclock-renders inc))
   (let [color (mf/deref util/*color)]
     (if (bit-test n b)

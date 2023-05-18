@@ -41,8 +41,11 @@
 
 (defn- prepare-render
   [{:keys [cname meta arg-1 arg-n body] :as ctx}]
-  (let [props-sym (gensym "props-")
+  (let [props-sym (with-meta (gensym "props-") {:tag 'js})
         args      (cons props-sym arg-n)
+        simple?   (fn [s]
+                    (some? (re-matches #"[A-Za-z0-9_]+" s)))
+
         f         `(fn ~cname [~@(if arg-1 args [])]
                      (let [~@(cond
                                (and (some? arg-1) (::wrap-props meta true))
@@ -62,10 +65,14 @@
                                    (set? items)
                                    (concat
                                     (mapcat (fn [k]
-                                              [(symbol (name k))
-                                               (if (contains? alts k)
-                                                 `(~'js* "~{} ?? ~{}" (c/unchecked-get ~props-sym ~(name k)) ~(get alts k))
-                                                 `(c/unchecked-get ~props-sym ~(name k)))])
+                                              (let [prop-name (name k)
+                                                    accessor  (if (simple? prop-name)
+                                                                (list '. props-sym (symbol (str "-" prop-name)))
+                                                                (list 'cljs.core/unchecked-get props-sym prop-name))]
+                                                [(if (symbol? k) k (symbol prop-name))
+                                                 (if (contains? alts k)
+                                                   `(~'js* "~{} ?? ~{}" ~accessor ~(get alts k))
+                                                   accessor)]))
                                             items)))))]
 
                        ~@(butlast body)
