@@ -129,6 +129,24 @@
     `(rumext.v2/use-memo
       (fn [] ~@(cons deps body)))))
 
+(defmacro with-fn
+  [deps & body]
+  (cond
+    (vector? deps)
+    `(rumext.v2/use-fn
+      (rumext.v2/deps ~@deps)
+      ~@body)
+
+
+    (nil? deps)
+    `(rumext.v2/use-fn
+      nil
+      ~@body)
+
+    :else
+    `(rumext.v2/use-fn
+      ~@(cons deps body))))
+
 (defmacro with-effect
   [deps & body]
   (cond
