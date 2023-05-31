@@ -118,18 +118,19 @@
   [k]
   (if (or (keyword? k) (symbol? k))
     (let [nword (name k)]
-      (if (str/starts-with? nword "--")
-        k
-        (let [[first-word & words] (str/split (name k) #"-")]
-          (if (or (empty? words)
-                  (= "aria" first-word)
-                  (= "data" first-word))
-            k)
-          (-> (map str/capitalize words)
-              (conj first-word)
-              str/join
-              keyword))))
-    k))
+      (cond
+        (str/starts-with? nword "--") k
+        (str/starts-with? nword "data-") k
+        (str/starts-with? nword "aria-") k
+        :else
+        (let [[first-word & words] (str/split nword #"-")]
+          (if (empty? words)
+            k
+            (-> (map str/capitalize words)
+                (conj first-word)
+                str/join
+                keyword)))))
+      k))
 
 (defn camel-case-keys
   "Recursively transforms all map keys into camel case."
