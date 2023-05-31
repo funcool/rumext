@@ -5,7 +5,9 @@
 ;; Copyright (c) 2016-2020 Andrey Antukh <niwi@niwi.nz>
 
 (ns rumext.v2.util
+  (:refer-clojure :exclude [concat])
   (:require
+   [clojure.core :as c]
    [clojure.string :as str]
    [clojure.set :as set]))
 
@@ -114,18 +116,19 @@
 (defn camel-case
   "Returns camel case version of the key, e.g. :http-equiv becomes :httpEquiv."
   [k]
-  (if (or (keyword? k)
-          (string? k)
-          (symbol? k))
-    (let [[first-word & words] (str/split (name k) #"-")]
-      (if (or (empty? words)
-              (= "aria" first-word)
-              (= "data" first-word))
+  (if (or (keyword? k) (symbol? k))
+    (let [nword (name k)]
+      (if (str/starts-with? nword "--")
         k
-        (-> (map str/capitalize words)
-            (conj first-word)
-            str/join
-            keyword)))
+        (let [[first-word & words] (str/split (name k) #"-")]
+          (if (or (empty? words)
+                  (= "aria" first-word)
+                  (= "data" first-word))
+            k)
+          (-> (map str/capitalize words)
+              (conj first-word)
+              str/join
+              keyword))))
     k))
 
 (defn camel-case-keys
@@ -175,12 +178,25 @@
        (remove nil?)
        (str/join " ")))
 
+(defn compile-concat
+  "A styles oriented fast string concat macro."
+  [& params]
+  (let [xform    (comp (filter some?)
+                       (map (fn [part]
+                              (if (string? part)
+                                part
+                                (list 'js* "(~{} ?? \"\")" part)))))
+        params   (into [] xform params)
+        template (->> (repeat (count params) "~{}")
+                      (interpose "+")
+                      (reduce c/str ""))]
+
+    (if (= 1 (count params))
+      (first params)
+      (apply list 'js* template params))))
+
 (defn compile-join-classes
   "Joins strings space separated"
   ([] "")
   ([& xs]
-   (let [strs (->> (repeat (count xs) "~{}")
-                   (interpose ",")
-                   (apply str))]
-     (list* 'js* (str "[" strs "].join(' ')") xs))))
-
+   (apply compile-concat (interpose " " xs))))
