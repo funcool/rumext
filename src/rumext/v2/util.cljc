@@ -179,24 +179,24 @@
        (str/join " ")))
 
 (defn compile-concat
-  "A styles oriented fast string concat macro."
-  [& params]
-  (let [xform    (comp (filter some?)
+  [params & {:keys [safe?]}]
+  (let [xform  (comp (filter some?)
+                     (if safe?
                        (map (fn [part]
                               (if (string? part)
                                 part
-                                (list 'js* "(~{} ?? \"\")" part)))))
-        params   (into [] xform params)
-        template (->> (repeat (count params) "~{}")
-                      (interpose "+")
-                      (reduce c/str ""))]
+                                (list 'js* "(~{} ?? \"\")" part))))
+                       (map identity)))
+        params (into [] xform params)]
 
     (if (= 1 (count params))
       (first params)
-      (apply list 'js* template params))))
+      (let [templ (->> (repeat (count params) "~{}")
+                       (interpose "+")
+                       (reduce c/str ""))]
+        (apply list 'js* templ params)))))
 
 (defn compile-join-classes
   "Joins strings space separated"
   ([] "")
-  ([& xs]
-   (apply compile-concat (interpose " " xs))))
+  ([& xs] (compile-concat (interpose " " xs) :safe? true)))
