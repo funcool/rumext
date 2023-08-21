@@ -9,16 +9,13 @@
   (:require-macros [rumext.v2 :refer [defc fnc]])
   (:require
    ["react" :as react]
-   ["react-dom" :as rdom]
+   ["react-dom/client" :as rdom]
    ["react/jsx-runtime" :as jsxrt]
    [cljs.core :as c]
    [goog.functions :as gf]
    [rumext.v2.util :as util]))
 
 (def ^:const undefined (js* "(void 0)"))
-
-(def react>=18?
-  (exists? react/useSyncExternalStore))
 
 (def browser-context?
   (exists? js/window))
@@ -126,6 +123,18 @@
   [f deps]
   (react/useEffect f deps))
 
+(defn useInsertionEffect
+  [f deps]
+  (react/useInsertionEffect f deps))
+
+(defn useLayoutEffect
+  [f deps]
+  (react/useLayoutEffect f deps))
+
+(defn useDeferredValue
+  [f]
+  (react/useDeferredValue f))
+
 (defn useMemo
   [f deps]
   (react/useMemo f deps))
@@ -133,10 +142,6 @@
 (defn useCallback
   [f deps]
   (react/useCallback f deps))
-
-(defn useLayoutEffect
-  [f deps]
-  (react/useLayoutEffect f deps))
 
 (defn useContext
   [ctx]
@@ -186,13 +191,9 @@
 
 (def ^:private internal-id 0)
 
-(if react>=18?
-  (defn use-id
-    []
-    (react/useId))
-  (defn use-id
-    []
-    (useMemo #(js* "\"rumext-id-\" + (++~{})" internal-id) #js [])))
+(defn use-id
+  []
+  (react/useId))
 
 (defn start-transition
   [f]
@@ -204,6 +205,11 @@
   ([f] (use-effect #js [] f))
   ([deps f]
    (useEffect #(let [r (^function f)] (if (fn? r) r noop)) deps)))
+
+(defn use-insertion-effect
+  ([f] (use-insertion-effect #js [] f))
+  ([deps f]
+   (useInsertionEffect #(let [r (^function f)] (if (fn? r) r noop)) deps)))
 
 (defn use-layout-effect
   ([f] (use-layout-effect #js [] f))
@@ -234,8 +240,8 @@
      (fn []
        (specify! (fn [cb-fn]
                    (^function start-fn cb-fn))
-         cljs.core/IDeref
-         (-deref [_] is-pending))))))
+         cljs.core/IPending
+         (-realized? [_] (not ^boolean is-pending)))))))
 
 (defn use-callback
   ([f] (useCallback f #js []))
@@ -246,38 +252,20 @@
   ([f] (useCallback f #js []))
   ([deps f] (useCallback f deps)))
 
-(if react>=18?
-  (defn deref
-    [iref]
-    (let [state     (use-ref (c/deref iref))
-          key       (use-id)
-          get-state (use-fn #(unchecked-get state "current"))
-          subscribe (use-fn #js [iref]
-                            (fn [listener-fn]
-                              (add-watch iref key (fn [_ _ _ newv]
-                                                    (unchecked-set state "current" newv)
-                                                    (^function listener-fn)))
-                              #(remove-watch iref key)))]
-      (react/useSyncExternalStore subscribe get-state)))
-  (defn deref
-    [iref]
-    (let [tmp       (useState #(c/deref iref))
-          state     (aget tmp 0)
-          set-state (aget tmp 1)
-          key       (useMemo
-                     #(let [key (js/Symbol "rumext.alpha/deref")]
-                        (add-watch iref key (fn [_ _ _ newv]
-                                              (^function set-state newv)))
-                        key)
-                     #js [iref])]
-
-      (useEffect
-       #(do
-          (^function set-state (c/deref iref))
-          (fn []
-            (remove-watch iref key)))
-       #js [iref key])
-      state)))
+(defn deref
+  [iref]
+  (let [state     (use-ref (c/deref iref))
+        key       (use-id)
+        get-state (use-fn #js [state] #(unchecked-get state "current"))
+        subscribe (use-fn #js [iref key]
+                          (fn [listener-fn]
+                            (unchecked-set state "current" (c/deref iref))
+                            (add-watch iref key (fn [_ _ _ newv]
+                                                  (unchecked-set state "current" newv)
+                                                  (^function listener-fn)))
+                            #(remove-watch iref key)))
+        snapshot  (use-fn #js [iref] #(c/deref iref))]
+    (react/useSyncExternalStore subscribe get-state snapshot)))
 
 (defn use-state
   ([] (use-state nil))
@@ -457,8 +445,45 @@
     state))
 
 (defn use-equal-memo
+  ([val]
+   (let [ref (use-ref nil)]
+     (when-not (= (ref-val ref) val)
+       (set-ref-val! ref val))
+     (ref-val ref)))
+  ([eqfn val]
+   (let [ref (use-ref nil)]
+     (when-not (eqfn (ref-val ref) val)
+       (set-ref-val! ref val))
+     (ref-val ref))))
+
+(defn use-deferred
   [val]
-  (let [ref (use-ref nil)]
-    (when-not (= (ref-val ref) val)
-      (set-ref-val! ref val))
+  (useDeferredValue val))
+
+(defn use-previous
+  "Returns the value from previous render cycle."
+  [value]
+  (let [ref (use-ref value)]
+    (use-effect #js [value] #(set-ref-val! ref value))
     (ref-val ref)))
+
+(defn use-update-ref
+  [value]
+  (let [ref (use-ref value)]
+    (use-effect #js [value] #(set-ref-val! ref value))
+    ref))
+
+(defn use-ref-fn
+  "Returns a stable callback pointer what calls the interned
+  callback. The interned callback will be automatically updated on
+  each render if the reference changes and works as noop if the
+  pointer references to nil value."
+  [f]
+  (let [ptr (use-ref nil)]
+    (use-effect #js [f] #(set-ref-val! ptr #js {:f f}))
+    (use-fn (fn [& args]
+              (let [obj (ref-val ptr)]
+                (when ^boolean obj
+                  (apply (.-f obj) args)))))))
+
+
