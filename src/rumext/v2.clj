@@ -204,4 +204,4 @@
                                           (rumext.v2/fnc ~'wrapper
                                             {:rumext.v2/wrap-props false}
                                             [props#]
-                                            [:> (deref loadable#) props])))))))))
+                                            [:> (deref loadable#) props#])))))))))
