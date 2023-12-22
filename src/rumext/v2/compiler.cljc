@@ -23,6 +23,12 @@
            (if (map? props)
              [klass (rumext.v2.util/compile-map->object props) children]
              [klass (list 'rumext.v2.util/map->obj props) children]))))
+
+   :? (fn [_ attrs & children]
+        (if (map? attrs)
+          ['rumext.v2/Suspense attrs children]
+          ['rumext.v2/Suspense {} (cons attrs children)]))
+
    :* (fn [_ attrs & children]
         (if (map? attrs)
           ['rumext.v2/Fragment attrs children]
