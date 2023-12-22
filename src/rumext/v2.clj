@@ -195,13 +195,13 @@
        (rumext.v2/lazy (fn []
                          (.then (shadow.lazy/load loadable#)
                                 (fn [component]
-                                  (js-obj "default" component))))))
+                                  (cljs.core/js-obj "default" component))))))
     `(let [loadable# (shadow.lazy/loadable ~ns-sym)]
        (rumext.v2/lazy (fn []
                          (.then (shadow.lazy/load loadable#)
                                 (fn [_#]
-                                  (js-obj "default"
-                                          (rumext.v2/fnc ~'wrapper
-                                            {:rumext.v2/wrap-props false}
-                                            [props#]
-                                            [:> (deref loadable#) props#])))))))))
+                                  (cjs.core/js-obj "default"
+                                                   (rumext.v2/fnc ~'wrapper
+                                                     {:rumext.v2/wrap-props false}
+                                                     [props#]
+                                                     [:> (deref loadable#) props#])))))))))
