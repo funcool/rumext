@@ -1,5 +1,41 @@
 # Changelog #
 
+## Version v2.8
+
+- Export `React.lazy` as `lazy` helper
+- Add `lazy-component` macro that joins react lazy with shadow-cljs
+  lazy loading
+  
+
+## Version v2.7
+
+- Update to react>=18
+
+
+## Version v2.6
+
+- Bugfixes
+
+
+## Version v2.5
+
+- Bugfixes
+
+
+## Version v2.4
+
+- Add improve performance of internal css handling
+
+
+## Version v2.3
+
+- Minor updates
+- Add with-fn macro
+
+## Version v2.2
+
+- Add the ability to destructure js props
+
 ## Version v2.1
 
 - Make `use-id` available for react < 18.
