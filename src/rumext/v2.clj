@@ -180,3 +180,28 @@
     :else
     `(rumext.v2/use-layout-effect
       (fn [] ~@(cons deps body)))))
+
+(defn production-build?
+  []
+  (let [env (System/getenv)]
+    (or (= "production" (get env "NODE_ENV"))
+        (= "production" (get env "RUMEXT_ENV"))
+        (= "production" (get env "TARGET_ENV")))))
+
+(defmacro lazy-component
+  [ns-sym]
+  (if (production-build?)
+    `(let [loadable# (shadow.lazy/loadable ~ns-sym)]
+       (rumext.v2/lazy (fn []
+                         (.then (shadow.lazy/load loadable#)
+                                (fn [component]
+                                  (js-obj "default" component))))))
+    `(let [loadable# (shadow.lazy/loadable ~ns-sym)]
+       (rumext.v2/lazy (fn []
+                         (.then (shadow.lazy/load loadable#)
+                                (fn [_#]
+                                  (js-obj "default"
+                                          (rumext.v2/fnc ~'wrapper
+                                            {:rumext.v2/wrap-props false}
+                                            [props#]
+                                            [:> (deref loadable#) props])))))))))

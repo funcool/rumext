@@ -11,6 +11,7 @@
    ["react" :as react]
    ["react-dom/client" :as rdom]
    ["react/jsx-runtime" :as jsxrt]
+   [shadow.lazy]
    [cljs.core :as c]
    [goog.functions :as gf]
    [rumext.v2.util :as util]))
@@ -23,6 +24,7 @@
 (def Component react/Component)
 (def Fragment react/Fragment)
 (def Profiler react/Profiler)
+(def Suspense react/Suspense)
 
 (extend-type cljs.core.UUID
   INamed
@@ -96,6 +98,10 @@
   [ref val]
   (unchecked-set ref "current" val)
   val)
+
+(defn lazy
+  [f]
+  (react/lazy f))
 
 ;; --- Context API
 

@@ -64,7 +64,7 @@
      "Convert shallowly an js object to cljs map."
      [obj]
      (let [keys (.keys js/Object obj)
-           len (alength keys)]
+           len  (alength keys)]
        (loop [i 0
               r (transient {})]
          (if (< i len)
