@@ -2,7 +2,7 @@
 
 Simple and Decomplected UI library based on React >= 18 focused on performance.
 
-**Documentation** & **API Reference**: http://funcool.github.io/beicon/latest/
+**Documentation** & **API Reference**: http://funcool.github.io/rumext/latest/
 
 ## License
 
