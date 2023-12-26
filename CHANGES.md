@@ -1,11 +1,19 @@
 # Changelog #
 
+## Version v2.9
+
+- Make the library more lightweight removing unnecesary and duplicated code
+- Add the ability to define more react friendly components (for use
+  outside cljs codebases).
+- Add the ability to define lazy loading components
+- Improve documentation
+
+
 ## Version v2.8
 
 - Export `React.lazy` as `lazy` helper
 - Add `lazy-component` macro that joins react lazy with shadow-cljs
   lazy loading
-  
 
 ## Version v2.7
 
