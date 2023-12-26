@@ -7,8 +7,8 @@
    :output-dir "target/public/js"
    :asset-path "/js"
    :modules {:main {:entries [rumext.examples.core]}}
-   :compiler-options {:output-feature-set :es8}
-   :release {:compiler-options {:pseudo-names true
+   :compiler-options {:output-feature-set :es-next}
+   :release {:compiler-options {:pseudo-names false
                                 :pretty-print true}}
 
    }}}

@@ -4,36 +4,37 @@
    [rumext.v2 :as mf]
    [rumext.examples.util :as util]))
 
-;; (mf/defc label
-;;   {:wrap [mf/wrap-memo]}
-;;   [{:keys [state] :as props}]
-;;   ;; (prn "label" props)
-;;   (let [{:keys [title n]} state]
-;;     [:div
-;;      [:span title ": " n]]))
-
 (def label
   (mf/fnc label
-    {::mf/wrap [mf/memo]}
+    {::mf/wrap [mf/memo]
+     ::mf/props :native}
     [{:keys [state] :as props}]
 
     (let [{:keys [title n]} state]
-      [:*
-       [:div
-        [:span title ": " n]]])))
+      [:div {:class "foobar"}
+       [:span title ": " n]])))
+
+(mf/defc label*
+  {::mf/wrap [#(mf/memo' % (mf/check-props ["title" "n"]))]}
+  [{:keys [title n on-click data-foo] :as props}]
+  [:div
+   [:span title ": " n]])
 
 (mf/defc local-state
   "test docstring"
-  {::mf/wrap [mf/memo]}
-  [{:keys [title] :as props}]
-  (let [local (mf/use-state {:counter1 {:title "Counter 1"
-                                        :n 0}
-                             :counter2 {:title "Counter 2"
-                                        :n 0}})]
+  {::mf/wrap [mf/memo]
+   ::mf/props :native}
+  [{:keys [title]}]
+  (let [local (mf/use-state
+               #(-> {:counter1 {:title "Counter 1"
+                                :n 0}
+                     :counter2 {:title "Counter 2"
+                                :n 0}}))]
     [:section {:class "counters"}
      [:hr]
-     [:& label {:state (:counter1 @local)}]
-     [:& label {:state (:counter2 @local)}]
+     [:& label {:state (:counter1 @local) :data-foobar 1 :on-click identity}]
+     (let [{:keys [title n]} (:counter2 @local)]
+       [:> label* {:title title :n n :on-click identity}])
      [:button {:on-click #(swap! local update-in [:counter1 :n] inc)} "Increment Counter 1"]
      [:button {:on-click #(swap! local update-in [:counter2 :n] inc)} "Increment Counter 2"]]))
 

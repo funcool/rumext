@@ -1,9 +1,11 @@
-(ns rumext.v2.normalize
-  "
-  Mostly from sablono + hiccup project.
-  "
-  (:require
-    [rumext.v2.util :as util]))
+(ns rumext.v2.normalize)
+
+(defn- element?
+  "- is x a vector?
+  AND
+   - first element is a keyword?"
+  [x]
+  (and (vector? x) (keyword? (first x))))
 
 (defn compact-map
   "Removes all map entries where the value of the entry is empty."
@@ -111,7 +113,7 @@
          (string? x)
          (list x)
 
-         (util/element? x)
+         (element? x)
          (list x)
 
          (and (list? x)
@@ -124,7 +126,7 @@
          (and (sequential? x)
               (sequential? (first x))
               (not (string? (first x)))
-              (not (util/element? (first x)))
+              (not (element? (first x)))
               (= (count x) 1))
          (children (first x))
 
@@ -153,6 +155,7 @@
       [tag
        (attributes tag-attrs)
        (children content)])))
+
 #_(element [:div#foo 'a])
 #_(element [:div.a#foo])
 #_(element [:h1.b {:className "a"}])

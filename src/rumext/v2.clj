@@ -5,8 +5,10 @@
 ;; Copyright (c) Andrey Antukh <niwi@niwi.nz>
 
 (ns rumext.v2
+  (:refer-clojure :exclude [simple-ident?])
   (:require
    [cljs.core :as-alias c]
+   [clojure.string :as str]
    [rumext.v2.compiler :as hc]))
 
 (defmacro html
@@ -27,71 +29,97 @@
           (recur (assoc r :doc v) (inc s) (first n) (rest n))
           (recur r (inc s) v n))
       2 (if (map? v)
-          (recur (assoc r :metadata v) (inc s) (first n) (rest n))
+          (recur (assoc r :meta v) (inc s) (first n) (rest n))
           (recur r (inc s) v n))
       3 (if (vector? v)
           (recur (assoc r :args v) (inc s) (first n) (rest n))
           (throw (ex-info "Invalid macro definition: expected component args vector" {})))
-      4 {:cname (:cname r)
-         :docs  (str (:doc r))
-         :arg-1  (first (:args r))
-         :arg-n  (rest (:args r))
-         :body  (cons v n)
-         :meta  (:metadata r)})))
 
-(defn- prepare-render
-  [{:keys [cname meta arg-1 arg-n body] :as ctx}]
-  (let [props-sym (with-meta (gensym "props-") {:tag 'js})
-        args      (cons props-sym arg-n)
-        simple?   (fn [s]
-                    (some? (re-matches #"[A-Za-z0-9_]+" s)))
+      (let [psym (with-meta (gensym "props-") {:tag 'js})]
+        {:cname  (:cname r)
+         :docs   (str (:doc r))
+         :props  (first (:args r))
+         :params (into [psym] (rest (:args r)))
+         :body   (cons v n)
+         :psym   psym
+         :meta   (:meta r)}))))
 
-        f         `(fn ~cname [~@(if arg-1 args [])]
-                     (let [~@(cond
-                               (and (some? arg-1) (::wrap-props meta true))
-                               [arg-1 `(rumext.v2.util/wrap-props ~props-sym)]
+(defn- wrap-props?
+  [{:keys [cname meta]}]
+  (let [default-style (if (str/ends-with? (name cname) "*") :native :clj)]
+    (cond
+      (contains? meta ::props)
+      (= :clj (get meta ::props default-style))
 
-                               (symbol? arg-1)
-                               [arg-1 props-sym]
+      (contains? meta ::wrap-props)
+      (get meta ::wrap-props)
 
-                               (and (map? arg-1) (not (::wrap-props meta true)))
-                               (let [alias (get arg-1 :as)
-                                     alts  (get arg-1 :or)
-                                     items (some-> (get arg-1 :keys) set)]
-                                 (cond->> []
-                                   (symbol? alias)
-                                   (into [alias props-sym])
+      (str/ends-with? (name cname) "*")
+      false
 
-                                   (set? items)
-                                   (concat
-                                    (mapcat (fn [k]
-                                              (let [prop-name (name k)
-                                                    accessor  (if (simple? prop-name)
-                                                                (list '. props-sym (symbol (str "-" prop-name)))
-                                                                (list 'cljs.core/unchecked-get props-sym prop-name))]
-                                                [(if (symbol? k) k (symbol prop-name))
-                                                 (if (contains? alts k)
-                                                   `(~'js* "~{} ?? ~{}" ~accessor ~(get alts k))
-                                                   accessor)]))
-                                            items)))))]
+      :else
+      true)))
 
-                       ~@(butlast body)
-                       (html ~(last body)))
-                     )]
+(defn- lisp-to-native-props?
+  [{:keys [meta cname] :as ctx}]
+  (and (not (wrap-props? ctx))
+       (or (str/ends-with? (name cname) "*")
+           (= (::props-destructuring meta) :lisp-to-camel))))
 
+(defn- simple-ident?
+  [s]
+  (some? (re-matches #"[A-Za-z0-9_]+" s)))
+
+(defn- prepare-let-bindings
+  [{:keys [cname meta props body params] :as ctx}]
+  (let [l2n? (lisp-to-native-props? ctx)
+        psym (first params)]
+    (cond
+      (and (some? props) (wrap-props? ctx))
+      [props `(rumext.v2.util/wrap-props ~psym)]
+
+      (and (map? props) (not (wrap-props? ctx)))
+      (let [alias (get props :as)
+            alts  (get props :or)
+            items (some-> (get props :keys) set)]
+        (cond->> []
+          (symbol? alias)
+          (into [alias psym])
+
+          (set? items)
+          (concat (mapcat (fn [k]
+                            (let [prop-name (if l2n?
+                                              (name (hc/camel-case k))
+                                              (name k))
+                                  accessor  (if (simple-ident? prop-name)
+                                              (list '. psym (symbol (str "-" prop-name)))
+                                              (list 'cljs.core/unchecked-get psym prop-name))]
+                              [(if (symbol? k) k (symbol prop-name))
+                               (if (contains? alts k)
+                                 `(~'js* "~{} ?? ~{}" ~accessor ~(get alts k))
+                                 accessor)]))
+                          items))))
+
+      (symbol? props)
+      [props psym])))
+
+(defn- prepare-render-fn
+  [{:keys [cname meta body params] :as ctx}]
+  (let [f `(fn ~cname ~params
+             (let [~@(prepare-let-bindings ctx)]
+               ~@(butlast body)
+               ~(hc/compile (last body))))]
     (if (::forward-ref meta)
       `(rumext.v2/forward-ref ~f)
       f)))
-
-
 
 (defmacro fnc
   [& args]
   (let [{:keys [cname meta] :as ctx} (parse-defc args)
         wrap-with (or (::wrap meta)
                       (:wrap meta))
-        rfs (gensym "component")]
-    `(let [~rfs ~(prepare-render ctx)]
+        rfs (gensym "component-")]
+    `(let [~rfs ~(prepare-render-fn ctx)]
        (set! (.-displayName ~rfs) ~(str cname))
        ~(if (seq wrap-with)
           (reduce (fn [r fi] `(~fi ~r)) rfs wrap-with)
@@ -102,8 +130,8 @@
   (let [{:keys [cname docs meta] :as ctx} (parse-defc args)
         wrap-with (or (::wrap meta)
                       (:wrap meta))
-        rfs (gensym "component")]
-    `(let [~rfs ~(prepare-render ctx)]
+        rfs (gensym "component-")]
+    `(let [~rfs ~(prepare-render-fn ctx)]
        (set! (.-displayName ~rfs) ~(str cname))
        (def ~cname ~docs ~(if (seq wrap-with)
                             (reduce (fn [r fi] `(~fi ~r)) rfs wrap-with)
@@ -181,7 +209,31 @@
     `(rumext.v2/use-layout-effect
       (fn [] ~@(cons deps body)))))
 
-(defn production-build?
+(defmacro check-props
+  "Utility function to use with `memo'`.
+  Will check the `props` keys to see if they are equal."
+  [props & [eq-f :as rest]]
+  (if (symbol? props)
+    `(apply rumext.v2/check-props ~props ~rest)
+
+    (let [eq-f (or eq-f 'cljs.core/=)
+          np-s (with-meta (gensym "new-props-") {:tag 'js})
+          op-s (with-meta (gensym "old-props-") {:tag 'js})
+          op-f (fn [prop]
+                 (let [prop-access (symbol (str "-" (name prop)))]
+                   (with-meta
+                     (if (simple-ident? prop)
+                       (list eq-f
+                             (list '.. np-s prop-access)
+                             (list '.. op-s prop-access))
+                       (list eq-f
+                             (list 'cljs.core/unchecked-get np-s prop)
+                             (list 'cljs.core/unchecked-get op-s prop)))
+                     {:tag 'boolean})))]
+      `(fn [~np-s ~op-s]
+         (and ~@(map op-f props))))))
+
+(defn ^:no-doc production-build?
   []
   (let [env (System/getenv)]
     (or (= "production" (get env "NODE_ENV"))
@@ -205,3 +257,20 @@
                                                       {:rumext.v2/wrap-props false}
                                                       [props#]
                                                       [:> (deref loadable#) props#])))))))))
+(defmacro spread-obj
+  "A helper for create spread js object operations"
+  [target & [other :as rest]]
+  (assert (or (symbol? target)
+              (map? target))
+          "only symbols or maps accepted on target")
+  (assert (or (and (= (count rest) 1)
+                   (or (symbol? other)
+                       (map? other)))
+              (and (even? (count rest))
+                   (or (keyword? other)
+                       (string? other))))
+          "only symbols, map or named parameters allowed for the spread")
+  (let [other (if (> (count rest) 1)
+                (apply hash-map rest)
+                other)]
+    (hc/compile-to-spread-js-obj target other)))
