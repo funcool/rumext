@@ -19,20 +19,32 @@
 (def ^:const undefined (js* "(void 0)"))
 
 (def browser-context?
+  "A boolean var, indicates if the current code is running on browser main thread or not."
   (exists? js/window))
 
-(def Component react/Component)
-(def Fragment react/Fragment)
-(def Profiler react/Profiler)
-(def Suspense react/Suspense)
+(def Component
+  "The `react.Component` class"
+  react/Component)
+
+(def Fragment
+  "The `react.Fragment class"
+  react/Fragment)
+
+(def Profiler
+  "The `react.Profiler` class"
+  react/Profiler)
+
+(def Suspense
+  "The `react.Suspense` class"
+  react/Suspense)
 
 (extend-type cljs.core.UUID
   INamed
   (-name [this] (js* "\"\" + ~{}" this))
   (-namespace [_] ""))
 
-(def ^function jsx jsxrt/jsx)
-(def ^function jsxs jsxrt/jsxs)
+(def ^:no-doc ^function jsx jsxrt/jsx)
+(def ^:no-doc ^function jsxs jsxrt/jsxs)
 
 (defn merge-props
   [props1 props2]
@@ -88,34 +100,70 @@
   val)
 
 (def ^function lazy
-  "Call lazy outside your components to declare a lazy-loaded React component"
+  "A helper for creating lazy loading components."
   react/lazy)
 
 ;; --- Context API
 
-(def ^function create-context react/createContext)
+(def ^function create-context
+  "Create a react context"
+  react/createContext)
 
 (defn provider
+  "Get the current provider for specified context"
   [ctx]
   (unchecked-get ctx "Provider"))
 
 ;; --- Raw Hooks
 
-(def ^function useRef react/useRef)
-(def ^function useState react/useState)
-(def ^function useEffect react/useEffect)
-(def ^function useInsertionEffect react/useInsertionEffect)
-(def ^function useLayoutEffect react/useLayoutEffect)
-(def ^function useDeferredValue react/useDeferredValue)
-(def ^function useMemo react/useMemo)
-(def ^function useCallback react/useCallback)
-(def ^function useContext react/useContext)
-(def ^function useTransition react/useTransition)
+(def ^function useId
+  "The `react.useId` hook function"
+  react/useId)
+
+(def ^function useRef
+  "The `react.useRef` hook function"
+  react/useRef)
+
+(def ^function useState
+  "The `react.useState` hook function"
+  react/useState)
+
+(def ^function useEffect
+  "The `react.useEffect` hook function"
+  react/useEffect)
+
+(def ^function useInsertionEffect
+  "The react.useInsertionEffect` hook function"
+  react/useInsertionEffect)
+
+(def ^function useLayoutEffect
+  "The `react.useLayoutEffect` hook function"
+  react/useLayoutEffect)
+
+(def ^function useDeferredValue
+  "The `react.useDeferredValue hook function"
+  react/useDeferredValue)
+
+(def ^function useMemo
+  "The `react.useMemo` hook function"
+  react/useMemo)
+
+(def ^function useCallback
+  "The `react.useCallback` hook function"
+  react/useCallback)
+
+(def ^function useContext
+  "The `react.useContext` hook function"
+  react/useContext)
+
+(def ^function useTransition
+  "The `react.useTransition` hook function"
+  react/useTransition)
 
 ;; --- Hooks
 
-(defprotocol IDepsAdapter
-  (adapt [o] "adapt dep if proceed"))
+(defprotocol ^:no-doc IDepsAdapter
+  (^:no-doc adapt [o] "adapt dep if proceed"))
 
 (extend-protocol IDepsAdapter
   default
@@ -130,7 +178,10 @@
 ;; "A convenience function that translates the list of arguments into a
 ;; valid js array for use in the deps list of hooks.
 
-(defn  deps
+(defn deps
+  "A helper for creating hook deps array, that handles some
+  adaptations for clojure specific data types such that UUID and
+  keywords"
   ([] #js [])
   ([a] #js [(adapt a)])
   ([a b] #js [(adapt a) (adapt b)])
@@ -142,37 +193,41 @@
   ([a b c d e f g h] #js [(adapt a) (adapt b) (adapt c) (adapt d) (adapt e) (adapt f) (adapt g) (adapt h)])
   ([a b c d e f g h & rest] (into-array (map adapt (into [a b c d e f g h] rest)))))
 
-(defn use-ref
-  ([] (react/useRef nil))
-  ([initial] (react/useRef initial)))
+(def ^function use-ref
+  "A lisp-case alias for `useRef`"
+  react/useRef)
 
-(defn use-ctx
-  [ctx]
-  (react/useContext ctx))
+(def ^function use-ctx
+  "A lisp-case short alias for the `useContext` hook function"
+  react/useContext)
 
-(def ^:private internal-id 0)
+(def ^function use-id
+  "A lisp-case alias fro `useId` hook function"
+  react/useId)
 
-(defn use-id
-  []
-  (react/useId))
-
-(defn start-transition
-  [f]
-  (react/startTransition f))
+(def ^function start-transition
+  "An alias for react.startTransition function"
+  react/startTransition)
 
 (def noop (constantly nil))
 
 (defn use-effect
+  "A rumext variant of the `useEffect` hook function with order of
+  arguments inverted"
   ([f] (use-effect #js [] f))
   ([deps f]
    (useEffect #(let [r (^function f)] (if (fn? r) r noop)) deps)))
 
 (defn use-insertion-effect
+  "A rumext variant of the `useInsertionEffect` hook function with order
+  of arguments inverted"
   ([f] (use-insertion-effect #js [] f))
   ([deps f]
    (useInsertionEffect #(let [r (^function f)] (if (fn? r) r noop)) deps)))
 
 (defn use-layout-effect
+  "A rumext variant of the `useLayoutEffect` hook function with order
+  of arguments inverted"
   ([f] (use-layout-effect #js [] f))
   ([deps f]
    (useLayoutEffect #(let [r (^function f)] (if (fn? r) r noop)) deps)))
@@ -188,10 +243,15 @@
         (ret)))))
 
 (defn use-memo
+  "A rumext variant of the `useMemo` hook function with order
+  of arguments inverted"
   ([f] (useMemo f #js []))
   ([deps f] (useMemo f deps)))
 
 (defn use-transition
+  "A rumext version of the `useTransition` hook function. Returns a
+  function object that implements the IPending protocol for check the
+  state of the transition."
   []
   (let [tmp        (useTransition)
         is-pending (aget tmp 0)
@@ -205,15 +265,19 @@
          (-realized? [_] (not ^boolean is-pending)))))))
 
 (defn use-callback
+  "A rumext variant of the `useCallback` hook function with order
+  of arguments inverted"
   ([f] (useCallback f #js []))
   ([deps f] (useCallback f deps)))
 
 (defn use-fn
-  "A convenient alias to useCallback"
+  "A convenience short alias for `use-callback`"
   ([f] (useCallback f #js []))
   ([deps f] (useCallback f deps)))
 
 (defn deref
+  "A rumext hook for deref and watch an atom or atom like object. It
+  internally uses the react.useSyncExternalSource API"
   [iref]
   (let [state     (use-ref (c/deref iref))
         key       (use-id)
@@ -229,6 +293,8 @@
     (react/useSyncExternalStore subscribe get-state snapshot)))
 
 (defn use-state
+  "A rumext variant of `useState`. Returns an object that implements
+  the Atom protocols."
   ([] (use-state nil))
   ([initial]
    (let [tmp    (useState initial)
@@ -256,13 +322,13 @@
           (-deref [_] state)))))))
 
 (defn use-var
-  "A custom hook for define mutable variables that persists
-  on renders (based on useRef hook)."
+  "A rumext custom hook that uses `useRef` under the hood. Returns an
+  object that implements the Atom protocols.  The updates does not
+  trigger rerender."
   ([] (use-var nil))
   ([initial]
    (let [ref (useRef initial)]
      (use-memo
-      #js []
       #(specify! (fn [val] (set-ref-val! ref val))
          c/IReset
          (-reset! [_ new-value]
@@ -285,6 +351,8 @@
 ;; --- Other API
 
 (defn element
+  "Create a react element. This is a public API for the internal `jsx`
+  function"
   ([klass]
    (jsx klass #js {} undefined))
   ([klass props]
@@ -309,7 +377,7 @@
   react/memo)
 
 (defn catch
-  "High order component for adding error boundaries"
+  "High order component that adds an error boundary"
   [component {:keys [fallback on-error]}]
   (let [constructor
         (fn [props]
@@ -350,6 +418,7 @@
       #(js/setTimeout % 16)))
 
 (defn deferred
+  "A higher-order component that just deffers the first render to the next tick"
   ([component] (deferred component schedule))
   ([component sfn]
    (fnc deferred
@@ -363,6 +432,7 @@
          [:> component props])))))
 
 (defn throttle
+  "A higher-order component that throttles the rendering"
   [component ms]
   (fnc throttle
     {::wrap-props false}
@@ -389,9 +459,11 @@
 
   Usage:
 
+  ```clojure
   (mf/defc my-component
     {::mf/wrap [#(mf/memo' % (mf/check-props [\"prop1\" \"prop2\"]))]}
     [props]
+  ```
   )"
 
   ([props] (check-props props =))
@@ -402,6 +474,7 @@
              props))))
 
 (defn use-debounce
+  "A rumext custom hook that debounces the value changes"
   [ms value]
   (let [[state update-fn] (useState value)
         update-fn (useMemo #(gf/debounce update-fn ms) #js [ms])]
@@ -409,6 +482,9 @@
     state))
 
 (defn use-equal-memo
+  "A rumext custom hook that preserves object identity through using a
+  `=` (value equality). Optionally, you can provide your own
+  function."
   ([val]
    (let [ref (use-ref nil)]
      (when-not (= (ref-val ref) val)
@@ -420,28 +496,29 @@
        (set-ref-val! ref val))
      (ref-val ref))))
 
-(defn use-deferred
-  [val]
-  (useDeferredValue val))
+(def ^function use-deferred
+  "A lisp-case shorter alias for `useDeferredValue`"
+  react/useDeferredValue)
 
 (defn use-previous
-  "Returns the value from previous render cycle."
+  "A rumext custom hook that returns a value from previous render"
   [value]
   (let [ref (use-ref value)]
     (use-effect #js [value] #(set-ref-val! ref value))
     (ref-val ref)))
 
 (defn use-update-ref
+  "A rumext custom hook that updates the ref value if the value changes"
   [value]
   (let [ref (use-ref value)]
     (use-effect #js [value] #(set-ref-val! ref value))
     ref))
 
 (defn use-ref-fn
-  "Returns a stable callback pointer what calls the interned
-  callback. The interned callback will be automatically updated on
-  each render if the reference changes and works as noop if the
-  pointer references to nil value."
+  "A rumext custom hook that returns a stable callback pointer what
+  calls the interned callback. The interned callback will be
+  automatically updated on each render if the reference changes and
+  works as noop if the pointer references to nil value."
   [f]
   (let [ptr (use-ref nil)]
     (use-effect #js [f] #(set-ref-val! ptr #js {:f f}))

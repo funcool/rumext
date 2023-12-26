@@ -114,6 +114,8 @@
       f)))
 
 (defmacro fnc
+  "A macro for defining inline component functions. Look the user guide for
+  understand how to use it."
   [& args]
   (let [{:keys [cname meta] :as ctx} (parse-defc args)
         wrap-with (or (::wrap meta)
@@ -126,6 +128,8 @@
           rfs))))
 
 (defmacro defc
+  "A macro for defining component functions. Look the user guide for
+  understand how to use it."
   [& args]
   (let [{:keys [cname docs meta] :as ctx} (parse-defc args)
         wrap-with (or (::wrap meta)
@@ -140,6 +144,7 @@
           `(swap! ~registry (fn [state#] (assoc state# ~(::register-as meta (keyword (str cname))) ~cname)))))))
 
 (defmacro with-memo
+  "A convenience syntactic abstraction (macro) for `useMemo`"
   [deps & body]
   (cond
     (vector? deps)
@@ -157,7 +162,7 @@
     `(rumext.v2/use-memo
       (fn [] ~@(cons deps body)))))
 
-(defmacro with-fn
+(defmacro ^:no-doc with-fn
   [deps & body]
   (cond
     (vector? deps)
@@ -176,6 +181,7 @@
       ~@(cons deps body))))
 
 (defmacro with-effect
+  "A convenience syntactic abstraction (macro) for `useEffect`"
   [deps & body]
   (cond
     (vector? deps)
@@ -193,6 +199,7 @@
       (fn [] ~@(cons deps body)))))
 
 (defmacro with-layout-effect
+  "A convenience syntactic abstraction (macro) for `useLayoutEffect`"
   [deps & body]
   (cond
     (vector? deps)
@@ -210,8 +217,7 @@
       (fn [] ~@(cons deps body)))))
 
 (defmacro check-props
-  "Utility function to use with `memo'`.
-  Will check the `props` keys to see if they are equal."
+  "A macro version of the `check-props` function"
   [props & [eq-f :as rest]]
   (if (symbol? props)
     `(apply rumext.v2/check-props ~props ~rest)
@@ -241,6 +247,8 @@
         (= "production" (get env "TARGET_ENV")))))
 
 (defmacro lazy-component
+  "A macro that helps defining lazy-loading components with the help
+  of shadow-cljs tooling."
   [ns-sym]
   (if (production-build?)
     `(let [loadable# (shadow.lazy/loadable ~ns-sym)]
@@ -258,7 +266,7 @@
                                                       [props#]
                                                       [:> (deref loadable#) props#])))))))))
 (defmacro spread-obj
-  "A helper for create spread js object operations"
+  "A helper for create spread js object operations."
   [target & [other :as rest]]
   (assert (or (symbol? target)
               (map? target))

@@ -4,7 +4,7 @@
 ;;
 ;; Copyright (c) 2016-2020 Andrey Antukh <niwi@niwi.nz>
 
-(ns rumext.v2.util
+(ns ^:no-doc rumext.v2.util
   "Runtime helpers")
 
 (defn obj->map

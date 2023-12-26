@@ -13,6 +13,12 @@
     org.clojure/clojure {:mvn/version "1.11.1"}
     }}
 
+  :codox
+  {:extra-deps
+   {codox/codox {:mvn/version "RELEASE"}
+    org.clojure/tools.reader {:mvn/version "RELEASE"}
+    codox-theme-rdash/codox-theme-rdash {:mvn/version "RELEASE"}}}
+
   :shadow-cljs
   {:main-opts ["-m" "shadow.cljs.devtools.cli"]}
 
