@@ -149,16 +149,16 @@ In this case we have two ways to call our component (or in react
 words, create the react-dom element from a user-defined
 component):
 
-A: The first is when we have 100% control of the props and we do not
-want any type of transformation to be done to them (usually when we
-are talking about large components, you probably do not reuse that
+**A**: The first is when we have 100% control of the props and we do
+not want any type of transformation to be done to them (usually when
+we are talking about large components, you probably do not reuse that
 they represent a page or a section of that page).
 
-B: And the second is when we are creating a reusable component that is
-probably wrapping one or more native elements of the virtual dom and
-we simply want to extend its behavior controlling only a subset of
-props, where the rest of the props that are not controlled would be
-passed as is. to the next native element.
+**B**: And the second is when we are creating a reusable component
+that is probably wrapping one or more native elements of the virtual
+dom and we simply want to extend its behavior controlling only a
+subset of props, where the rest of the props that are not controlled
+would be passed as is. to the next native element.
 
 For the **A** case, we will use the `[:& ...]` handler:
 
@@ -191,18 +191,19 @@ For the **B** case, we will use the already known `[:> ...]` handler:
   [:> button {:name "foobar" :on-click some-fn}])
 ```
 
-You can see that when using the `[:>` handler we pass the props using lisp-style syntax
-which are automatically transformed into camelCase, and the component receives the
-parameters in a raw or native form from react (that is, in camelCase).
+You can see that when using the `[:>` handler we pass the props using
+lisp-style syntax which are automatically transformed into camelCase,
+and the component receives the parameters in a raw or native form from
+react (that is, in camelCase).
 
-Remember that `::mf/props :native` should probably be a default, so all components you
-define should have that metadata; In any case, that does not affect at all what is said in
-the previous paragraph.
+Remember that `::mf/props :native` should probably be a default, so
+all components you define should have that metadata.
 
-For syntax convenience, if the component is named with an `*` at the end of the name or it
-uses the `::mf/props-destructuring :lisp-to-camel` prop in the metadata along with
-`::mf/props :native`, the destructuring can use the lisp-case and the macro will automatically
-access the value with camelCase from the props.
+For convenience, if the component is named with an `*` at the end of
+the name or it has the `::mf/props-destructuring :lisp-to-camel` prop
+in the metadata along with `::mf/props :native`, the destructuring can
+use the lisp-case and the macro will automatically access the value
+with camelCase from the props.
 
 ```
 (mf/defc button*
@@ -212,11 +213,12 @@ access the value with camelCase from the props.
 
 (mf/defc my-big-component
   []
-  [:> button {:name "foobar" :on-click some-fn}])
+  [:> button {:name "foobar" :onClick some-fn}])
 ```
 
-The **B** case is also useful if the intention is for the components to be reusable
-externally, in non-clojure code bases (for example in a storybook).
+The **B** case is also useful if the intention for the components is
+to be reusable externally, in non-clojure code bases (for example in a
+storybook).
 
 
 ## Higher-Order Components
@@ -228,8 +230,8 @@ function component. Rumext exposes one:
   component based on props comparison.
 - `mf/memo'`: identical to the `React.memo`
 
-In order to use the high-order components, you need wrap the component manually
-or passing it as a special property in the metadata:
+In order to use the high-order components, you need wrap the component
+manually or passing it as a special property in the metadata:
 
 ```clojure
 (mf/defc title
@@ -239,8 +241,8 @@ or passing it as a special property in the metadata:
   [:div {:class "label"} (:name props)])
 ```
 
-By default `identical?` predicate is used for compare props; you can pass a custom
-comparator function as second argument:
+By default `identical?` predicate is used for compare props; you can
+pass a custom comparator function as second argument:
 
 ```clojure
 (mf/defc title
