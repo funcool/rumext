@@ -5,9 +5,8 @@
   "dependencies": {
     "react": "18.2.0",
     "react-dom": "18.2.0",
-    "shadow-cljs": "2.23.3"
+    "shadow-cljs": "2.26.2"
   },
-  "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -20,5 +19,6 @@
   "bugs": {
     "url": "https://github.com/funcool/rumext/issues"
   },
-  "homepage": "https://github.com/funcool/rumext#readme"
+  "homepage": "https://github.com/funcool/rumext#readme",
+  "packageManager": "yarn@4.0.2"
 }
