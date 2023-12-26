@@ -8,4 +8,4 @@
   :themes [:rdash]
   :source-paths ["src"]
   :namespaces [#"^rumext\."]
-  :source-uri "https://github.com/funcool/rumext/blob/master/{filepath}#L{line}"})
+  :source-uri "https://github.com/funcool/rumext/blob/v2/{filepath}#L{line}"})
