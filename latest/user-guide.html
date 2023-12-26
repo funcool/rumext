@@ -76,8 +76,8 @@ h("div", {className: "foobar",
 <h3><a href="#user-defined-components" id="user-defined-components"></a>User defined components</h3>
 <p>Components are everything that we as users define.</p>
 <p>In this case we have two ways to call our component (or in react words, create the react-dom element from a user-defined component):</p>
-<p>A: The first is when we have 100% control of the props and we do not want any type of transformation to be done to them (usually when we are talking about large components, you probably do not reuse that they represent a page or a section of that page).</p>
-<p>B: And the second is when we are creating a reusable component that is probably wrapping one or more native elements of the virtual dom and we simply want to extend its behavior controlling only a subset of props, where the rest of the props that are not controlled would be passed as is. to the next native element.</p>
+<p><strong>A</strong>: The first is when we have 100% control of the props and we do not want any type of transformation to be done to them (usually when we are talking about large components, you probably do not reuse that they represent a page or a section of that page).</p>
+<p><strong>B</strong>: And the second is when we are creating a reusable component that is probably wrapping one or more native elements of the virtual dom and we simply want to extend its behavior controlling only a subset of props, where the rest of the props that are not controlled would be passed as is. to the next native element.</p>
 <p>For the <strong>A</strong> case, we will use the <code>[:&amp; ...]</code> handler:</p>
 <pre><code class="language-clojure">(mf/defc title
   {::mf/props :native}
@@ -100,8 +100,8 @@ h("div", {className: "foobar",
   [:&gt; button {:name "foobar" :on-click some-fn}])
 </code></pre>
 <p>You can see that when using the <code>[:&gt;</code> handler we pass the props using lisp-style syntax which are automatically transformed into camelCase, and the component receives the parameters in a raw or native form from react (that is, in camelCase).</p>
-<p>Remember that <code>::mf/props :native</code> should probably be a default, so all components you define should have that metadata; In any case, that does not affect at all what is said in the previous paragraph.</p>
-<p>For syntax convenience, if the component is named with an <code>*</code> at the end of the name or it uses the <code>::mf/props-destructuring :lisp-to-camel</code> prop in the metadata along with <code>::mf/props :native</code>, the destructuring can use the lisp-case and the macro will automatically access the value with camelCase from the props.</p>
+<p>Remember that <code>::mf/props :native</code> should probably be a default, so all components you define should have that metadata.</p>
+<p>For convenience, if the component is named with an <code>*</code> at the end of the name or it has the <code>::mf/props-destructuring :lisp-to-camel</code> prop in the metadata along with <code>::mf/props :native</code>, the destructuring can use the lisp-case and the macro will automatically access the value with camelCase from the props.</p>
 <pre><code>(mf/defc button*
   {::mf/props :native}
   [{:keys [name on-clic]}]
@@ -109,9 +109,9 @@ h("div", {className: "foobar",
 
 (mf/defc my-big-component
   []
-  [:&gt; button {:name "foobar" :on-click some-fn}])
+  [:&gt; button {:name "foobar" :onClick some-fn}])
 </code></pre>
-<p>The <strong>B</strong> case is also useful if the intention is for the components to be reusable externally, in non-clojure code bases (for example in a storybook).</p>
+<p>The <strong>B</strong> case is also useful if the intention for the components is to be reusable externally, in non-clojure code bases (for example in a storybook).</p>
 <h2><a href="#higher-order-components" id="higher-order-components"></a>Higher-Order Components</h2>
 <p>This is the way you have to extend/add additional functionality to a function component. Rumext exposes one:</p>
 <ul>
