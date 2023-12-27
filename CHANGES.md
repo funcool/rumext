@@ -1,5 +1,10 @@
 # Changelog #
 
+## Version v2.10
+
+- Make `rumext.v2.compiler/compile-concat` public.
+
+
 ## Version v2.9
 
 - Make the library more lightweight removing unnecesary and duplicated code

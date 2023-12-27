@@ -75,7 +75,8 @@
        (remove nil?)
        (str/join " ")))
 
-(defn- compile-concat
+(defn compile-concat
+  "Compile efficient and performant string concatenation operation"
   [params & {:keys [safe?]}]
   (let [xform  (comp (filter some?)
                      (if safe?
