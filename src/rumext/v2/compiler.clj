@@ -342,7 +342,7 @@
 
 
     [(->> form
-          (map key)
+          (map (comp name key))
           (map #(-> (str \' % "':~{}")))
           (interpose ",")
           (apply str))
@@ -415,6 +415,7 @@
 
             props (->> (into {} (map compile-prop) props)
                        (compile-to-js))]
+
         (if (> (count children) 1)
           (list 'rumext.v2/jsxs tag props)
           (list 'rumext.v2/jsx tag props)))

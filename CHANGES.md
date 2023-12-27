@@ -2,7 +2,8 @@
 
 ## Version v2.10
 
-- Make `rumext.v2.compiler/compile-concat` public.
+- Make `rumext.v2.compiler/compile-concat` public
+- Fix incorrect props compilation issue introduced in previous commit
 
 
 ## Version v2.9

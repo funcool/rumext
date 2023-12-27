@@ -9,7 +9,7 @@
    ;; [rumext.examples.errors :as errors]
    ))
 
-(enable-console-print!)
+;; (enable-console-print!)
 
 (binary-clock/mount!)
 (timer-reactive/mount!)
