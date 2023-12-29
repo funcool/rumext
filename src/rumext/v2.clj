@@ -254,8 +254,8 @@
     `(let [loadable# (shadow.lazy/loadable ~ns-sym)]
        (rumext.v2/lazy (fn []
                          (.then (shadow.lazy/load loadable#)
-                                (fn [component]
-                                  (cljs.core/js-obj "default" component))))))
+                                (fn [component#]
+                                  (cljs.core/js-obj "default" component#))))))
     `(let [loadable# (shadow.lazy/loadable ~ns-sym)]
        (rumext.v2/lazy (fn []
                          (.then (shadow.lazy/load loadable#)
