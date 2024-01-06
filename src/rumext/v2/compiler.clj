@@ -15,6 +15,7 @@
    cljs.tagged_literals.JSValue))
 
 (declare ^:private compile-to-js)
+(declare ^:private compile-map-to-js)
 (declare ^:private emit-react)
 (declare ^:private compile*)
 (declare ^:private js-value?)
@@ -31,7 +32,7 @@
         ([_ klass props & children]
          (let [klass klass]
            (cond
-             (map? props)      [klass (compile-to-js props) children]
+             (map? props)      [klass (compile-map-to-js props) children]
              (symbol? props)   [klass (list 'rumext.v2.util/map->obj props) children]
              (js-value? props) [klass props children]
              :else             [klass props children]))))
@@ -336,17 +337,15 @@
 
 (defn compile-kv-to-js
   "A internal method helper for compile kv data structures"
-  [form]
+  [form val-fn]
   (let [valid-key? #(or (keyword? %) (string? %))
         form       (into {} (filter (comp valid-key? key)) form)]
-
-
     [(->> form
           (map (comp name key))
           (map #(-> (str \' % "':~{}")))
           (interpose ",")
           (apply str))
-     (mapv compile-to-js (vals form))]))
+     (mapv val-fn (vals form))]))
 
 (defn compile-to-js
   "Compile a statically known data sturcture, recursivelly to js
@@ -357,10 +356,9 @@
     (map? form)
     (if (empty? form)
       (list 'js* "{}")
-      (let [[keys vals] (compile-kv-to-js form)]
-        (vary-meta
-         (list* 'js* (str "{" keys "}") vals)
-         assoc :tag 'object)))
+      (let [[keys vals] (compile-kv-to-js form compile-to-js)]
+        (-> (list* 'js* (str "{" keys "}") vals)
+            (vary-meta assoc :tag 'object))))
 
     (vector? form)
     (apply list 'cljs.core/array (map compile-to-js form))
@@ -369,6 +367,19 @@
     (name form)
 
     :else
+    form))
+
+(defn compile-map-to-js
+  "Compile a statically known data sturcture, non-recursivelly to js
+  expression. Mainly used by macros for create js data structures at
+  compile time."
+  [form]
+  (if (map? form)
+    (if (empty? form)
+      (list 'js* "{}")
+      (let [[keys vals] (compile-kv-to-js form identity)]
+        (-> (list* 'js* (str "{" keys "}") vals)
+            (vary-meta assoc :tag 'object))))
     form))
 
 (defn compile-to-spread-js-obj
@@ -380,19 +391,19 @@
 
     (and (symbol? target)
          (map? other))
-    (let [[keys vals] (compile-kv-to-js other)
+    (let [[keys vals] (compile-kv-to-js other identity)
           template    (str "{...~{}, " keys "}")]
       (apply list 'js* template target vals))
 
     (and (map? target)
          (symbol? other))
-    (let [[keys vals] (compile-kv-to-js target)
+    (let [[keys vals] (compile-kv-to-js target identity)
           template    (str "{" keys ", ...~{}}")]
       (apply list 'js* template (concat vals [other])))
 
     (and (map? target)
          (map? other))
-    (compile-to-js (merge target other))
+    (compile-map-to-js (merge target other))
 
     :else
     (throw (IllegalArgumentException. "invalid arguments, only symbols or maps allowed"))))
