@@ -29,6 +29,8 @@
 
 (defn map->obj
   [o]
+  (js/console.warn "automatic runtime props conversion")
+  (js/console.warn "(please check hint the props with ^js for avoid this warning)")
   (cond
     (plain-object? o)
     o

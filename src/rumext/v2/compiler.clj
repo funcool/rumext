@@ -275,9 +275,9 @@
   "Pre-compile data structures"
   [content]
   (cond
-    (vector? content)       (compile-element content)
+    (vector? content)  (compile-element content)
     (literal? content) content
-    :else                   (compile-form content)))
+    :else              (compile-form content)))
 
 (defn- tag->el
   [x]
@@ -458,7 +458,8 @@
           (list 'rumext.v2/jsx tag props)))
 
       (or (symbol? props)
-          (js-value? props))
+          (js-value? props)
+          (seq? props))
       (let [props (if (and (::allow-dynamic-transform mdata) (not jstag?))
                     (list 'rumext.v2.util/map->obj props)
                     props)]
@@ -477,7 +478,7 @@
                       (apply list 'cljs.core/array children)))))
 
       :else
-      (throw (ex-info "unable to compile: invalid props" {:props props})))))
+      (throw (ex-info "emit-react: invalid props" {:props props})))))
 
 (defn compile
   "Arguments:
