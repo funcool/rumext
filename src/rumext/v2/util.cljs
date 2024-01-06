@@ -20,11 +20,26 @@
                  (assoc! r (keyword key) (unchecked-get obj key))))
         (persistent! r)))))
 
+(defn plain-object?
+  ^boolean
+  [o]
+  (and (some? o)
+       (identical? (.getPrototypeOf js/Object o)
+                   (.-prototype js/Object))))
+
 (defn map->obj
   [o]
-  (let [m #js {}]
-    (run! (fn [[k v]] (unchecked-set m (name k) v)) o)
-    m))
+  (cond
+    (plain-object? o)
+    o
+
+    (map? o)
+    (let [m #js {}]
+      (run! (fn [[k v]] (unchecked-set m (name k) v)) o)
+      m)
+
+    :else
+    (throw (ex-info "unable to create obj" {:data o}))))
 
 (defn wrap-props
   [props]

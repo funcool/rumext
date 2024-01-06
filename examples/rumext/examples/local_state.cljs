@@ -32,7 +32,7 @@
                                 :n 0}}))]
     [:section {:class "counters"}
      [:hr]
-     [:& label {:state (:counter1 @local) :data-foobar 1 :on-click identity}]
+     [:& label {:state (:counter1 @local) :data-foobar 1 :on-click identity :id :foobar}]
      (let [{:keys [title n]} (:counter2 @local)]
        [:> label* {:title title :n n :on-click identity}])
      [:button {:on-click #(swap! local update-in [:counter1 :n] inc)} "Increment Counter 1"]

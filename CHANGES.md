@@ -1,10 +1,5 @@
 # Changelog #
 
-## Version v2.10
-
-- Make `rumext.v2.compiler/compile-concat` public
-- Fix incorrect props compilation issue introduced in previous commit
-
 
 ## Version v2.9
 
@@ -12,6 +7,7 @@
 - Add the ability to define more react friendly components (for use
   outside cljs codebases).
 - Add the ability to define lazy loading components
+- Make `rumext.v2.compiler/compile-concat` public
 - Improve documentation
 
 

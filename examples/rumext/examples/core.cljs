@@ -10,10 +10,10 @@
    ))
 
 ;; (enable-console-print!)
+(local-state/mount!)
 
 (binary-clock/mount!)
 (timer-reactive/mount!)
-(local-state/mount!)
 
 (refs/mount!)
 (controls/mount!)

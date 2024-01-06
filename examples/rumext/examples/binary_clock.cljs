@@ -89,7 +89,7 @@
        [:th msl]]
       [:tr
        [:th {:col-span 8}
-        [:& render-count]]]]]))
+        [:& render-count {}]]]]]))
 
 (def root (mf/create-root (dom/getElement "binary-clock")))
 

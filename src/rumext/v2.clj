@@ -11,6 +11,8 @@
    [clojure.string :as str]
    [rumext.v2.compiler :as hc]))
 
+(create-ns 'rumext.v2.util)
+
 (defmacro html
   [body]
   (hc/compile body))
@@ -76,7 +78,7 @@
         psym (first params)]
     (cond
       (and (some? props) (wrap-props? ctx))
-      [props `(rumext.v2.util/wrap-props ~psym)]
+      [props (list 'rumext.v2.util/wrap-props psym)]
 
       (and (map? props) (not (wrap-props? ctx)))
       (let [alias (get props :as)

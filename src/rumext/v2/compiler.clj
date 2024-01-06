@@ -26,16 +26,12 @@
   {:> (fn [_ klass props & children]
         [klass props children])
    :& (fn
-        ([_ klass]
-         (let [klass klass]
-           [klass {} nil]))
+        ([_ klass] [klass {} nil])
         ([_ klass props & children]
-         (let [klass klass]
-           (cond
-             (map? props)      [klass (compile-map-to-js props) children]
-             (symbol? props)   [klass (list 'rumext.v2.util/map->obj props) children]
-             (js-value? props) [klass props children]
-             :else             [klass props children]))))
+         (let [props (vary-meta props assoc
+                                ::omit-key-transform true
+                                ::allow-dynamic-transform true)]
+           [klass props children])))
 
    :? (fn [_ props & children]
         ['rumext.v2/Suspense props children])
@@ -328,12 +324,27 @@
 (defn compile-prop
   [[key val :as kvpair]]
   (cond
-    (= key :class)       [:className (compile-class-attr-value val)]
-    (= key :style)       [key (camel-case-keys val)]
-    (= key :for)         [:htmlFor val]
+    (= key :class)
+    [:className (compile-class-attr-value val)]
+
+    (= key :style)
+    (let [val (-> (camel-case-keys val)
+                  (compile-map-to-js))]
+      [key val])
+
+    (= key :for)
+    (let [val (cond
+                (keyword? val) (name val)
+                (symbol? val)  (name val)
+                :else          val)]
+      [:htmlFor val])
+
     (or (keyword? key)
-        (symbol? key))   [(camel-case key) val]
-    :else                kvpair))
+        (symbol? key))
+    [(camel-case key) val]
+
+    :else
+    kvpair))
 
 (defn compile-kv-to-js
   "A internal method helper for compile kv data structures"
@@ -411,35 +422,61 @@
 (defn emit-react
   "Emits the final react js code"
   [tag props children]
-  (let [tag      (tag->el tag)
-        children (into [] (filter some?) children)]
-    (if (map? props)
-      (let [props (cond
-                    (= 0 (count children))
+  (let [tag        (cond
+                     (keyword? tag) (name tag)
+                     (string? tag)  tag
+                     (symbol? tag)  tag
+                     :else          (throw (ex-info "invalid tag" {:tag tag})))
+
+        children   (into [] (filter some?) children)
+        mdata      (meta props)
+        jstag?     (= (get mdata :tag) 'js)]
+
+    (cond
+      (map? props)
+      (let [nchild (count children)
+            props  (cond
+                     (= 0 nchild)
                     props
 
-                    (= 1 (count children))
+                    (= 1 nchild)
                     (assoc props :children (peek children))
 
                     :else
                     (assoc props :children (apply list 'cljs.core/array children)))
 
-            props (->> (into {} (map compile-prop) props)
-                       (compile-to-js))]
+            props (cond->> props
+                    (not (::omit-key-transform mdata))
+                    (into {} (map compile-prop))
+
+                    :always
+                    (compile-map-to-js))]
 
         (if (> (count children) 1)
           (list 'rumext.v2/jsxs tag props)
           (list 'rumext.v2/jsx tag props)))
 
-      (cond
-        (= 0 (count children))
-        (list 'rumext.v2/jsx tag props)
+      (or (symbol? props)
+          (js-value? props))
+      (let [props (if (and (::allow-dynamic-transform mdata) (not jstag?))
+                    (list 'rumext.v2.util/map->obj props)
+                    props)]
 
-        (= 1 (count children))
-        (list 'rumext.v2/jsx tag (list 'js* "{...~{}, children: ~{}}" props (first children)))
+        (cond
+          (= 0 (count children))
+          (list 'rumext.v2/jsx tag props)
 
-        :else
-        (list 'rumext.v2/jsxs tag (list 'js* "{...~{}, children: ~{}}" props (apply list 'cljs.core/array children)))))))
+          (= 1 (count children))
+          (list 'rumext.v2/jsx tag
+                (list 'js* "{...~{}, children: ~{}}" props (first children)))
+
+          :else
+          (list 'rumext.v2/jsxs tag
+                (list 'js* "{...~{}, children: ~{}}" props
+                      (apply list 'cljs.core/array children)))))
+
+      :else
+      (throw (ex-info "unable to compile: invalid props" {:props props})))))
 
 (defn compile
   "Arguments:
