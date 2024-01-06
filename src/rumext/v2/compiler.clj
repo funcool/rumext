@@ -426,6 +426,7 @@
                      (keyword? tag) (name tag)
                      (string? tag)  tag
                      (symbol? tag)  tag
+                     (seq? tag)     tag
                      :else          (throw (ex-info "invalid tag" {:tag tag})))
 
         children   (into [] (filter some?) children)
