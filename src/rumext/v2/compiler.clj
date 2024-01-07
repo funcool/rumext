@@ -23,25 +23,35 @@
 (def ^:dynamic *handlers* nil)
 
 (def default-handlers
-  {:> (fn [_ klass props & children]
-        [klass props children])
-   :& (fn
-        ([_ klass] [klass {} nil])
-        ([_ klass props & children]
-         (let [props (vary-meta props assoc
-                                ::omit-key-transform true
-                                ::allow-dynamic-transform true)]
-           [klass props children])))
+  {:> (fn [& [_ tag props :as children]]
+        (when (> 3 (count children))
+          (throw (ex-info "invalid params for `:>` handler, tag and props are mandatory"
+                          {:params children})))
+        [tag props (drop 3 children)])
 
-   :? (fn [_ props & children]
-        ['rumext.v2/Suspense props children])
+   :& (fn [& [_ tag props :as children]]
+        (when (> 3 (count children))
+          (throw (ex-info "invalid params for `:&` handler, tag and props are mandatory"
+                          {:params children})))
+        (let [props (or props {})
+              props (vary-meta props assoc
+                               ::omit-key-transform true
+                               ::allow-dynamic-transform true)]
+          [tag props (drop 3 children)]))
 
-   :* (fn [_ props & children]
+   :? (fn [& [_ props :as children]]
         (if (or (map? props)
                 (symbol? props)
                 (js-value? props))
-          ['rumext.v2/Fragment props children]
-          ['rumext.v2/Fragment {} (cons props children)]))})
+          ['rumext.v2/Suspense props (drop 2 children)]
+          ['rumext.v2/Suspense {} (drop 1 children)]))
+
+   :* (fn [& [_ props :as children]]
+        (if (or (map? props)
+                (symbol? props)
+                (js-value? props))
+          ['rumext.v2/Fragment props (drop 2 children)]
+          ['rumext.v2/Fragment {} (drop 1 children)]))})
 
 (defn- js-value?
   [o]
@@ -239,8 +249,8 @@
     ;; e.g. [:> Component {:key "xyz", :foo "bar} ch0 ch1]
     (contains? *handlers* tag)
     (let [f (get *handlers* tag)
-          [klass props children] (apply f element)]
-      (emit-react klass props (mapv compile* children)))
+          [tag props children] (apply f element)]
+      (emit-react tag props (mapv compile* children)))
 
     ;; e.g. [:span {} x]
     (and (literal? tag) (map? props))
@@ -278,14 +288,6 @@
     (vector? content)  (compile-element content)
     (literal? content) content
     :else              (compile-form content)))
-
-(defn- tag->el
-  [x]
-  (assert (or (symbol? x) (keyword? x) (string? x) (seq? x))
-          (str "Got: " (class x)))
-  (if (keyword? x)
-    (name x)
-    x))
 
 (defn camel-case
   "Returns camel case version of the key, e.g. :http-equiv
