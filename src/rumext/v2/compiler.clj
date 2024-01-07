@@ -16,11 +16,22 @@
 
 (declare ^:private compile-to-js)
 (declare ^:private compile-map-to-js)
-(declare ^:private emit-react)
+(declare ^:private emit-jsx)
 (declare ^:private compile*)
-(declare ^:private js-value?)
 
 (def ^:dynamic *handlers* nil)
+
+(defn- js-value?
+  [o]
+  (instance? JSValue o))
+
+(defn- valid-props-type?
+  [o]
+  (or (symbol? o)
+      (js-value? o)
+      (seq? o)
+      (nil? o)
+      (map? o)))
 
 (def default-handlers
   {:> (fn [& [_ tag props :as children]]
@@ -30,9 +41,14 @@
         [tag props (drop 3 children)])
 
    :& (fn [& [_ tag props :as children]]
-        (when (> 3 (count children))
+        (when (> 2 (count children))
           (throw (ex-info "invalid params for `:&` handler, tag and props are mandatory"
                           {:params children})))
+
+        (when-not (valid-props-type? props)
+          (throw (ex-info "invalid props type: obj, symbol seq or map is allowed"
+                          {:props props})))
+
         (let [props (or props {})
               props (vary-meta props assoc
                                ::omit-key-transform true
@@ -52,10 +68,6 @@
                 (js-value? props))
           ['rumext.v2/Fragment props (drop 2 children)]
           ['rumext.v2/Fragment {} (drop 1 children)]))})
-
-(defn- js-value?
-  [o]
-  (instance? JSValue o))
 
 (defn- unevaluated?
   "True if the expression has not been evaluated.
@@ -250,18 +262,18 @@
     (contains? *handlers* tag)
     (let [f (get *handlers* tag)
           [tag props children] (apply f element)]
-      (emit-react tag props (mapv compile* children)))
+      (emit-jsx tag props (mapv compile* children)))
 
     ;; e.g. [:span {} x]
     (and (literal? tag) (map? props))
     (let [[tag props _] (norm/element [tag props])]
-      (emit-react tag props (mapv compile* children)))
+      (emit-jsx tag props (mapv compile* children)))
 
-    (literal? tag)
     ;; We could now interpet this as either:
     ;; 1. First argument is the attributes (in #js{} provided by the user) OR:
     ;; 2. First argument is the first child element.
     ;; We assume #2. Always!
+    (literal? tag)
     (compile-element (list* tag {} props children))
 
     ;; Problem: [a b c] could be interpreted as:
@@ -271,7 +283,7 @@
     ;; since a map doesn't make any sense as a ReactNode.
     ;; [foo {...} ch0 ch1] NEVER makes sense to interpret as a sequence
     (and (vector? element) (map? props))
-    (emit-react tag props (mapv compile* children))
+    (emit-jsx tag props (mapv compile* children))
 
     (seq? element)
     (seq (mapv compile* element))
@@ -421,7 +433,7 @@
     :else
     (throw (IllegalArgumentException. "invalid arguments, only symbols or maps allowed"))))
 
-(defn emit-react
+(defn emit-jsx
   "Emits the final react js code"
   [tag props children]
   (let [tag        (cond
@@ -429,58 +441,54 @@
                      (string? tag)  tag
                      (symbol? tag)  tag
                      (seq? tag)     tag
-                     :else          (throw (ex-info "invalid tag" {:tag tag})))
+                     :else          (throw (ex-info "jsx: invalid tag" {:tag tag})))
 
         children   (into [] (filter some?) children)
         mdata      (meta props)
         jstag?     (= (get mdata :tag) 'js)]
 
-    (cond
-      (map? props)
-      (let [nchild (count children)
-            props  (cond
-                     (= 0 nchild)
-                    props
+    (if (valid-props-type? props)
+      (if (or (map? props) (nil? props))
+        (let [nchild (count children)
+              props  (cond
+                       (= 0 nchild)
+                       (or props {})
 
-                    (= 1 nchild)
-                    (assoc props :children (peek children))
+                       (= 1 nchild)
+                       (assoc props :children (peek children))
 
-                    :else
-                    (assoc props :children (apply list 'cljs.core/array children)))
+                       :else
+                       (assoc props :children (apply list 'cljs.core/array children)))
 
-            props (cond->> props
-                    (not (::omit-key-transform mdata))
-                    (into {} (map compile-prop))
+              props (cond->> props
+                      (not (::omit-key-transform mdata))
+                      (into {} (map compile-prop))
 
-                    :always
-                    (compile-map-to-js))]
+                      :always
+                      (compile-map-to-js))]
 
-        (if (> (count children) 1)
-          (list 'rumext.v2/jsxs tag props)
-          (list 'rumext.v2/jsx tag props)))
+          (if (> (count children) 1)
+            (list 'rumext.v2/jsxs tag props)
+            (list 'rumext.v2/jsx tag props)))
 
-      (or (symbol? props)
-          (js-value? props)
-          (seq? props))
-      (let [props (if (and (::allow-dynamic-transform mdata) (not jstag?))
-                    (list 'rumext.v2.util/map->obj props)
-                    props)]
+        (let [props  (if (and (::allow-dynamic-transform mdata) (not jstag?))
+                       (list 'rumext.v2.util/map->obj props)
+                       props)
+              nchild (count children)]
+          (cond
+            (= 0 nchild)
+            (list 'rumext.v2/jsx tag props)
 
-        (cond
-          (= 0 (count children))
-          (list 'rumext.v2/jsx tag props)
+            (= 1 nchild)
+            (list 'rumext.v2/jsx tag
+                  (list 'js* "{...~{}, children: ~{}}" props (first children)))
 
-          (= 1 (count children))
-          (list 'rumext.v2/jsx tag
-                (list 'js* "{...~{}, children: ~{}}" props (first children)))
+            :else
+            (list 'rumext.v2/jsxs tag
+                  (list 'js* "{...~{}, children: ~{}}" props
+                        (apply list 'cljs.core/array children))))))
 
-          :else
-          (list 'rumext.v2/jsxs tag
-                (list 'js* "{...~{}, children: ~{}}" props
-                      (apply list 'cljs.core/array children)))))
-
-      :else
-      (throw (ex-info "emit-react: invalid props" {:props props})))))
+      (throw (ex-info "jsx: invalid props type" {:props props})))))
 
 (defn compile
   "Arguments:
