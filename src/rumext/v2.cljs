@@ -357,7 +357,7 @@
    (jsx klass #js {} undefined))
   ([klass props]
    (let [props (cond
-                 (object? props) props
+                 (object? props) ^js props
                  (map? props) (util/map->obj props)
                  :else (throw (ex-info "Unexpected props" {:props props})))]
      (jsx klass props undefined))))
@@ -521,10 +521,11 @@
   works as noop if the pointer references to nil value."
   [f]
   (let [ptr (use-ref nil)]
-    (use-effect #js [f] #(set-ref-val! ptr #js {:f f}))
-    (use-fn (fn [& args]
-              (let [obj (ref-val ptr)]
-                (when ^boolean obj
-                  (apply (.-f obj) args)))))))
+    (use-effect #js [f] #(set-ref-val! ptr f))
+    (use-fn (fn []
+              (let [f    (ref-val ptr)
+                    args (js-arguments)]
+                (when (some? f)
+                  (.apply f args)))))))
 
 

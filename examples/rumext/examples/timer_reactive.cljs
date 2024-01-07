@@ -26,8 +26,8 @@
 (def root2 (mf/create-root (dom/getElement "timer2")))
 
 (defn mount! []
-  (mf/render! root1 (mf/element timer1))
-  (mf/render! root2 (mf/element timer2 {:ts @util/*clock}))
+  (mf/render! root1 (mf/jsx timer1 {}))
+  (mf/render! root2 (mf/jsx timer2 #js  {:ts @util/*clock}))
   (add-watch util/*clock :timer-static
              (fn [_ _ _ ts]
-               (mf/render! root2 (mf/element timer2 {:ts ts})))))
+               (mf/render! root2 (mf/jsx timer2 #js {:ts ts})))))

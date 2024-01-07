@@ -41,4 +41,4 @@
 (def root (mf/create-root (dom/getElement "local-state-1")))
 
 (defn mount! []
-  (mf/render! root (mf/element local-state {:title "Clicks count"})))
+  (mf/render! root (mf/element local-state #js {:title "Clicks count"})))

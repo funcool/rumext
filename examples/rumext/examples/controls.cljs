@@ -22,7 +22,7 @@
    ;; Binding another component to the same atom will keep 2 input boxes in sync
    [:dt "Clone: "]
    [:dd
-    (mf/element input {:color util/*color})]
+    (mf/jsx input #js {:color util/*color})]
    [:dt "Color: "]
    [:dd {} (util/watches-count {:iref util/*color}) " watches"]
 
