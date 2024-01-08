@@ -56,16 +56,12 @@
           [tag props (drop 3 children)]))
 
    :? (fn [& [_ props :as children]]
-        (if (or (map? props)
-                (symbol? props)
-                (js-value? props))
+        (if (map? props)
           ['rumext.v2/Suspense props (drop 2 children)]
           ['rumext.v2/Suspense {} (drop 1 children)]))
 
    :* (fn [& [_ props :as children]]
-        (if (or (map? props)
-                (symbol? props)
-                (js-value? props))
+        (if (map? props)
           ['rumext.v2/Fragment props (drop 2 children)]
           ['rumext.v2/Fragment {} (drop 1 children)]))})
 
