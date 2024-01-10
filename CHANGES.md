@@ -1,5 +1,9 @@
 # Changelog #
 
+## Version v2.9.3
+
+- bugfixes
+
 ## Version v2.9.2
 
 - bugfixes
