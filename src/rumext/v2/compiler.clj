@@ -343,10 +343,9 @@
       [key val])
 
     (= key :for)
-    (let [val (cond
-                (keyword? val) (name val)
-                (symbol? val)  (name val)
-                :else          val)]
+    (let [val (if (keyword? val)
+                (name val)
+                val)]
       [:htmlFor val])
 
     (or (keyword? key)
