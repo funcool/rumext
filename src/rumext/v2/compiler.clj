@@ -357,7 +357,7 @@
 
 (defn compile-kv-to-js
   "A internal method helper for compile kv data structures"
-  [form val-fn]
+  [form]
   (let [valid-key? #(or (keyword? %) (string? %))
         form       (into {} (filter (comp valid-key? key)) form)]
     [(->> form
@@ -365,29 +365,7 @@
           (map #(-> (str \' % "':~{}")))
           (interpose ",")
           (apply str))
-     (mapv val-fn (vals form))]))
-
-(defn compile-to-js
-  "Compile a statically known data sturcture, recursivelly to js
-  expression. Mainly used by macros for create js data structures at
-  compile time."
-  [form]
-  (cond
-    (map? form)
-    (if (empty? form)
-      (list 'js* "{}")
-      (let [[keys vals] (compile-kv-to-js form compile-to-js)]
-        (-> (list* 'js* (str "{" keys "}") vals)
-            (vary-meta assoc :tag 'object))))
-
-    (vector? form)
-    (apply list 'cljs.core/array (map compile-to-js form))
-
-    (keyword? form)
-    (name form)
-
-    :else
-    form))
+     (vec (vals form))]))
 
 (defn compile-map-to-js
   "Compile a statically known data sturcture, non-recursivelly to js
@@ -397,13 +375,13 @@
   (if (map? form)
     (if (empty? form)
       (list 'js* "{}")
-      (let [[keys vals] (compile-kv-to-js form identity)]
-        (-> (list* 'js* (str "{" keys "}") vals)
+      (let [[keys vals] (compile-kv-to-js form)]
+        (-> (apply list 'js* (str "{" keys "}") vals)
             (vary-meta assoc :tag 'object))))
     form))
 
-(defn compile-to-spread-js-obj
-  [target other]
+(defn compile-to-js-spread
+  [target other compile-prop]
   (cond
     (and (symbol? target)
          (symbol? other))
@@ -411,19 +389,24 @@
 
     (and (symbol? target)
          (map? other))
-    (let [[keys vals] (compile-kv-to-js other identity)
+    (let [[keys vals] (->> other
+                           (into {} (map compile-prop))
+                           (compile-kv-to-js))
           template    (str "{...~{}, " keys "}")]
       (apply list 'js* template target vals))
 
     (and (map? target)
          (symbol? other))
-    (let [[keys vals] (compile-kv-to-js target identity)
+    (let [[keys vals] (->> target
+                           (into {} (map compile-prop))
+                           (compile-kv-to-js))
           template    (str "{" keys ", ...~{}}")]
       (apply list 'js* template (concat vals [other])))
 
     (and (map? target)
          (map? other))
-    (compile-map-to-js (merge target other))
+    (compile-map-to-js (->> (merge target other)
+                            (into {} (map compile-prop))))
 
     :else
     (throw (IllegalArgumentException. "invalid arguments, only symbols or maps allowed"))))

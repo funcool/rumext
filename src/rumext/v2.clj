@@ -268,19 +268,42 @@
                                                       [props#]
                                                       [:> (deref loadable#) props#])))))))))
 (defmacro spread-obj
-  "A helper for create spread js object operations."
+  "A helper for create spread js object operations. Leaves the keys untouched."
   [target & [other :as rest]]
   (assert (or (symbol? target)
               (map? target))
           "only symbols or maps accepted on target")
-  (assert (or (and (= (count rest) 1)
+  (assert (or (= (count rest) 0)
+              (and (= (count rest) 1)
                    (or (symbol? other)
                        (map? other)))
               (and (even? (count rest))
                    (or (keyword? other)
                        (string? other))))
           "only symbols, map or named parameters allowed for the spread")
-  (let [other (if (> (count rest) 1)
-                (apply hash-map rest)
-                other)]
-    (hc/compile-to-spread-js-obj target other)))
+  (let [other (cond
+                (> (count rest) 1) (apply hash-map rest)
+                (= (count rest) 0) {}
+                :else              other)]
+    (hc/compile-to-js-spread target other identity)))
+
+(defmacro spread-props
+  "A helper for create spread js object operations. Adapts compile
+  time known keys to the react props standard transformations."
+  [target & [other :as rest]]
+  (assert (or (symbol? target)
+              (map? target))
+          "only symbols or maps accepted on target")
+  (assert (or (= (count rest) 0)
+              (and (= (count rest) 1)
+                   (or (symbol? other)
+                       (map? other)))
+              (and (even? (count rest))
+                   (or (keyword? other)
+                       (string? other))))
+          "only symbols, map or named parameters allowed for the spread")
+  (let [other (cond
+                (> (count rest) 1) (apply hash-map rest)
+                (= (count rest) 0) {}
+                :else              other)]
+     (hc/compile-to-js-spread target other hc/compile-prop)))
