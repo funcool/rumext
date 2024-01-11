@@ -48,7 +48,7 @@
 
 (defn- wrap-props?
   [{:keys [cname meta]}]
-  (let [default-style (if (str/ends-with? (name cname) "*") :native :clj)]
+  (let [default-style (if (str/ends-with? (name cname) "*") :obj :clj)]
     (cond
       (contains? meta ::props)
       (= :clj (get meta ::props default-style))
@@ -62,11 +62,11 @@
       :else
       true)))
 
-(defn- lisp-to-native-props?
+(defn- react-props?
   [{:keys [meta cname] :as ctx}]
   (and (not (wrap-props? ctx))
        (or (str/ends-with? (name cname) "*")
-           (= (::props-destructuring meta) :lisp-to-camel))))
+           (= (::props meta) :react))))
 
 (defn- simple-ident?
   [s]
@@ -74,8 +74,8 @@
 
 (defn- prepare-let-bindings
   [{:keys [cname meta props body params] :as ctx}]
-  (let [l2n? (lisp-to-native-props? ctx)
-        psym (first params)]
+  (let [react-props? (react-props? ctx)
+        psym         (first params)]
     (cond
       (and (some? props) (wrap-props? ctx))
       [props (list 'rumext.v2.util/wrap-props psym)]
@@ -90,8 +90,8 @@
 
           (set? items)
           (concat (mapcat (fn [k]
-                            (let [prop-name (if l2n?
-                                              (name (hc/camel-case k))
+                            (let [prop-name (if react-props?
+                                              (hc/compile-prop-key k)
                                               (name k))
                                   accessor  (if (simple-ident? prop-name)
                                               (list '. psym (symbol (str "-" prop-name)))

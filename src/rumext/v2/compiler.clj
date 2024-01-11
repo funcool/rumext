@@ -297,13 +297,15 @@
     (literal? content) content
     :else              (compile-form content)))
 
-(defn camel-case
-  "Returns camel case version of the key, e.g. :http-equiv
-  becomes :httpEquiv with some exceptions for specific type of keys"
+
+(defn compile-prop-key
+  "Compiles a key to a react compatible key (eg: camelCase)"
   [k]
   (if (or (keyword? k) (symbol? k))
     (let [nword (name k)]
       (cond
+        (= "class" nword) "className"
+        (= "for" nword) "htmlFor"
         (str/starts-with? nword "--") nword
         (str/starts-with? nword "data-") nword
         (str/starts-with? nword "aria-") nword
@@ -314,46 +316,43 @@
             (-> (map str/capitalize words)
                 (conj first-word)
                 str/join)))))
-      k))
+    k))
 
-(defn- camel-case-keys
+
+(defn- compile-recursive-keys
   "Recursively transforms all map keys into camel case."
   [m]
   (cond
     (map? m)
     (reduce-kv
       (fn [m k v]
-        (assoc m (camel-case k) v))
+        (assoc m (compile-prop-key k) v))
       {} m)
     ;; React native accepts :style [{:foo-bar ..} other-styles] so camcase those keys:
     (vector? m)
-    (mapv camel-case-keys m)
+    (mapv compile-recursive-keys m)
+
     :else
     m))
 
 (defn compile-prop
   [[key val :as kvpair]]
-  (cond
-    (= key :class)
-    [:className (compile-class-attr-value val)]
+  (let [key (compile-prop-key key)]
+    (case key
+      "className"
+      [key (compile-class-attr-value val)]
 
-    (= key :style)
-    (let [val (-> (camel-case-keys val)
-                  (compile-map-to-js))]
-      [key val])
+      "style"
+      [key (-> val
+               (compile-recursive-keys)
+               (compile-map-to-js))]
 
-    (= key :for)
-    (let [val (if (keyword? val)
-                (name val)
-                val)]
-      [:htmlFor val])
+      "htmlFor"
+      [key (if (keyword? val)
+             (name val)
+             val)]
 
-    (or (keyword? key)
-        (symbol? key))
-    [(camel-case key) val]
-
-    :else
-    kvpair))
+      [key val])))
 
 (defn compile-kv-to-js
   "A internal method helper for compile kv data structures"

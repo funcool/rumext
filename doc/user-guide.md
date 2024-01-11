@@ -31,11 +31,11 @@ Let's see a example of how to define a component:
 
 For performance reasons, you most likely want the props to arrive as
 is, as a javascript object. For this case, you should use the metadata
-`::mf/props :native` for completly avoid props wrapping overhead.
+`::mf/props :obj` for completly avoid props wrapping overhead.
 
 ```clojure
 (mf/defc title
-  {::mf/props :native}
+  {::mf/props :obj}
   [props]
   (let [name (unchecked-get props "name")]
     [:div {:class "label"} name]))
@@ -52,7 +52,7 @@ destructuring even if `props` is a plain javascript object:
 
 ```clojure
 (mf/defc title
-  {::mf/props :native}
+  {::mf/props :obj}
   [{:keys [name] :as props}]
   [:div {:class "label"} name])
 ```
@@ -164,7 +164,7 @@ For the **A** case, we will use the `[:& ...]` handler:
 
 ```clojure
 (mf/defc title
-  {::mf/props :native}
+  {::mf/props :obj}
   [{:keys [name on-click]}]
   [:div {:class "label" :on-click on-click} name])
 
@@ -182,7 +182,7 @@ For the **B** case, we will use the already known `[:> ...]` handler:
 
 ```clojure
 (mf/defc button
-  {::mf/props :native}
+  {::mf/props :obj}
   [{:keys [name onClick]}]
   [:button {:on-click on-click} name])
 
@@ -196,18 +196,17 @@ lisp-style syntax which are automatically transformed into camelCase,
 and the component receives the parameters in a raw or native form from
 react (that is, in camelCase).
 
-Remember that `::mf/props :native` should probably be a default, so
+Remember that `::mf/props :obj` should probably be a default, so
 all components you define should have that metadata.
 
 For convenience, if the component is named with an `*` at the end of
-the name or it has the `::mf/props-destructuring :lisp-to-camel` prop
-in the metadata along with `::mf/props :native`, the destructuring can
-use the lisp-case and the macro will automatically access the value
-with camelCase from the props.
+the name or it has the `::mf/props :react` in the metadata, the
+destructuring can use the lisp-case and the macro will automatically
+access the value with camelCase from the props, respecting the react
+convention for props.
 
 ```
 (mf/defc button*
-  {::mf/props :native}
   [{:keys [name on-clic]}]
   [:button {:on-click on-click} name])
 
@@ -236,7 +235,7 @@ manually or passing it as a special property in the metadata:
 ```clojure
 (mf/defc title
   {::mf/wrap [mf/memo]
-   ::mf/props :native}
+   ::mf/props :obj}
   [props]
   [:div {:class "label"} (:name props)])
 ```
@@ -257,7 +256,7 @@ If you want create a own high-order component you can use `mf/fnc` macro:
 (defn some-factory
   [component param]
   (mf/fnc myhighordercomponent
-    {::mf/props :native}
+    {::mf/props :obj}
     [props]
     [:section
      [:> component props]]))
