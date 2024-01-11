@@ -4,8 +4,8 @@
 <p>Simple and Decomplected UI library based on React &gt;= 18 focused on performance.</p>
 <p>Add to deps.edn:</p>
 <pre><code class="language-clojure">funcool/rumext
-{:git/tag "v2.9.2"
- :git/sha "faa6e6c"
+{:git/tag "v2.9.4"
+ :git/sha "af08e55"
  :git/url "https://github.com/funcool/rumext.git"}
 </code></pre>
 <h2><a href="#first-steps" id="first-steps"></a>First Steps</h2>
@@ -17,9 +17,9 @@
   [{:keys [name] :as props}]
   [:div {:class "label"} name])
 </code></pre>
-<p>For performance reasons, you most likely want the props to arrive as is, as a javascript object. For this case, you should use the metadata <code>::mf/props :native</code> for completly avoid props wrapping overhead.</p>
+<p>For performance reasons, you most likely want the props to arrive as is, as a javascript object. For this case, you should use the metadata <code>::mf/props :obj</code> for completly avoid props wrapping overhead.</p>
 <pre><code class="language-clojure">(mf/defc title
-  {::mf/props :native}
+  {::mf/props :obj}
   [props]
   (let [name (unchecked-get props "name")]
     [:div {:class "label"} name]))
@@ -27,7 +27,7 @@
 <p>NOTE: This should be the default, but because we have too many components defined supposing the old behavior (where <code>props</code> is a clojure map), we can’t put that default right now. But in the future it is possible that this will be the default.</p>
 <p>In any case, having the props as a javascript object does not make destructuring unusable. The <code>defc</code> macro allows basic use of destructuring even if <code>props</code> is a plain javascript object:</p>
 <pre><code class="language-clojure">(mf/defc title
-  {::mf/props :native}
+  {::mf/props :obj}
   [{:keys [name] :as props}]
   [:div {:class "label"} name])
 </code></pre>
@@ -80,7 +80,7 @@ h("div", {className: "foobar",
 <p><strong>B</strong>: And the second is when we are creating a reusable component that is probably wrapping one or more native elements of the virtual dom and we simply want to extend its behavior controlling only a subset of props, where the rest of the props that are not controlled would be passed as is. to the next native element.</p>
 <p>For the <strong>A</strong> case, we will use the <code>[:&amp; ...]</code> handler:</p>
 <pre><code class="language-clojure">(mf/defc title
-  {::mf/props :native}
+  {::mf/props :obj}
   [{:keys [name on-click]}]
   [:div {:class "label" :on-click on-click} name])
 
@@ -91,7 +91,7 @@ h("div", {className: "foobar",
 <p>You can see how the properties passed to the <code>title</code> component are passed as is, without any kind of transformation in the props (for example <code>on-click</code> is still passed as <code>on-click</code> using the lisp-case)</p>
 <p>For the <strong>B</strong> case, we will use the already known <code>[:&gt; ...]</code> handler:</p>
 <pre><code class="language-clojure">(mf/defc button
-  {::mf/props :native}
+  {::mf/props :obj}
   [{:keys [name onClick]}]
   [:button {:on-click on-click} name])
 
@@ -100,16 +100,15 @@ h("div", {className: "foobar",
   [:&gt; button {:name "foobar" :on-click some-fn}])
 </code></pre>
 <p>You can see that when using the <code>[:&gt;</code> handler we pass the props using lisp-style syntax which are automatically transformed into camelCase, and the component receives the parameters in a raw or native form from react (that is, in camelCase).</p>
-<p>Remember that <code>::mf/props :native</code> should probably be a default, so all components you define should have that metadata.</p>
-<p>For convenience, if the component is named with an <code>*</code> at the end of the name or it has the <code>::mf/props-destructuring :lisp-to-camel</code> prop in the metadata along with <code>::mf/props :native</code>, the destructuring can use the lisp-case and the macro will automatically access the value with camelCase from the props.</p>
+<p>Remember that <code>::mf/props :obj</code> should probably be a default, so all components you define should have that metadata.</p>
+<p>For convenience, if the component is named with an <code>*</code> at the end of the name or it has the <code>::mf/props :react</code> in the metadata, the destructuring can use the lisp-case and the macro will automatically access the value with camelCase from the props, respecting the react convention for props.</p>
 <pre><code>(mf/defc button*
-  {::mf/props :native}
-  [{:keys [name on-clic]}]
-  [:button {:on-click on-click} name])
+  [{:keys [name on-clic class]}]
+  [:button {:on-click on-click :class class} name])
 
 (mf/defc my-big-component
   []
-  [:&gt; button {:name "foobar" :onClick some-fn}])
+  [:&gt; button* {:name "foobar" :onClick some-fn :className "foobar"}])
 </code></pre>
 <p>The <strong>B</strong> case is also useful if the intention for the components is to be reusable externally, in non-clojure code bases (for example in a storybook).</p>
 <h2><a href="#higher-order-components" id="higher-order-components"></a>Higher-Order Components</h2>
@@ -121,7 +120,7 @@ h("div", {className: "foobar",
 <p>In order to use the high-order components, you need wrap the component manually or passing it as a special property in the metadata:</p>
 <pre><code class="language-clojure">(mf/defc title
   {::mf/wrap [mf/memo]
-   ::mf/props :native}
+   ::mf/props :obj}
   [props]
   [:div {:class "label"} (:name props)])
 </code></pre>
@@ -135,7 +134,7 @@ h("div", {className: "foobar",
 <pre><code class="language-clojure">(defn some-factory
   [component param]
   (mf/fnc myhighordercomponent
-    {::mf/props :native}
+    {::mf/props :obj}
     [props]
     [:section
      [:&gt; component props]]))
