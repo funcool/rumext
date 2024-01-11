@@ -207,12 +207,12 @@ convention for props.
 
 ```
 (mf/defc button*
-  [{:keys [name on-clic]}]
-  [:button {:on-click on-click} name])
+  [{:keys [name on-clic class]}]
+  [:button {:on-click on-click :class class} name])
 
 (mf/defc my-big-component
   []
-  [:> button {:name "foobar" :onClick some-fn}])
+  [:> button* {:name "foobar" :onClick some-fn :className "foobar"}])
 ```
 
 The **B** case is also useful if the intention for the components is
