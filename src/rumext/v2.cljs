@@ -453,26 +453,6 @@
       (useEffect #(fn [] (set-ref-val! ref true)) #js [])
       [:> component state])))
 
-(defn check-props
-  "Utility function to use with `memo'`.
-  Will check the `props` keys to see if they are equal.
-
-  Usage:
-
-  ```clojure
-  (mf/defc my-component
-    {::mf/wrap [#(mf/memo' % (mf/check-props [\"prop1\" \"prop2\"]))]}
-    [props]
-  ```
-  )"
-
-  ([props] (check-props props =))
-  ([props eqfn?]
-   (fn [np op]
-     (every? #(eqfn? (unchecked-get np %)
-                     (unchecked-get op %))
-             props))))
-
 (defn use-debounce
   "A rumext custom hook that debounces the value changes"
   [ms value]
