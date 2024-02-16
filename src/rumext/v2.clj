@@ -9,9 +9,17 @@
   (:require
    [cljs.core :as-alias c]
    [clojure.string :as str]
+   [rumext.v2.props :as-alias mf.props]
    [rumext.v2.compiler :as hc]))
 
 (create-ns 'rumext.v2.util)
+
+(defn ^:no-doc production-build?
+  []
+  (let [env (System/getenv)]
+    (or (= "production" (get env "NODE_ENV"))
+        (= "production" (get env "RUMEXT_ENV"))
+        (= "production" (get env "TARGET_ENV")))))
 
 (defmacro html
   [body]
@@ -168,9 +176,34 @@
 
       [(apply list 'js* tmpl params)])))
 
+(defn- prepare-props-checks
+  [{:keys [meta params] :as ctx}]
+  (let [react-props? (react-props? ctx)
+        psym         (vary-meta (first params) assoc :tag 'js)]
+    (when-not (production-build?)
+      (when-let [props (::mf.props/expect meta)]
+        (concat
+         (cons (list 'js* "// ===== start props checking =====") nil)
+         (if (map? props)
+           (->> props
+                (map (fn [[prop pred-sym]]
+                       (let [prop (name prop)
+                             expr `(~pred-sym (cljs.core/unchecked-get ~psym ~prop))]
+                         `(when-not ~(vary-meta expr assoc :tag 'boolean)
+                            (throw (js/Error. ~(str "invalid value for '" prop "'"))))))))
+
+           (->> props
+                (map name)
+                (map (fn [prop]
+                       (let [expr `(.hasOwnProperty ~psym ~prop)]
+                         `(when-not ~(vary-meta expr assoc :tag 'boolean)
+                            (throw (js/Error. ~(str "missing prop '" prop "'")))))))))
+         (cons (list 'js* "// ===== end props checking =====") nil))))))
+
 (defn- prepare-render-fn
   [{:keys [cname meta body params props] :as ctx}]
   (let [f `(fn ~cname ~params
+             ~@(prepare-props-checks ctx)
              (let [~@(prepare-let-bindings ctx)]
                ~@(native-destructure ctx)
 
@@ -311,13 +344,6 @@
     `(fn [c#]
        (rumext.v2/memo' c# (fn [~np-s ~op-s]
                              (and ~@(map op-f props)))))))
-
-(defn ^:no-doc production-build?
-  []
-  (let [env (System/getenv)]
-    (or (= "production" (get env "NODE_ENV"))
-        (= "production" (get env "RUMEXT_ENV"))
-        (= "production" (get env "TARGET_ENV")))))
 
 (defmacro lazy-component
   "A macro that helps defining lazy-loading components with the help
