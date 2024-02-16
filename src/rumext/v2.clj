@@ -83,10 +83,14 @@
       (and (map? props) (not (wrap-props? ctx)))
       (let [alias (get props :as)
             alts  (get props :or)
+            other (get props :&)
             items (some-> (get props :keys) set)]
         (cond->> []
           (symbol? alias)
           (into [alias psym])
+
+          (symbol? other)
+          (into [other nil])
 
           (set? items)
           (concat (mapcat (fn [k]
@@ -96,19 +100,80 @@
                                   accessor  (if (simple-ident? prop-name)
                                               (list '. psym (symbol (str "-" prop-name)))
                                               (list 'cljs.core/unchecked-get psym prop-name))]
+
                               [(if (symbol? k) k (symbol prop-name))
-                               (if (contains? alts k)
+                               (cond
+                                 ;; If the other symbol is present, then a
+                                 ;; different destructuring stragegy will be
+                                 ;; used so we need to set here the value to
+                                 ;; 'undefined'
+                                 (symbol? other)
+                                 'rumext.v2/undefined
+
+                                 (contains? alts k)
                                  `(~'js* "~{} ?? ~{}" ~accessor ~(get alts k))
+
+                                 :else
                                  accessor)]))
                           items))))
 
       (symbol? props)
       [props psym])))
 
+(defn native-destructure
+  "Generates a js var line with native destructuring"
+  [{:keys [props params props] :as ctx}]
+
+  ;; Emit native destructuring only if the :& key has value
+  (when (symbol? (:& props))
+    (let [react-props? (react-props? ctx)
+          psym         (first params)
+
+          keys-props (:keys props [])
+          all-alias  (:as props)
+          rst-alias  (:& props)
+
+          s-props    (->> (:keys props [])
+                          (filter (comp simple-ident? name)))
+          k-props    (dissoc props :keys :as :&)
+          k-props    (->> (:keys props [])
+                          (remove (comp simple-ident? name))
+                          (map (fn [k] [k k]))
+                          (into k-props))
+
+          props  (mapv name s-props)
+          params []
+
+          [props params]
+          (if (seq k-props)
+            (reduce (fn [[props params] [ks kp]]
+                      (let [kp (if react-props?
+                                 (hc/compile-prop-key kp)
+                                 (name kp))]
+                        [(conj props (str "~{}: ~{}"))
+                         (conj params kp ks)]))
+                    [props params]
+                    k-props)
+            [props params])
+
+          [props params]
+          (if (symbol? rst-alias)
+            [(conj props "...~{}") (conj params rst-alias)]
+            [props params])
+
+          tmpl    (str "var {"
+                       (str/join ", " props)
+                       "} = ~{}")
+          params  (conj params psym)]
+
+      [(apply list 'js* tmpl params)])))
+
 (defn- prepare-render-fn
-  [{:keys [cname meta body params] :as ctx}]
+  [{:keys [cname meta body params props] :as ctx}]
   (let [f `(fn ~cname ~params
              (let [~@(prepare-let-bindings ctx)]
+               ~@(native-destructure ctx)
+
                ~@(butlast body)
                ~(hc/compile (last body))))]
     (if (::forward-ref meta)
