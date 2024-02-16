@@ -9,9 +9,17 @@
   (:require
    [cljs.core :as-alias c]
    [clojure.string :as str]
+   [rumext.v2.props :as-alias mf.props]
    [rumext.v2.compiler :as hc]))
 
 (create-ns 'rumext.v2.util)
+
+(defn ^:no-doc production-build?
+  []
+  (let [env (System/getenv)]
+    (or (= "production" (get env "NODE_ENV"))
+        (= "production" (get env "RUMEXT_ENV"))
+        (= "production" (get env "TARGET_ENV")))))
 
 (defmacro html
   [body]
@@ -90,7 +98,7 @@
           (into [alias psym])
 
           (symbol? other)
-          (into [other nil])
+          (into [other (list 'js* "undefined")])
 
           (set? items)
           (concat (mapcat (fn [k]
@@ -108,7 +116,7 @@
                                  ;; used so we need to set here the value to
                                  ;; 'undefined'
                                  (symbol? other)
-                                 'rumext.v2/undefined
+                                 (list 'js* "undefined")
 
                                  (contains? alts k)
                                  `(~'js* "~{} ?? ~{}" ~accessor ~(get alts k))
@@ -121,7 +129,8 @@
       [props psym])))
 
 (defn native-destructure
-  "Generates a js var line with native destructuring"
+  "Generates a js var line with native destructuring. Only used when :&
+  used in destructuring."
   [{:keys [props params props] :as ctx}]
 
   ;; Emit native destructuring only if the :& key has value
@@ -168,9 +177,43 @@
 
       [(apply list 'js* tmpl params)])))
 
+(defn- prepare-props-checks
+  [{:keys [meta params] :as ctx}]
+  (let [react-props? (react-props? ctx)
+        psym         (vary-meta (first params) assoc :tag 'js)]
+    (when-not (production-build?)
+      (when-let [props (::mf.props/expect meta)]
+        (concat
+         (cons (list 'js* "// ===== start props checking =====") nil)
+         (if (map? props)
+           (->> props
+                (map (fn [[prop pred-sym]]
+                       (let [prop (if react-props?
+                                    (hc/compile-prop-key prop)
+                                    (name prop))
+
+                             accs (if (simple-ident? prop)
+                                    (list '. psym (symbol (str "-" prop)))
+                                    (list 'cljs.core/unchecked-get psym prop))
+
+                             expr `(~pred-sym ~accs)]
+                         `(when-not ~(vary-meta expr assoc :tag 'boolean)
+                            (throw (js/Error. ~(str "invalid value for '" prop "'"))))))))
+
+           (->> props
+                (map (fn [prop]
+                       (let [prop (if react-props?
+                                    (hc/compile-prop-key prop)
+                                    (name prop))
+                             expr `(.hasOwnProperty ~psym ~prop)]
+                         `(when-not ~(vary-meta expr assoc :tag 'boolean)
+                            (throw (js/Error. ~(str "missing prop '" prop "'")))))))))
+         (cons (list 'js* "// ===== end props checking =====") nil))))))
+
 (defn- prepare-render-fn
   [{:keys [cname meta body params props] :as ctx}]
   (let [f `(fn ~cname ~params
+             ~@(prepare-props-checks ctx)
              (let [~@(prepare-let-bindings ctx)]
                ~@(native-destructure ctx)
 
@@ -180,18 +223,50 @@
       `(rumext.v2/forward-ref ~f)
       f)))
 
+(defn- resolve-wrappers
+  [{:keys [cname docs meta] :as ctx}]
+  (let [wrappers     (or (::wrap meta) (:wrap meta) [])
+        react-props? (react-props? ctx)
+        memo         (::memo meta)]
+    (cond
+      (set? memo)
+      (let [eq-f (or (::memo-eq-fn ctx) 'cljs.core/=)
+            np-s (with-meta (gensym "new-props-") {:tag 'js})
+            op-s (with-meta (gensym "old-props-") {:tag 'js})
+            op-f (fn [prop]
+                   (let [prop (if react-props?
+                                (hc/compile-prop-key prop)
+                                (name prop))
+                         accs (if (simple-ident? prop)
+                                (let [prop (symbol (str "-" (name prop)))]
+                                  (list eq-f
+                                        (list '.. np-s prop)
+                                        (list '.. op-s prop)))
+                                (list eq-f
+                                      (list 'cljs.core/unchecked-get np-s prop)
+                                      (list 'cljs.core/unchecked-get op-s prop)))]
+                     (with-meta accs {:tag 'boolean})))]
+        (conj wrappers
+              `(fn [props#]
+                 (mf/memo' props# (fn [~np-s ~op-s]
+                                    (and ~@(map op-f memo)))))))
+
+      (true? memo)
+      (conj wrappers 'rumext.v2/memo)
+
+      :else wrappers)))
+
 (defmacro fnc
   "A macro for defining inline component functions. Look the user guide for
   understand how to use it."
   [& args]
   (let [{:keys [cname meta] :as ctx} (parse-defc args)
-        wrap-with (or (::wrap meta)
-                      (:wrap meta))
-        rfs (gensym "component-")]
+        wrappers (resolve-wrappers ctx)
+        rfs      (gensym "component-")]
     `(let [~rfs ~(prepare-render-fn ctx)]
        (set! (.-displayName ~rfs) ~(str cname))
-       ~(if (seq wrap-with)
-          (reduce (fn [r fi] `(~fi ~r)) rfs wrap-with)
+       ~(if (seq wrappers)
+          (reduce (fn [r fi] `(~fi ~r)) rfs wrappers)
           rfs))))
 
 (defmacro defc
@@ -199,16 +274,16 @@
   understand how to use it."
   [& args]
   (let [{:keys [cname docs meta] :as ctx} (parse-defc args)
-        wrap-with (or (::wrap meta)
-                      (:wrap meta))
-        rfs       (gensym "component-")
-        cname     (if (::private meta)
-                    (vary-meta cname assoc :private true)
-                    cname)]
+        wrappers (resolve-wrappers ctx)
+        rfs      (gensym "component-")
+        cname    (if (::private meta)
+                   (vary-meta cname assoc :private true)
+                   cname)]
+
     `(let [~rfs ~(prepare-render-fn ctx)]
        (set! (.-displayName ~rfs) ~(str cname))
-       (def ~cname ~docs ~(if (seq wrap-with)
-                            (reduce (fn [r fi] `(~fi ~r)) rfs wrap-with)
+       (def ~cname ~docs ~(if (seq wrappers)
+                            (reduce (fn [r fi] `(~fi ~r)) rfs wrappers)
                             rfs))
        ~(when-let [registry (::register meta)]
           `(swap! ~registry (fn [state#] (assoc state# ~(::register-as meta (keyword (str cname))) ~cname)))))))
@@ -308,13 +383,6 @@
                      {:tag 'boolean})))]
       `(fn [~np-s ~op-s]
          (and ~@(map op-f props))))))
-
-(defn ^:no-doc production-build?
-  []
-  (let [env (System/getenv)]
-    (or (= "production" (get env "NODE_ENV"))
-        (= "production" (get env "RUMEXT_ENV"))
-        (= "production" (get env "TARGET_ENV")))))
 
 (defmacro lazy-component
   "A macro that helps defining lazy-loading components with the help

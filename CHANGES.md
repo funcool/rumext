@@ -1,5 +1,14 @@
 # Changelog #
 
+## Version v2.10
+
+- Add the `::rumext.v2/memo` metadata for simplify the common case for memoization
+- Add the `::rumext.v2.props/expect` metadata for props checking; it
+  accepts a set of props for simple existence checkong or map with
+  predicates for simple type checking
+- Add native js destructuring support on props
+
+
 ## Version v2.9.3
 
 - bugfixes
