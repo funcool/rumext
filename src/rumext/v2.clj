@@ -201,7 +201,10 @@
   (let [{:keys [cname docs meta] :as ctx} (parse-defc args)
         wrap-with (or (::wrap meta)
                       (:wrap meta))
-        rfs (gensym "component-")]
+        rfs       (gensym "component-")
+        cname     (if (::private meta)
+                    (vary-meta cname assoc :private true)
+                    cname)]
     `(let [~rfs ~(prepare-render-fn ctx)]
        (set! (.-displayName ~rfs) ~(str cname))
        (def ~cname ~docs ~(if (seq wrap-with)
@@ -329,7 +332,7 @@
                                 (fn [_#]
                                   (cljs.core/js-obj "default"
                                                     (rumext.v2/fnc ~'wrapper
-                                                      {:rumext.v2/wrap-props false}
+                                                      {:rumext.v2/props :obj}
                                                       [props#]
                                                       [:> (deref loadable#) props#])))))))))
 (defmacro spread-obj
