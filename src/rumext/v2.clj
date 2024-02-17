@@ -98,7 +98,7 @@
           (into [alias psym])
 
           (symbol? other)
-          (into [other nil])
+          (into [other (list 'js* "undefined")])
 
           (set? items)
           (concat (mapcat (fn [k]
@@ -116,7 +116,7 @@
                                  ;; used so we need to set here the value to
                                  ;; 'undefined'
                                  (symbol? other)
-                                 'rumext.v2/undefined
+                                 (list 'js* "undefined")
 
                                  (contains? alts k)
                                  `(~'js* "~{} ?? ~{}" ~accessor ~(get alts k))
@@ -129,7 +129,8 @@
       [props psym])))
 
 (defn native-destructure
-  "Generates a js var line with native destructuring"
+  "Generates a js var line with native destructuring. Only used when :&
+  used in destructuring."
   [{:keys [props params props] :as ctx}]
 
   ;; Emit native destructuring only if the :& key has value
@@ -187,15 +188,24 @@
          (if (map? props)
            (->> props
                 (map (fn [[prop pred-sym]]
-                       (let [prop (name prop)
-                             expr `(~pred-sym (cljs.core/unchecked-get ~psym ~prop))]
+                       (let [prop (if react-props?
+                                    (hc/compile-prop-key prop)
+                                    (name prop))
+
+                             accs (if (simple-ident? prop)
+                                    (list '. psym (symbol (str "-" prop)))
+                                    (list 'cljs.core/unchecked-get psym prop))
+
+                             expr `(~pred-sym ~accs)]
                          `(when-not ~(vary-meta expr assoc :tag 'boolean)
                             (throw (js/Error. ~(str "invalid value for '" prop "'"))))))))
 
            (->> props
-                (map name)
                 (map (fn [prop]
-                       (let [expr `(.hasOwnProperty ~psym ~prop)]
+                       (let [prop (if react-props?
+                                    (hc/compile-prop-key prop)
+                                    (name prop))
+                             expr `(.hasOwnProperty ~psym ~prop)]
                          `(when-not ~(vary-meta expr assoc :tag 'boolean)
                             (throw (js/Error. ~(str "missing prop '" prop "'")))))))))
          (cons (list 'js* "// ===== end props checking =====") nil))))))
