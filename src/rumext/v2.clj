@@ -247,14 +247,14 @@
                                       (list 'cljs.core/unchecked-get op-s prop)))]
                      (with-meta accs {:tag 'boolean})))]
         (conj wrappers
-              `(fn [props#]
-                 (mf/memo' props# (fn [~np-s ~op-s]
-                                    (and ~@(map op-f memo)))))))
+              `(fn [component#]
+                 (mf/memo' component# (fn [~np-s ~op-s]
+                                        (and ~@(map op-f memo)))))))
 
       (true? memo)
       (if-let [eq-f (::memo-equals meta)]
-        (conj wrappers `(fn [props#]
-                          (mf/memo props# ~eq-f)))
+        (conj wrappers `(fn [component#]
+                          (mf/memo component# ~eq-f)))
         (conj wrappers 'rumext.v2/memo'))
 
       :else wrappers)))
