@@ -201,7 +201,7 @@
   (let [{:keys [cname docs meta] :as ctx} (parse-defc args)
         wrap-with (or (::wrap meta)
                       (:wrap meta))
-        rfs       (gensym (str cname "-"))
+        rfs       (gensym "component-")
         cname     (if (::private meta)
                     (vary-meta cname assoc :private true)
                     cname)]
@@ -288,29 +288,26 @@
 
 (defmacro check-props
   "A macro version of the `check-props` function"
-  [eq-fn & props]
+  [props & [eq-f :as rest]]
+  (if (symbol? props)
+    `(apply rumext.v2/check-props ~props ~rest)
 
-  (let [[eq-fn props] (if (symbol? eq-fn)
-                        [eq-fn props]
-                        ['cljs.core/= (cons eq-fn props)])
-
-        np-s (with-meta (gensym "new-props-") {:tag 'js})
-        op-s (with-meta (gensym "old-props-") {:tag 'js})
-        op-f (fn [prop]
-               (let [prop (name prop)
-                     expr (if (simple-ident? prop)
-                            (let [prop-access (symbol (str "-" prop))]
-                              (list eq-fn
-                                    (list '.. np-s prop-access)
-                                    (list '.. op-s prop-access)))
-                            (list eq-fn
-                                  (list 'cljs.core/unchecked-get np-s prop)
-                                  (list 'cljs.core/unchecked-get op-s prop)))]
-
-                 (with-meta expr {:tag 'boolean})))]
-    `(fn [c#]
-       (rumext.v2/memo' c# (fn [~np-s ~op-s]
-                             (and ~@(map op-f props)))))))
+    (let [eq-f (or eq-f 'cljs.core/=)
+          np-s (with-meta (gensym "new-props-") {:tag 'js})
+          op-s (with-meta (gensym "old-props-") {:tag 'js})
+          op-f (fn [prop]
+                 (let [prop-access (symbol (str "-" (name prop)))]
+                   (with-meta
+                     (if (simple-ident? prop)
+                       (list eq-f
+                             (list '.. np-s prop-access)
+                             (list '.. op-s prop-access))
+                       (list eq-f
+                             (list 'cljs.core/unchecked-get np-s prop)
+                             (list 'cljs.core/unchecked-get op-s prop)))
+                     {:tag 'boolean})))]
+      `(fn [~np-s ~op-s]
+         (and ~@(map op-f props))))))
 
 (defn ^:no-doc production-build?
   []
