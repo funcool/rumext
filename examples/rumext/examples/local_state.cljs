@@ -7,7 +7,7 @@
 (def label
   (mf/fnc label
     {::mf/wrap [mf/memo]
-     ::mf/props :native}
+     ::mf/props :obj}
     [{:keys [state] :as props}]
 
     (let [{:keys [title n]} state]
@@ -22,8 +22,8 @@
 
 (mf/defc local-state
   "test docstring"
-  {::mf/wrap [mf/memo]
-   ::mf/props :native}
+  {::mf/memo true
+   ::mf/props :obj}
   [{:keys [title]}]
   (let [local (mf/use-state
                #(-> {:counter1 {:title "Counter 1"

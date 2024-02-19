@@ -230,7 +230,7 @@
         memo         (::memo meta)]
     (cond
       (set? memo)
-      (let [eq-f (or (::memo-eq-fn ctx) 'cljs.core/=)
+      (let [eq-f (or (::memo-equals ctx) 'cljs.core/=)
             np-s (with-meta (gensym "new-props-") {:tag 'js})
             op-s (with-meta (gensym "old-props-") {:tag 'js})
             op-f (fn [prop]
@@ -252,7 +252,10 @@
                                     (and ~@(map op-f memo)))))))
 
       (true? memo)
-      (conj wrappers 'rumext.v2/memo)
+      (if-let [eq-f (::memo-equals meta)]
+        (conj wrappers `(fn [props#]
+                          (mf/memo props# ~eq-f)))
+        (conj wrappers 'rumext.v2/memo'))
 
       :else wrappers)))
 
