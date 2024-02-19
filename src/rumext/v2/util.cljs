@@ -51,8 +51,8 @@
 
 (defn props-equals?
   [eq? new-props old-props]
-  (let [old-keys (.keys js/Object old-props)
-        new-keys (.keys js/Object new-props)
+  (let [old-keys     (.keys js/Object old-props)
+        new-keys     (.keys js/Object new-props)
         old-keys-len (alength old-keys)
         new-keys-len (alength new-keys)]
     (if (identical? old-keys-len new-keys-len)

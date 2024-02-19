@@ -265,12 +265,13 @@
   [& args]
   (let [{:keys [cname meta] :as ctx} (parse-defc args)
         wrappers (resolve-wrappers ctx)
-        rfs      (gensym "component-")]
-    `(let [~rfs ~(prepare-render-fn ctx)]
-       (set! (.-displayName ~rfs) ~(str cname))
-       ~(if (seq wrappers)
-          (reduce (fn [r fi] `(~fi ~r)) rfs wrappers)
-          rfs))))
+        rfs      (gensym (str cname "__"))]
+    `(let [~rfs ~(if (seq wrappers)
+                   (reduce (fn [r fi] `(~fi ~r)) (prepare-render-fn ctx) wrappers)
+                   (prepare-render-fn ctx))]
+       ~@(when-not (production-build?)
+           [`(set! (.-displayName ~rfs) ~(str cname))])
+       ~rfs)))
 
 (defmacro defc
   "A macro for defining component functions. Look the user guide for
@@ -278,18 +279,21 @@
   [& args]
   (let [{:keys [cname docs meta] :as ctx} (parse-defc args)
         wrappers (resolve-wrappers ctx)
-        rfs      (gensym "component-")
         cname    (if (::private meta)
                    (vary-meta cname assoc :private true)
                    cname)]
 
-    `(let [~rfs ~(prepare-render-fn ctx)]
-       (set! (.-displayName ~rfs) ~(str cname))
+    `(do
        (def ~cname ~docs ~(if (seq wrappers)
-                            (reduce (fn [r fi] `(~fi ~r)) rfs wrappers)
-                            rfs))
+                            (reduce (fn [r fi] `(~fi ~r)) (prepare-render-fn ctx) wrappers)
+                            (prepare-render-fn ctx)))
+
+       ~@(when-not (production-build?)
+           [`(set! (.-displayName ~cname) ~(str cname))])
+
        ~(when-let [registry (::register meta)]
-          `(swap! ~registry (fn [state#] (assoc state# ~(::register-as meta (keyword (str cname))) ~cname)))))))
+          `(swap! ~registry (fn [state#] (assoc state# ~(::register-as meta (keyword (str cname))) ~cname))))
+       )))
 
 (defmacro with-memo
   "A convenience syntactic abstraction (macro) for `useMemo`"
