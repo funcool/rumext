@@ -113,16 +113,16 @@ hash-map**.
   [:div {:class "label"} name])
 ```
 
-## JSX & Call Conventions
+## JSX / Hiccup
 
 You may be already familiar with hiccup syntax (which is equivalent to
 the react JSX) for defining the react dom. The intention on this
 section is explain only the essential part of it and the peculiarities
 of rumext.
 
-### Native elements
+### Introduction
 
-Lets start with simple generic components like `:div`:
+Lets start with simple generic elements like `div`:
 
 ```clojure
 [:div {:class "foobar"
@@ -131,12 +131,11 @@ Lets start with simple generic components like `:div`:
   "Hello World"]
 ```
 
-As you can observe, looks very familiar. The props and the style are
-transformed at compile time to a js object transforming all keys from
-lisp-case to camelCase (and rename `:class` to `className`); so the
-result will look aproximatelly like this in jsx:
+The props and the style are transformed at compile time to a js object
+transforming all keys from lisp-case to camelCase (and rename `:class`
+to `className`); so the compilation result to something like this:
 
-```javascript
+```js
 const h = React.createElement;
 
 h("div", {className: "foobar",
@@ -147,37 +146,120 @@ h("div", {className: "foobar",
 
 It should be noted that this transformation is only done to properties
 that are keyword type and that properties that begin with `data-` and
-`aria-` are left as is without transforming just like the string keys.
+`aria-` are left as is without transforming just like the string
+keys. The properties can be passed directly using camelCase syntax (as
+react nativelly expects) if you want.
 
-Obviously the keyword properties can be passed directly using
-camelCase syntax (as react nativelly expects) but for convenience the
-rumext compiler converts lisp-case to camelCase for you (`on-click` ->
-`onClick`).
 
-There are times when we will need the element name to be chosen
-dynamically or constructed in runtime. For these cases rumext offers
-handlers. For this specific case the handler is `[:> ...]`.
+### Handlers & Call Conventions
 
-Using the same example as before, the equivalent code would be:
+There are times when we'll need:
+
+- the element name to be chosen dynamically or constructed in runtime;
+- the props to be build dinamically
+- create an element from user defined component
+
+For this purpose, rumext exposes a special handlers, each one exposing
+its own call convention: `:&` and `:>`.
+
+Lets start with `:&` handler. We will use it when we have 100% control
+of the props and we do not want any type of transformation to be done
+to them (usually when we are talking about large components, you
+probably do not reuse that they represent a page or a section of that
+page, but not limited to). All props passed to the element will be
+passed as-is, without any kind of transformations to the prop keys nor
+values.
 
 ```clojure
-[:> "div" {:class "foobar"
-           :style {:background-color "red"}
-           :on-click some-on-click-fn}
-  "Hello World"]
+(mf/defc title
+  {::mf/props :obj}
+  [{:keys [name on-click]}]
+  [:div {:class "label" :on-click on-click} name])
+
+(mf/defc my-big-component
+  []
+  [:& title {:name "foobar" :on-click some-fn}])
 ```
 
-Since rumext uses compile-time transformations (macros) to transform
-data structures from clojure to the react dom, all data must be
-literals that the macro can understand. But there are times when we
-need to be able to build the props dynamically and in this case we
-have no choice but to build the props in a javascript object.
+And for completeness, an example without destructuring:
+
+```clojure
+(mf/defc title
+  {::mf/props :obj}
+  [props]
+  (let [name     (unchecked-get props "name")
+        on-click (unchecked-get props "on-click")]
+    [:div {:class "label" :on-click on-click} name]))
+
+(mf/defc my-big-component
+  []
+  [:& title {:name "foobar" :on-click some-fn}])
+```
+
+This is probably the handler that you will use the most time.
+
+Then, we also have the `:>` handler. We will use it when we have the
+following situations:
+
+- We want to decide the element name dynamicaly
+
+```clojure
+(let [element (if something "div" "span")]
+  [:> element {:class "foobar"
+               :style {:background-color "red"}
+               :on-click some-on-click-fn}
+    "Hello World"])
+```
+
+- We want to build and pass props dinamically to create a DOM native
+  element (note that the props are always js plain objects and using
+  react naming convention)
 
 ```clojure
 (let [props #js {:className "fooBar"
                  :style #js {:backgroundColor "red"}
                  :onClick some-on-click}]
   [:> "div" props "Hello World"])
+```
+
+- we are creating a reusable component that is probably wrapping one
+  or more native elements of the virtual dom and we simply want to
+  extend its behavior controlling only a subset of props, where the
+  rest of the props that are not controlled would be passed as is to
+  the next native element.
+
+```clojure
+(mf/defc my-button
+  {::mf/props :obj}
+  [props]
+  (let [name     (unchecked-get props "name")
+        on-click (unchecked-get props "onClick")
+        class    "my-button-class"]
+    [:button {:on-click on-click :class class} name]))
+
+(mf/defc other-component
+  []
+  [:> button {:name "foobar" :on-click some-fn}])
+```
+
+The props passed to the `:>` handler on creating an element from
+`button` component are transformed at compile-time to an js object
+following react convention (camelcasing keys, etc)
+
+The same example can written in this way, using destructuring and
+props spreading:
+
+```clojure
+(mf/defc my-button
+  {::mf/props :obj}
+  [{:keys [name] :& props}]
+  (let [props (mf/spread-props props {:class "my-button-class"})]
+    [:> :button props name]
+      [:button {:on-click on-click :class class} name]))
+
+(mf/defc other-component
+  []
+  [:> button {:name "foobar" :on-click some-fn}])
 ```
 
 
