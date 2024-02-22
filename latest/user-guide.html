@@ -51,7 +51,7 @@
 
   [:div {:class "label"} name])
 </code></pre>
-<p>That approach is very convenient because when you start proptotypong, the received props obeys the already known idioms, and all works in a way like the component is a simple clojure function.</p>
+<p>That approach is very convenient because when you start prototyping, the received props obeys the already known idioms, and all works in a way like the component is a simple clojure function.</p>
 <p>But, this approach has inconvenience of the need to transform from js object to clojure hash-map on each render and this has performance penalization. In the majority of cases this has no isues at all.</p>
 <p>But in cases when performance is important, it is recommended to use the <code>::mf/props :obj</code> which completly removes the transformation overhead.</p>
 <p>The component functions with <code>::mf/props :obj</code> also has support for the already familiar destructuring idiom. Internally, this compiles to code that directly accesses properties within the props object. The only thing to keep in mind, whether you use destructuring or not, <strong>is that the props object is a flat js object and not a clojure hash-map</strong>.</p>
@@ -100,7 +100,7 @@ h("div", {className: "foobar",
 <h3><a href="#user-defined-components" id="user-defined-components"></a>User defined components</h3>
 <p>Components are everything that we as users define.</p>
 <p>In this case we have two ways to call our component (or in react words, create the react-dom element from a user-defined component):</p>
-<p><strong>A</strong>: When we have 100% control of the props and we do not want any type of transformation to be done to them (usually when we are talking about large components, you probably do not reuse that they represent a page or a section of that page).</p>
+<p><strong>A</strong>: When we have 100% control of the props and we do not want any type of transformation to be done to them (usually when we are talking about large components, you probably do not reuse that they represent a page or a section of that page, but not limited to).</p>
 <p><strong>B</strong>: When we are creating a reusable component that is probably wrapping one or more native elements of the virtual dom and we simply want to extend its behavior controlling only a subset of props, where the rest of the props that are not controlled would be passed as is to the next native element.</p>
 <p>For the <strong>A</strong> case, we will use the <code>[:&amp; ...]</code> handler:</p>
 <pre><code class="language-clojure">(mf/defc title
@@ -117,25 +117,27 @@ h("div", {className: "foobar",
 <pre><code class="language-clojure">(mf/defc button
   {::mf/props :obj}
   [{:keys [name onClick]}]
-  [:button {:on-click on-click} name])
+  [:button {:on-click onClick} name])
 
 (mf/defc my-big-component
   []
   [:&gt; button {:name "foobar" :on-click some-fn}])
 </code></pre>
-<p>The prop literals passed to the <code>[:&gt;</code> handler will be transformed automatically using react props naming rules.</p>
-<p>Remember that <code>::mf/props :obj</code> should probably be a default, so all components you define should have that metadata.</p>
+<p>In this example, we are creating a react element from user defined <strong>button</strong> component in the same way as we do it with native DOM elements. Following the same transformation rules (the prop literals passed to the <code>[:&gt;</code> handler will be transformed automatically using react props naming rules, as explained previously).</p>
 <h3><a href="#special-case-with-components-ending-in-on-the-name" id="special-case-with-components-ending-in-on-the-name"></a>Special case with components ending in <code>*</code> on the name</h3>
 <p>For convenience, if the component is named with an <code>*</code> at the end of the name (or it has the <code>::mf/props :react</code> in the metadata instead of <code>::mf/props :obj</code>), the destructuring can use the lisp-case and the macro will automatically access the value with camelCase from the props, respecting the react convention for props.</p>
 <p>Useful when you build a native element wrapper and the majority of props will be passed as-is to the wrapped element.</p>
 <pre><code>(mf/defc button*
-  [{:keys [name on-clic class]}]
+  [{:keys [name on-click class]}]
   [:button {:on-click on-click :class class} name])
 
 (mf/defc my-big-component
   []
+  ;; note: we use here camel case just for demostration purposes and it
+  ;; is not really needded becaue the macro will do it for you
   [:&gt; button* {:name "foobar" :onClick some-fn :className "foobar"}])
 </code></pre>
+<p>But remember, the <code>*</code> only changes the behavior of destructuring. The call convention is determined by the used handler: <code>[:&amp;</code> or <code>[:&gt;</code>.</p>
 <h2><a href="#props-checking" id="props-checking"></a>Props Checking</h2>
 <p>Rumext comes with basic props checking that allows basic existence checking or with simple predicate checking. For simple existence checking, just pass a set with prop names.</p>
 <pre><code class="language-clojure">(ns my.ns
