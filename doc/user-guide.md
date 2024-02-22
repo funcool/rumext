@@ -180,10 +180,6 @@ have no choice but to build the props in a javascript object.
   [:> "div" props "Hello World"])
 ```
 
-With the both ways of create a react element, the prop literals are
-converted semi-recursivelly (the root props and the style props) to js
-objects that react understands.
-
 
 ### User defined components
 
