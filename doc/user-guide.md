@@ -83,7 +83,7 @@ Not passing any value for `::mf/props` is equivalent to passing
   [:div {:class "label"} name])
 ```
 
-That approach is very convenient because when you start proptotypong,
+That approach is very convenient because when you start prototyping,
 the received props obeys the already known idioms, and all works in a
 way like the component is a simple clojure function.
 
@@ -196,7 +196,7 @@ component):
 **A**: When we have 100% control of the props and we do
 not want any type of transformation to be done to them (usually when
 we are talking about large components, you probably do not reuse that
-they represent a page or a section of that page).
+they represent a page or a section of that page, but not limited to).
 
 **B**: When we are creating a reusable component that is probably
 wrapping one or more native elements of the virtual dom and we simply
@@ -227,18 +227,19 @@ For the **B** case, we will use the already known `[:> ...]` handler:
 (mf/defc button
   {::mf/props :obj}
   [{:keys [name onClick]}]
-  [:button {:on-click on-click} name])
+  [:button {:on-click onClick} name])
 
 (mf/defc my-big-component
   []
   [:> button {:name "foobar" :on-click some-fn}])
 ```
 
-The prop literals passed to the `[:>` handler will be transformed
-automatically using react props naming rules.
+In this example, we are creating a react element from user defined
+**button** component in the same way as we do it with native DOM
+elements. Following the same transformation rules (the prop literals
+passed to the `[:>` handler will be transformed automatically using
+react props naming rules, as explained previously).
 
-Remember that `::mf/props :obj` should probably be a default, so
-all components you define should have that metadata.
 
 ### Special case with components ending in `*` on the name
 
@@ -253,13 +254,19 @@ props will be passed as-is to the wrapped element.
 
 ```
 (mf/defc button*
-  [{:keys [name on-clic class]}]
+  [{:keys [name on-click class]}]
   [:button {:on-click on-click :class class} name])
 
 (mf/defc my-big-component
   []
+  ;; note: we use here camel case just for demostration purposes and it
+  ;; is not really needded becaue the macro will do it for you
   [:> button* {:name "foobar" :onClick some-fn :className "foobar"}])
 ```
+
+But remember, the `*` only changes the behavior of destructuring. The
+call convention is determined by the used handler: `[:&` or `[:>`.
+
 
 ## Props Checking
 

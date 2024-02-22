@@ -20,11 +20,17 @@
   [:div
    [:span title ": " n]])
 
-(mf/defc local-state
+(mf/defc label
   "test docstring"
-  {::mf/memo true
-   ::mf/props :obj}
-  [{:keys [title]}]
+  {::mf/props :obj}
+  [{:keys [name] :& props}]
+  (assert (object? props) "expect js plain object")
+  (assert (string? name) "expect string")
+
+  ;; props contains all passed props except name
+  [:> :label props name])
+
+
   (let [local (mf/use-state
                #(-> {:counter1 {:title "Counter 1"
                                 :n 0}
