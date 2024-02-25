@@ -4,15 +4,19 @@
    [rumext.v2 :as mf]
    [rumext.examples.util :as util]))
 
-(def label
-  (mf/fnc label
-    {::mf/wrap [mf/memo]
-     ::mf/props :obj}
-    [{:keys [state] :as props}]
-
-    (let [{:keys [title n]} state]
-      [:div {:class "foobar"}
-       [:span title ": " n]])))
+(mf/defc label
+  {::mf/memo true
+   ::mf/props :obj
+   ::mf/expect #{:state}}
+  [{:keys [state] :as props :rest others}]
+  (let [{:keys [title n]} state
+        props (mf/spread-props {:class "baar"}
+                               :data-test "1")
+        ]
+    (js/console.log props)
+    (js/console.log others)
+    [:div {:class "foobar"}
+     [:span title ": " n]]))
 
 (mf/defc label*
   {::mf/wrap [#(mf/memo' % (mf/check-props ["title" "n"]))]}
@@ -20,17 +24,11 @@
   [:div
    [:span title ": " n]])
 
-(mf/defc label
+(mf/defc local-state
   "test docstring"
-  {::mf/props :obj}
-  [{:keys [name] :& props}]
-  (assert (object? props) "expect js plain object")
-  (assert (string? name) "expect string")
-
-  ;; props contains all passed props except name
-  [:> :label props name])
-
-
+  {::mf/memo true
+   ::mf/props :obj}
+  [{:keys [title]}]
   (let [local (mf/use-state
                #(-> {:counter1 {:title "Counter 1"
                                 :n 0}
