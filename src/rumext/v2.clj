@@ -9,7 +9,6 @@
   (:require
    [cljs.core :as-alias c]
    [clojure.string :as str]
-   [rumext.v2.props :as-alias mf.props]
    [rumext.v2.compiler :as hc]))
 
 (create-ns 'rumext.v2.util)
@@ -91,7 +90,8 @@
       (and (map? props) (not (wrap-props? ctx)))
       (let [alias (get props :as)
             alts  (get props :or)
-            other (get props :&)
+            other (or (get props :&)
+                      (get props :rest))
             items (some-> (get props :keys) set)]
         (cond->> []
           (symbol? alias)
@@ -134,17 +134,19 @@
   [{:keys [props params props] :as ctx}]
 
   ;; Emit native destructuring only if the :& key has value
-  (when (symbol? (:& props))
+  (when (or (symbol? (:& props))
+            (symbol? (:rest props)))
+
     (let [react-props? (react-props? ctx)
           psym         (first params)
 
           keys-props (:keys props [])
           all-alias  (:as props)
-          rst-alias  (:& props)
+          rst-alias  (or (:& props) (:rest props))
 
           s-props    (->> (:keys props [])
                           (filter (comp simple-ident? name)))
-          k-props    (dissoc props :keys :as :&)
+          k-props    (dissoc props :keys :as :& :rest)
           k-props    (->> (:keys props [])
                           (remove (comp simple-ident? name))
                           (map (fn [k] [k k]))
@@ -181,8 +183,8 @@
   [{:keys [meta params] :as ctx}]
   (let [react-props? (react-props? ctx)
         psym         (vary-meta (first params) assoc :tag 'js)]
-    (when-not (production-build?)
-      (when-let [props (::mf.props/expect meta)]
+    (when *assert*
+      (when-let [props (::expect meta)]
         (concat
          (cons (list 'js* "// ===== start props checking =====") nil)
          (if (map? props)
@@ -410,8 +412,10 @@
                                                       {:rumext.v2/props :obj}
                                                       [props#]
                                                       [:> (deref loadable#) props#])))))))))
-(defmacro spread-obj
-  "A helper for create spread js object operations. Leaves the keys untouched."
+
+(defmacro spread
+  "A helper for create spread js object operations. Leaves the keys
+  untouched."
   [target & [other :as rest]]
   (assert (or (symbol? target)
               (map? target))
