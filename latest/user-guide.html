@@ -58,50 +58,51 @@
 <pre><code class="language-clojure">(mf/defc title
   {::mf/props :obj}
   [{:keys [name] :as props}]
-  (assert (object? props) "expected map")
+  (assert (object? props) "expected object")
   (assert (string? name) "expected string")
   (assert (unchecked-get props "name") "expected string")
 
-  [:div {:class "label"} name])
+  [:label {:class "label"} name])
 </code></pre>
-<h2><a href="#jsx-call-conventions" id="jsx-call-conventions"></a>JSX &amp; Call Conventions</h2>
+<p>An additional idiom, only available in case of using destructuring with props as a js object: is the possibility of obtaining an object with all properties not destructured:</p>
+<pre><code class="language-clojure">(mf/defc title
+  {::mf/props :obj}
+  [{:keys [name] :as props :rest other}]
+  (assert (object? props) "expected object")
+  (assert (object? other) "expected map")
+  (assert (nil? (unchecked-get other "name")) "no name in other")
+
+  ;; The `:&gt;` will be explained later
+  [:&gt; :label other name])
+</code></pre>
+<p>This allows you to extract the props that the component has control of and leave the rest in an object that can be passed as is to the next element.</p>
+<h2><a href="#jsx-hiccup" id="jsx-hiccup"></a>JSX / Hiccup</h2>
 <p>You may be already familiar with hiccup syntax (which is equivalent to the react JSX) for defining the react dom. The intention on this section is explain only the essential part of it and the peculiarities of rumext.</p>
-<h3><a href="#native-elements" id="native-elements"></a>Native elements</h3>
-<p>Lets start with simple generic components like <code>:div</code>:</p>
+<h3><a href="#introduction" id="introduction"></a>Introduction</h3>
+<p>Lets start with simple generic elements like <code>div</code>:</p>
 <pre><code class="language-clojure">[:div {:class "foobar"
        :style {:background-color "red"}
        :on-click some-on-click-fn}
   "Hello World"]
 </code></pre>
-<p>As you can observe, looks very familiar. The props and the style are transformed at compile time to a js object transforming all keys from lisp-case to camelCase (and rename <code>:class</code> to <code>className</code>); so the result will look aproximatelly like this in jsx:</p>
-<pre><code class="language-javascript">const h = React.createElement;
+<p>The props and the style are transformed at compile time to a js object transforming all keys from lisp-case to camelCase (and rename <code>:class</code> to <code>className</code>); so the compilation result to something like this:</p>
+<pre><code class="language-js">const h = React.createElement;
 
 h("div", {className: "foobar",
           style: {"backgroundColor": "red"},
           onClick=someFn},
           "Hello World");
 </code></pre>
-<p>It should be noted that this transformation is only done to properties that are keyword type and that properties that begin with <code>data-</code> and <code>aria-</code> are left as is without transforming just like the string keys.</p>
-<p>Obviously the keyword properties can be passed directly using camelCase syntax (as react nativelly expects) but for convenience the rumext compiler converts lisp-case to camelCase for you (<code>on-click</code> -&gt; <code>onClick</code>).</p>
-<p>There are times when we will need the element name to be chosen dynamically or constructed in runtime. For these cases rumext offers handlers. For this specific case the handler is <code>[:&gt; ...]</code>.</p>
-<p>Using the same example as before, the equivalent code would be:</p>
-<pre><code class="language-clojure">[:&gt; "div" {:class "foobar"
-           :style {:background-color "red"}
-           :on-click some-on-click-fn}
-  "Hello World"]
-</code></pre>
-<p>Since rumext uses compile-time transformations (macros) to transform data structures from clojure to the react dom, all data must be literals that the macro can understand. But there are times when we need to be able to build the props dynamically and in this case we have no choice but to build the props in a javascript object.</p>
-<pre><code class="language-clojure">(let [props #js {:className "fooBar"
-                 :style #js {:backgroundColor "red"}
-                 :onClick some-on-click}]
-  [:&gt; "div" props "Hello World"])
-</code></pre>
-<h3><a href="#user-defined-components" id="user-defined-components"></a>User defined components</h3>
-<p>Components are everything that we as users define.</p>
-<p>In this case we have two ways to call our component (or in react words, create the react-dom element from a user-defined component):</p>
-<p><strong>A</strong>: When we have 100% control of the props and we do not want any type of transformation to be done to them (usually when we are talking about large components, you probably do not reuse that they represent a page or a section of that page, but not limited to).</p>
-<p><strong>B</strong>: When we are creating a reusable component that is probably wrapping one or more native elements of the virtual dom and we simply want to extend its behavior controlling only a subset of props, where the rest of the props that are not controlled would be passed as is to the next native element.</p>
-<p>For the <strong>A</strong> case, we will use the <code>[:&amp; ...]</code> handler:</p>
+<p>It should be noted that this transformation is only done to properties that are keyword type and that properties that begin with <code>data-</code> and <code>aria-</code> are left as is without transforming just like the string keys. The properties can be passed directly using camelCase syntax (as react nativelly expects) if you want.</p>
+<h3><a href="#handlers-call-conventions" id="handlers-call-conventions"></a>Handlers &amp; Call Conventions</h3>
+<p>There are times when we’ll need:</p>
+<ul>
+<li>the element name to be chosen dynamically or constructed in runtime;</li>
+<li>the props to be build dinamically</li>
+<li>create an element from user defined component</li>
+</ul>
+<p>For this purpose, rumext exposes a special handlers, each one exposing its own call convention: <code>:&amp;</code> and <code>:&gt;</code>.</p>
+<p>Lets start with <code>:&amp;</code> handler. We will use it when we have 100% control of the props and we do not want any type of transformation to be done to them (usually when we are talking about large components, you probably do not reuse that they represent a page or a section of that page, but not limited to). All props passed to the element will be passed as-is, without any kind of transformations to the prop keys nor values.</p>
 <pre><code class="language-clojure">(mf/defc title
   {::mf/props :obj}
   [{:keys [name on-click]}]
@@ -111,42 +112,67 @@ h("div", {className: "foobar",
   []
   [:&amp; title {:name "foobar" :on-click some-fn}])
 </code></pre>
-<p>The <code>[:&amp;</code> handler do not perform any case transformation to props. So prop keys and its values will be received as they are supplied on creating the element.</p>
-<p>For the <strong>B</strong> case, we will use the already known <code>[:&gt; ...]</code> handler:</p>
-<pre><code class="language-clojure">(mf/defc button
+<p>And for completeness, an example without destructuring:</p>
+<pre><code class="language-clojure">(mf/defc title
   {::mf/props :obj}
-  [{:keys [name onClick]}]
-  [:button {:on-click onClick} name])
+  [props]
+  (let [name     (unchecked-get props "name")
+        on-click (unchecked-get props "on-click")]
+    [:div {:class "label" :on-click on-click} name]))
 
 (mf/defc my-big-component
   []
-  [:&gt; button {:name "foobar" :on-click some-fn}])
+  [:&amp; title {:name "foobar" :on-click some-fn}])
 </code></pre>
-<p>In this example, we are creating a react element from user defined <strong>button</strong> component in the same way as we do it with native DOM elements. Following the same transformation rules (the prop literals passed to the <code>[:&gt;</code> handler will be transformed automatically using react props naming rules, as explained previously).</p>
-<h3><a href="#special-case-with-components-ending-in-on-the-name" id="special-case-with-components-ending-in-on-the-name"></a>Special case with components ending in <code>*</code> on the name</h3>
-<p>For convenience, if the component is named with an <code>*</code> at the end of the name (or it has the <code>::mf/props :react</code> in the metadata instead of <code>::mf/props :obj</code>), the destructuring can use the lisp-case and the macro will automatically access the value with camelCase from the props, respecting the react convention for props.</p>
-<p>Useful when you build a native element wrapper and the majority of props will be passed as-is to the wrapped element.</p>
-<pre><code>(mf/defc button*
-  [{:keys [name on-click class]}]
-  [:button {:on-click on-click :class class} name])
+<p>This is probably the handler that you will use the most time.</p>
+<p>Then, we also have the <code>:&gt;</code> handler. We will use it when we have the following situations:</p>
+<ul>
+<li>We want to decide the element name dynamicaly</li>
+</ul>
+<pre><code class="language-clojure">(let [element (if something "div" "span")]
+  [:&gt; element {:class "foobar"
+               :style {:background-color "red"}
+               :on-click some-on-click-fn}
+    "Hello World"])
+</code></pre>
+<ul>
+<li>We want to build and pass props dinamically to create a DOM native element (note that the props are always js plain objects and using react naming convention)</li>
+</ul>
+<pre><code class="language-clojure">(let [props #js {:className "fooBar"
+                 :style #js {:backgroundColor "red"}
+                 :onClick some-on-click}]
+  [:&gt; "div" props "Hello World"])
+</code></pre>
+<ul>
+<li>we are creating a reusable component that is probably wrapping one or more native elements of the virtual dom and we simply want to extend its behavior controlling only a subset of props, where the rest of the props that are not controlled would be passed as is to the next native element.</li>
+</ul>
+<pre><code class="language-clojure">(mf/defc my-label
+  {::mf/props :obj}
+  [{:keys [name className] :rest props}]
+  (let [class (or className "my-label")
+        props (mf/spread props {:className class})]
+    [:&gt; :label props name]))
 
-(mf/defc my-big-component
+(mf/defc other-component
   []
-  ;; note: we use here camel case just for demostration purposes and it
-  ;; is not really needded becaue the macro will do it for you
-  [:&gt; button* {:name "foobar" :onClick some-fn :className "foobar"}])
+  [:&gt; my-label {:name "foobar" :on-click some-fn}])
 </code></pre>
-<p>But remember, the <code>*</code> only changes the behavior of destructuring. The call convention is determined by the used handler: <code>[:&amp;</code> or <code>[:&gt;</code>.</p>
+<p>So, all the the props passed to the <code>:&gt;</code> handler on creating an element from <code>my-label</code> component are transformed at compile-time to an js object following react convention (camelcasing keys, etc.); This greatly facilitates the task of passing the props to the next element without performing any additional transformation.</p>
+<p>For this last case and to make the work even easier but preserving the same code style as the rest of the application, rumext offers a way for the destructuring to also take into account the rules and conventions of react for the props keys.</p>
+<p>This is achieved with the metadata <code>{::mf/props :react}</code> or by putting the suffix <code>*</code> in the component name. And then, the destructuring can use the lisp-case and the macro will automatically access the value with camelCase from the props, respecting the react convention.</p>
+<pre><code>(mf/defc my-label*
+  {::mf/props :obj}
+  [{:keys [name class] :rest props}]
+  (let [class (or class "my-label")
+        props (mf/spread-props props {:class class})]
+    [:&gt; :label props name]))
+</code></pre>
+<p>But remember: <strong>the <code>*</code> only changes the behavior of destructuring</strong>. The call convention is determined by the used handler: <code>[:&amp;</code> or <code>[:&gt;</code>.</p>
 <h2><a href="#props-checking" id="props-checking"></a>Props Checking</h2>
 <p>Rumext comes with basic props checking that allows basic existence checking or with simple predicate checking. For simple existence checking, just pass a set with prop names.</p>
-<pre><code class="language-clojure">(ns my.ns
-  (:require
-    [rumext.v2 :as mf]
-    [rumext.v2.props :as-alias mf.props]))
-
-(mf/defc button
+<pre><code class="language-clojure">(mf/defc button
   {::mf/props :obj
-   ::mf.props/expect #{:name :on-click}}
+   ::mf/expect #{:name :on-click}}
   [{:keys [name on-click]}]
   [:button {:on-click on-click} name])
 </code></pre>
@@ -154,12 +180,12 @@ h("div", {className: "foobar",
 <p>You also can add some predicates:</p>
 <pre><code class="language-clojure">(mf/defc button
   {::mf/props :obj
-   ::mf.props/expect {:name string?
-                      :on-click fn?}}
+   ::mf/expect {:name string?
+                :on-click fn?}}
   [{:keys [name on-click]}]
   [:button {:on-click on-click} name])
 </code></pre>
-<p>The props checking can be disabled on production builds setting the <code>NODE_ENV</code> enviroment variable to <code>production</code> value.</p>
+<p>The props checking obey the <code>:elide-asserts</code> compiler option and they are removed on production builds.</p>
 <h2><a href="#higher-order-components" id="higher-order-components"></a>Higher-Order Components</h2>
 <p>This is the way you have to extend/add additional functionality to a function component. Rumext exposes one:</p>
 <ul>
