@@ -4,8 +4,8 @@
 <p>Simple and Decomplected UI library based on React &gt;= 18 focused on performance.</p>
 <p>Add to deps.edn:</p>
 <pre><code class="language-clojure">funcool/rumext
-{:git/tag "v2.10"
- :git/sha "d96ea18"
+{:git/tag "v2.11"
+ :git/sha "4140a50"
  :git/url "https://github.com/funcool/rumext.git"}
 </code></pre>
 <h2><a href="#first-steps" id="first-steps"></a>First Steps</h2>
@@ -158,8 +158,7 @@ h("div", {className: "foobar",
   [:&gt; my-label {:name "foobar" :on-click some-fn}])
 </code></pre>
 <p>So, all the the props passed to the <code>:&gt;</code> handler on creating an element from <code>my-label</code> component are transformed at compile-time to an js object following react convention (camelcasing keys, etc.); This greatly facilitates the task of passing the props to the next element without performing any additional transformation.</p>
-<p>For this last case and to make the work even easier but preserving the same code style as the rest of the application, rumext offers a way for the destructuring to also take into account the rules and conventions of react for the props keys.</p>
-<p>This is achieved with the metadata <code>{::mf/props :react}</code> or by putting the suffix <code>*</code> in the component name. And then, the destructuring can use the lisp-case and the macro will automatically access the value with camelCase from the props, respecting the react convention.</p>
+<p>And finally, to help preserve the code style, rumext offers a way for the destructuring to also take into account the rules and conventions of react for the props keys. This is achieved with the metadata <code>{::mf/props :react}</code> or by putting the suffix <code>*</code> in the component name. With that, the destructuring can use the lisp-case for keys and the macro will automatically generate the appropriate access code to the value with camelCase from the props, respecting the react convention.</p>
 <pre><code>(mf/defc my-label*
   {::mf/props :obj}
   [{:keys [name class] :rest props}]
@@ -169,15 +168,15 @@ h("div", {className: "foobar",
 </code></pre>
 <p>But remember: <strong>the <code>*</code> only changes the behavior of destructuring</strong>. The call convention is determined by the used handler: <code>[:&amp;</code> or <code>[:&gt;</code>.</p>
 <h2><a href="#props-checking" id="props-checking"></a>Props Checking</h2>
-<p>Rumext comes with basic props checking that allows basic existence checking or with simple predicate checking. For simple existence checking, just pass a set with prop names.</p>
+<p>The rumext library comes with two approaches for checking props: <strong>simple</strong> and <strong>malli</strong>.</p>
+<p>Lets start with the <strong>simple</strong>, which consists on simple existence check or plain predicate checking:</p>
 <pre><code class="language-clojure">(mf/defc button
   {::mf/props :obj
    ::mf/expect #{:name :on-click}}
   [{:keys [name on-click]}]
   [:button {:on-click on-click} name])
 </code></pre>
-<p>The prop names obeys the same rules as the destructuring so you should use the same names in destructuring.</p>
-<p>You also can add some predicates:</p>
+<p>The prop names obeys the same rules as the destructuring so you should use the same names in destructuring. Sometimes a simple existence check is not enought, for that cases you can pass a map where keys are props and values predicates:</p>
 <pre><code class="language-clojure">(mf/defc button
   {::mf/props :obj
    ::mf/expect {:name string?
@@ -185,7 +184,21 @@ h("div", {className: "foobar",
   [{:keys [name on-click]}]
   [:button {:on-click on-click} name])
 </code></pre>
-<p>The props checking obey the <code>:elide-asserts</code> compiler option and they are removed on production builds.</p>
+<p>If that is not enough, it also supports <strong><a href="https://github.com/metosin/malli">malli</a></strong> as validation mechanism for props:</p>
+<pre><code class="language-clojure">(def ^:private schema:props
+  [:map {:title "button:props"}
+   [:name string?]
+   [:class {:optional true} string?]
+   [:on-click fn?]])
+
+(mf/defc button
+  {::mf/props :obj
+   ::mf/schema schema:props}
+  [{:keys [name on-click]}]
+  [:button {:on-click on-click} name])
+</code></pre>
+<p>The prop names on schema obeys the destructuring rules for key casing.</p>
+<p><strong>NOTE</strong>: The props checking obey the <code>:elide-asserts</code> compiler option and they are removed on production builds.</p>
 <h2><a href="#higher-order-components" id="higher-order-components"></a>Higher-Order Components</h2>
 <p>This is the way you have to extend/add additional functionality to a function component. Rumext exposes one:</p>
 <ul>
@@ -321,5 +334,5 @@ h("div", {className: "foobar",
 </ul>
 <p><strong>WARNING</strong>: it is mainly implemented to be used in <a href="https://github.com/penpot/penpot">penpot</a> and released as separated project for conveniendce. Don’t expect compromise for backward compatibility beyond what the penpot project needs.</p>
 <h2><a href="#license" id="license"></a>License</h2>
-<p>Licensed under Eclipse Public License (see <a href="LICENSE">LICENSE</a>).</p>
+<p>Licensed under MPL-2.0 (see LICENSE file on the root of the repository)</p>
 </div></div></div></body></html>
