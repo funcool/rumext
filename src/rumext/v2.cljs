@@ -327,26 +327,35 @@
   trigger rerender."
   ([] (use-var nil))
   ([initial]
-   (let [ref (useRef initial)]
-     (use-memo
-      #(specify! (fn [val] (set-ref-val! ref val))
-         c/IReset
-         (-reset! [_ new-value]
-           (set-ref-val! ref new-value))
+   (let [ref (useRef nil)]
+     (when (nil? (.-current ^js ref))
+       (let [self (fn [value]
+                    (let [target (unchecked-get ref "current")]
+                      (unchecked-set target "value" value)))]
 
-         c/ISwap
-         (-swap!
-           ([self f]
-            (set-ref-val! ref (f (ref-val ref))))
-           ([self f x]
-            (set-ref-val! ref (f (ref-val ref) x)))
-           ([self f x y]
-            (set-ref-val! ref (f (ref-val ref) x y)))
-           ([self f x y more]
-            (set-ref-val! ref (apply f (ref-val ref) x y more))))
+         (unchecked-set self "value" initial)
+         (unchecked-set ref "current" self)
+         (specify! self
+           cljs.core/IDeref
+           (-deref [this]
+             (.-value ^js this))
 
-         c/IDeref
-         (-deref [self] (ref-val ref)))))))
+           cljs.core/IReset
+           (-reset! [this v]
+             (unchecked-set this "value" v))
+
+           cljs.core/ISwap
+           (-swap!
+             ([this f]
+              (unchecked-set this "value" (f (.-value ^js this))))
+             ([this f a]
+              (unchecked-set this "value" (f (.-value ^js this) a)))
+             ([this f a b]
+              (unchecked-set this "value" (f (.-value ^js this) a b)))
+             ([this f a b xs]
+              (unchecked-set this "value" (apply f (.-value ^js this) a b xs)))))))
+
+     (.-current ^js ref))))
 
 ;; --- Other API
 
