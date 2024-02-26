@@ -37,7 +37,7 @@
      [:hr]
      (let [{:keys [title n]} (:counter1 @local)]
        [:> label {:n n :title title :data-foobar 1 :on-click identity :id "foobar"}])
-     #_(let [{:keys [title n]} (:counter2 @local)]
+     (let [{:keys [title n]} (:counter2 @local)]
        [:> label {:title title :n n :on-click identity}])
      [:button {:on-click #(swap! local update-in [:counter1 :n] inc)} "Increment Counter 1"]
      [:button {:on-click #(swap! local update-in [:counter2 :n] inc)} "Increment Counter 2"]]))
