@@ -16,26 +16,24 @@
   "Compiles a keyword or symbol to string using react prop naming
   convention"
   [k]
-  (if (or (keyword? k) (symbol? k))
-    (let [nword (name k)]
-      (cond
-        (= "class" nword) "className"
-        (= "for" nword) "htmlFor"
-        (str/starts-with? nword "--") nword
-        (str/starts-with? nword "data-") nword
-        (str/starts-with? nword "aria-") nword
-        :else
-        (let [[first-word & words] (str/split nword #"-")]
-          (if (empty? words)
-            nword
-            (let [vendor? (str/starts-with? nword "-")
-                  result  (-> (map str/capital words)
-                              (conj first-word)
-                              str/join)]
-              (if (str/starts-with? nword "-")
-                (str/capital result)
-                result))))))
-    k))
+  (let [nword (name k)]
+    (cond
+      (= "class" nword) "className"
+      (= "for" nword) "htmlFor"
+      (str/starts-with? nword "--") nword
+      (str/starts-with? nword "data-") nword
+      (str/starts-with? nword "aria-") nword
+      :else
+      (if (nil? (str/index-of nword "-"))
+        nword
+        (let [[first-word & words] (str/split nword #"-")
+              vendor? (str/starts-with? nword "-")
+              result  (-> (map str/capital words)
+                          (conj first-word)
+                          str/join)]
+          (if (str/starts-with? nword "-")
+            (str/capital result)
+            result))))))
 
 #?(:cljs
    (defn obj->map
@@ -72,6 +70,26 @@
 
        :else
        (throw (ex-info "unable to create obj" {:data o})))))
+
+#?(:cljs
+   (defn map->props
+     [o]
+     (reduce-kv (fn [res k v]
+                  (let [v (if (keyword? v) (name v) v)
+                        k (cond
+                            (string? k)  k
+                            (keyword? k) (ident->prop k)
+                            :else        nil)]
+
+                    (when (some? k)
+                      (let [v (if (and (= k "style") (map? v))
+                                (map->props v)
+                                v)]
+                        (unchecked-set res k v)))
+
+                    res))
+                #js {}
+                o)))
 
 #?(:cljs
    (defn wrap-props
