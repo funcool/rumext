@@ -1,13 +1,19 @@
 (ns rumext.examples.local-state
   (:require
    [goog.dom :as dom]
+   [malli.core :as m]
    [rumext.v2 :as mf]
    [rumext.examples.util :as util]))
+
+(def schema:label-props
+  [:map {:title "label:props"}
+   [:on-click fn?]
+   [:state map?]])
 
 (mf/defc label
   {::mf/memo true
    ::mf/props :obj
-   ::mf/expect #{:state}}
+   ::mf/schema schema:label-props}
   [{:keys [state] :as props :rest others}]
   (let [{:keys [title n]} state
         props (mf/spread-props {:class "baar"}

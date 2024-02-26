@@ -180,37 +180,55 @@
       [(apply list 'js* tmpl params)])))
 
 (defn- prepare-props-checks
-  [{:keys [meta params] :as ctx}]
+  [{:keys [cname meta params] :as ctx}]
   (let [react-props? (react-props? ctx)
         psym         (vary-meta (first params) assoc :tag 'js)]
     (when *assert*
-      (when-let [props (::expect meta)]
-        (concat
-         (cons (list 'js* "// ===== start props checking =====") nil)
-         (if (map? props)
-           (->> props
-                (map (fn [[prop pred-sym]]
-                       (let [prop (if react-props?
-                                    (hc/compile-prop-key prop)
-                                    (name prop))
+      (cond
+        (::schema meta)
+        (let [validator-sym (with-meta (symbol (str cname "-validator"))
+                              {:tag 'function})]
+          (concat
+           (cons (list 'js* "// ===== start props checking =====") nil)
+           [`(let [res# (~validator-sym ~psym)]
+               (when (some? res#)
+                 (let [res# (first res#)
+                       msg# (str ~(str "invalid props on component " (str cname) " ")
+                                 "('" (name (key res#)) "' " (val res#) ")\n")]
+                   (throw (js/Error. msg#)))))]
+           (cons (list 'js* "// ===== end props checking =====") nil)))
 
-                             accs (if (simple-ident? prop)
-                                    (list '. psym (symbol (str "-" prop)))
-                                    (list 'cljs.core/unchecked-get psym prop))
+        (::expect meta)
+        (let [props (::expect meta)]
+          (concat
+           (cons (list 'js* "// ===== start props checking =====") nil)
+           (if (map? props)
+             (->> props
+                  (map (fn [[prop pred-sym]]
+                         (let [prop (if react-props?
+                                      (hc/compile-prop-key prop)
+                                      (name prop))
 
-                             expr `(~pred-sym ~accs)]
-                         `(when-not ~(vary-meta expr assoc :tag 'boolean)
-                            (throw (js/Error. ~(str "invalid value for '" prop "'"))))))))
+                               accs (if (simple-ident? prop)
+                                      (list '. psym (symbol (str "-" prop)))
+                                      (list 'cljs.core/unchecked-get psym prop))
 
-           (->> props
-                (map (fn [prop]
-                       (let [prop (if react-props?
-                                    (hc/compile-prop-key prop)
-                                    (name prop))
-                             expr `(.hasOwnProperty ~psym ~prop)]
-                         `(when-not ~(vary-meta expr assoc :tag 'boolean)
-                            (throw (js/Error. ~(str "missing prop '" prop "'")))))))))
-         (cons (list 'js* "// ===== end props checking =====") nil))))))
+                               expr `(~pred-sym ~accs)]
+                           `(when-not ~(vary-meta expr assoc :tag 'boolean)
+                              (throw (js/Error. ~(str "invalid value for '" prop "'"))))))))
+
+             (->> props
+                  (map (fn [prop]
+                         (let [prop (if react-props?
+                                      (hc/compile-prop-key prop)
+                                      (name prop))
+                               expr `(.hasOwnProperty ~psym ~prop)]
+                           `(when-not ~(vary-meta expr assoc :tag 'boolean)
+                              (throw (js/Error. ~(str "missing prop '" prop "'")))))))))
+           (cons (list 'js* "// ===== end props checking =====") nil)))
+
+        :else
+        []))))
 
 (defn- prepare-render-fn
   [{:keys [cname meta body params props] :as ctx}]
@@ -286,6 +304,11 @@
                    cname)]
 
     `(do
+       ~@(when (and (::schema meta) *assert*)
+           (let [validator-sym (with-meta (symbol (str cname "-validator"))
+                                 {:tag 'function})]
+             [`(def ~validator-sym (rumext.v2.util/validator ~(::schema meta)))]))
+
        (def ~cname ~docs ~(if (seq wrappers)
                             (reduce (fn [r fi] `(~fi ~r)) (prepare-render-fn ctx) wrappers)
                             (prepare-render-fn ctx)))

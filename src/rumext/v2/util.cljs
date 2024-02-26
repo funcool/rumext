@@ -5,7 +5,11 @@
 ;; Copyright (c) 2016-2020 Andrey Antukh <niwi@niwi.nz>
 
 (ns ^:no-doc rumext.v2.util
-  "Runtime helpers")
+  "Runtime helpers"
+  (:require
+   [malli.core :as m]
+   [malli.error :as me]
+   [cljs-bean.core :refer [bean]]))
 
 (defn obj->map
   "Convert shallowly an js object to cljs map."
@@ -71,3 +75,18 @@
   [v]
   (.for js/Symbol v))
 
+(defn ^:no-doc validator
+  [schema]
+  (let [validator (delay (m/validator schema))
+        explainer (delay (m/explainer schema))]
+    (fn [props]
+      (let [props    (bean props)
+            validate (deref validator)]
+        (when-not ^boolean (^function validate props)
+          (let [explainer (deref explainer)
+                explain   (^function explainer props)
+                explain   (me/humanize explain)]
+            (reduce-kv (fn [result k v]
+                         (assoc result k (peek v)))
+                       explain
+                       explain)))))))

@@ -11,10 +11,10 @@
    ["react" :as react]
    ["react-dom/client" :as rdom]
    ["react/jsx-runtime" :as jsxrt]
-   [shadow.lazy]
    [cljs.core :as c]
    [goog.functions :as gf]
-   [rumext.v2.util :as util]))
+   [rumext.v2.util :as util]
+   [shadow.lazy]))
 
 (def ^:const undefined (js* "(void 0)"))
 
