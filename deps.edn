@@ -1,4 +1,5 @@
 {:deps {metosin/malli {:mvn/version "0.14.0"}
+        funcool/cuerdas {:mvn/version "2023.11.09-407"}
         cljs-bean/cljs-bean {:mvn/version "1.9.0"}}
  :paths ["src"]
  :aliases

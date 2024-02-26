@@ -9,8 +9,8 @@
   (:require
    [cljs.core :as-alias c]
    [clojure.string :as str]
-   [rumext.v2.util :as hu]
-   [rumext.v2.compiler :as hc]))
+   [rumext.v2.compiler :as hc]
+   [rumext.v2.util :as util]))
 
 (create-ns 'rumext.v2.util)
 
@@ -104,7 +104,7 @@
           (set? items)
           (concat (mapcat (fn [k]
                             (let [prop-name (if react-props?
-                                              (hu/compile-prop-key k)
+                                              (util/ident->prop k)
                                               (name k))
                                   accessor  (if (simple-ident? prop-name)
                                               (list '. psym (symbol (str "-" prop-name)))
@@ -160,7 +160,7 @@
           (if (seq k-props)
             (reduce (fn [[props params] [ks kp]]
                       (let [kp (if react-props?
-                                 (hu/compile-prop-key kp)
+                                 (util/ident->prop kp)
                                  (name kp))]
                         [(conj props (str "~{}: ~{}"))
                          (conj params kp ks)]))
@@ -207,7 +207,7 @@
              (->> props
                   (map (fn [[prop pred-sym]]
                          (let [prop (if react-props?
-                                      (hu/compile-prop-key prop)
+                                      (util/ident->prop prop)
                                       (name prop))
 
                                accs (if (simple-ident? prop)
@@ -221,7 +221,7 @@
              (->> props
                   (map (fn [prop]
                          (let [prop (if react-props?
-                                      (hu/compile-prop-key prop)
+                                      (util/ident->prop prop)
                                       (name prop))
                                expr `(.hasOwnProperty ~psym ~prop)]
                            `(when-not ~(vary-meta expr assoc :tag 'boolean)
@@ -256,7 +256,7 @@
             op-s (with-meta (gensym "old-props-") {:tag 'js})
             op-f (fn [prop]
                    (let [prop (if react-props?
-                                (hu/compile-prop-key prop)
+                                (util/ident->prop prop)
                                 (name prop))
                          accs (if (simple-ident? prop)
                                 (let [prop (symbol (str "-" (name prop)))]

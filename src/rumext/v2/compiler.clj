@@ -10,8 +10,8 @@
   (:require
    [clojure.core :as c]
    [clojure.string :as str]
-   [rumext.v2.util :as util]
-   [rumext.v2.normalize :as norm])
+   [rumext.v2.normalize :as norm]
+   [rumext.v2.util :as util])
   (:import
    cljs.tagged_literals.JSValue))
 
@@ -298,13 +298,20 @@
     (literal? content) content
     :else              (compile-form content)))
 
+(defn compile-prop-key
+  "Compiles a key to a react compatible key (eg: camelCase)"
+  [k]
+  (if (or (keyword? k) (symbol? k))
+    (util/ident->prop k)
+    k))
+
 (defn- compile-recursive-keys
   [m]
   (cond
     (map? m)
     (reduce-kv
       (fn [m k v]
-        (assoc m (util/compile-prop-key k) v))
+        (assoc m (compile-prop-key k) v))
       {} m)
     ;; React native accepts :style [{:foo-bar ..} other-styles] so camcase those keys:
     (vector? m)
@@ -315,7 +322,7 @@
 
 (defn compile-prop
   [[key val :as kvpair]]
-  (let [key (util/compile-prop-key key)]
+  (let [key (compile-prop-key key)]
     (case key
       "className"
       [key (compile-class-attr-value val)]

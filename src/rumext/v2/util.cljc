@@ -9,11 +9,12 @@
   (:require
    [malli.core :as m]
    [malli.error :as me]
-   [clojure.string :as str]
+   [cuerdas.core :as str]
    #?(:cljs [cljs-bean.core :refer [bean]])))
 
-(defn compile-prop-key
-  "Compiles a key to a react compatible key (eg: camelCase)"
+(defn ident->prop
+  "Compiles a keyword or symbol to string using react prop naming
+  convention"
   [k]
   (if (or (keyword? k) (symbol? k))
     (let [nword (name k)]
@@ -27,9 +28,13 @@
         (let [[first-word & words] (str/split nword #"-")]
           (if (empty? words)
             nword
-            (-> (map str/capitalize words)
-                (conj first-word)
-                str/join)))))
+            (let [vendor? (str/starts-with? nword "-")
+                  result  (-> (map str/capital words)
+                              (conj first-word)
+                              str/join)]
+              (if (str/starts-with? nword "-")
+                (str/capital result)
+                result))))))
     k))
 
 #?(:cljs
@@ -107,6 +112,11 @@
        (.-fqn x))))
 
 #?(:cljs
+   (defn- react-key->prop [x]
+     (when (keyword? x)
+       (ident->prop x))))
+
+#?(:cljs
    (defn ^:no-doc validator
      [schema react-props?]
      (let [validator (delay (m/validator schema))
@@ -115,7 +125,7 @@
          (let [props    (bean props
                               :prop->key keyword
                               :key->prop (if react-props?
-                                           compile-prop-key
+                                           react-key->prop
                                            default-key->prop))
 
                validate (deref validator)]
