@@ -592,4 +592,4 @@ project needs.
 
 ## License
 
-Licensed under Eclipse Public License (see [LICENSE](LICENSE)).
+Licensed under MPL-2.0 (see LICENSE file on the root of the repository)
