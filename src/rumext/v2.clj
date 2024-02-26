@@ -9,6 +9,7 @@
   (:require
    [cljs.core :as-alias c]
    [clojure.string :as str]
+   [rumext.v2.util :as hu]
    [rumext.v2.compiler :as hc]))
 
 (create-ns 'rumext.v2.util)
@@ -103,7 +104,7 @@
           (set? items)
           (concat (mapcat (fn [k]
                             (let [prop-name (if react-props?
-                                              (hc/compile-prop-key k)
+                                              (hu/compile-prop-key k)
                                               (name k))
                                   accessor  (if (simple-ident? prop-name)
                                               (list '. psym (symbol (str "-" prop-name)))
@@ -159,7 +160,7 @@
           (if (seq k-props)
             (reduce (fn [[props params] [ks kp]]
                       (let [kp (if react-props?
-                                 (hc/compile-prop-key kp)
+                                 (hu/compile-prop-key kp)
                                  (name kp))]
                         [(conj props (str "~{}: ~{}"))
                          (conj params kp ks)]))
@@ -206,7 +207,7 @@
              (->> props
                   (map (fn [[prop pred-sym]]
                          (let [prop (if react-props?
-                                      (hc/compile-prop-key prop)
+                                      (hu/compile-prop-key prop)
                                       (name prop))
 
                                accs (if (simple-ident? prop)
@@ -220,7 +221,7 @@
              (->> props
                   (map (fn [prop]
                          (let [prop (if react-props?
-                                      (hc/compile-prop-key prop)
+                                      (hu/compile-prop-key prop)
                                       (name prop))
                                expr `(.hasOwnProperty ~psym ~prop)]
                            `(when-not ~(vary-meta expr assoc :tag 'boolean)
@@ -255,7 +256,7 @@
             op-s (with-meta (gensym "old-props-") {:tag 'js})
             op-f (fn [prop]
                    (let [prop (if react-props?
-                                (hc/compile-prop-key prop)
+                                (hu/compile-prop-key prop)
                                 (name prop))
                          accs (if (simple-ident? prop)
                                 (let [prop (symbol (str "-" (name prop)))]
@@ -298,16 +299,16 @@
   understand how to use it."
   [& args]
   (let [{:keys [cname docs meta] :as ctx} (parse-defc args)
-        wrappers (resolve-wrappers ctx)
-        cname    (if (::private meta)
-                   (vary-meta cname assoc :private true)
-                   cname)]
-
+        wrappers     (resolve-wrappers ctx)
+        react-props? (react-props? ctx)
+        cname        (if (::private meta)
+                       (vary-meta cname assoc :private true)
+                       cname)]
     `(do
        ~@(when (and (::schema meta) *assert*)
            (let [validator-sym (with-meta (symbol (str cname "-validator"))
                                  {:tag 'function})]
-             [`(def ~validator-sym (rumext.v2.util/validator ~(::schema meta)))]))
+             [`(def ~validator-sym (rumext.v2.util/validator ~(::schema meta) ~react-props?))]))
 
        (def ~cname ~docs ~(if (seq wrappers)
                             (reduce (fn [r fi] `(~fi ~r)) (prepare-render-fn ctx) wrappers)
