@@ -268,15 +268,14 @@ an js object following react convention (camelcasing keys, etc.); This
 greatly facilitates the task of passing the props to the next element
 without performing any additional transformation.
 
-For this last case and to make the work even easier but preserving the
-same code style as the rest of the application, rumext offers a way
-for the destructuring to also take into account the rules and
-conventions of react for the props keys.
-
-This is achieved with the metadata `{::mf/props :react}` or by putting
-the suffix `*` in the component name. And then, the destructuring can
-use the lisp-case and the macro will automatically access the value
-with camelCase from the props, respecting the react convention.
+And finally, to help preserve the code style, rumext offers a way for
+the destructuring to also take into account the rules and conventions
+of react for the props keys. This is achieved with the metadata
+`{::mf/props :react}` or by putting the suffix `*` in the component
+name. With that, the destructuring can use the lisp-case for keys and
+the macro will automatically generate the appropriate access code to
+the value with camelCase from the props, respecting the react
+convention.
 
 ```
 (mf/defc my-label*
@@ -294,9 +293,11 @@ handler: `[:&` or `[:>`.
 
 ## Props Checking
 
-Rumext comes with basic props checking that allows basic existence
-checking or with simple predicate checking. For simple existence
-checking, just pass a set with prop names.
+The rumext library comes with two approaches for checking props:
+**simple** and **malli**.
+
+Lets start with the **simple**, which consists on simple existence
+check or plain predicate checking:
 
 ```clojure
 (mf/defc button
@@ -307,9 +308,9 @@ checking, just pass a set with prop names.
 ```
 
 The prop names obeys the same rules as the destructuring so you should
-use the same names in destructuring.
-
-You also can add some predicates:
+use the same names in destructuring. Sometimes a simple existence
+check is not enought, for that cases you can pass a map where keys are
+props and values predicates:
 
 ```clojure
 (mf/defc button
@@ -320,8 +321,29 @@ You also can add some predicates:
   [:button {:on-click on-click} name])
 ```
 
-The props checking obey the `:elide-asserts` compiler option and they
-are removed on production builds.
+If that is not enough, it also supports
+**[malli](https://github.com/metosin/malli)** as validation mechanism
+for props:
+
+```clojure
+(def ^:private schema:props
+  [:map {:title "button:props"}
+   [:name string?]
+   [:class {:optional true} string?]
+   [:on-click fn?]])
+
+(mf/defc button
+  {::mf/props :obj
+   ::mf/schema schema:props}
+  [{:keys [name on-click]}]
+  [:button {:on-click on-click} name])
+```
+
+The prop names on schema obeys the destructuring rules for key casing.
+
+
+**NOTE**: The props checking obey the `:elide-asserts` compiler option
+and they are removed on production builds.
 
 
 ## Higher-Order Components

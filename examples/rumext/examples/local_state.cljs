@@ -5,30 +5,23 @@
    [rumext.v2 :as mf]
    [rumext.examples.util :as util]))
 
-(def schema:label-props
+(def schema:label
   [:map {:title "label:props"}
-   [:on-click fn?]
-   [:state map?]])
+   [:on-click {:optional true} fn?]
+   [:title string?]
+   [:n number?]])
 
 (mf/defc label
   {::mf/memo true
-   ::mf/props :obj
-   ::mf/schema schema:label-props}
-  [{:keys [state] :as props :rest others}]
-  (let [{:keys [title n]} state
-        props (mf/spread-props {:class "baar"}
-                               :data-test "1")
-        ]
-    (js/console.log props)
-    (js/console.log others)
-    [:div {:class "foobar"}
+   ::mf/props :react
+   ::mf/schema schema:label
+   }
+  [{:keys [title n] :as props :rest others}]
+  (js/console.log "label:props" props)
+  (js/console.log "label:others" others)
+  (let [props (mf/spread-props others {:class "my-label"})]
+    [:> :div props
      [:span title ": " n]]))
-
-(mf/defc label*
-  {::mf/wrap [#(mf/memo' % (mf/check-props ["title" "n"]))]}
-  [{:keys [title n on-click data-foo] :as props}]
-  [:div
-   [:span title ": " n]])
 
 (mf/defc local-state
   "test docstring"
@@ -42,13 +35,15 @@
                                 :n 0}}))]
     [:section {:class "counters"}
      [:hr]
-     [:& label {:state (:counter1 @local) :data-foobar 1 :on-click identity :id :foobar}]
-     (let [{:keys [title n]} (:counter2 @local)]
-       [:> label* {:title title :n n :on-click identity}])
+     (let [{:keys [title n]} (:counter1 @local)]
+       [:> label {:n n :title title :data-foobar 1 :on-click identity :id "foobar"}])
+     #_(let [{:keys [title n]} (:counter2 @local)]
+       [:> label {:title title :n n :on-click identity}])
      [:button {:on-click #(swap! local update-in [:counter1 :n] inc)} "Increment Counter 1"]
      [:button {:on-click #(swap! local update-in [:counter2 :n] inc)} "Increment Counter 2"]]))
 
-(def root (mf/create-root (dom/getElement "local-state-1")))
+(defonce root
+  (mf/create-root (dom/getElement "local-state-1")))
 
 (defn mount! []
   (mf/render! root (mf/element local-state #js {:title "Clicks count"})))
