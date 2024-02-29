@@ -147,17 +147,14 @@
 
           k-props    (dissoc props :keys :as :& :rest)
           k-props    (->> (:keys props [])
-                          (remove (comp simple-ident? name))
-                          (map (fn [k] [k k]))
+                          (map (fn [k]
+                                 (let [kv (if react-props?
+                                            (util/ident->prop k)
+                                            (name k))]
+                                   [k kv])))
                           (into k-props))
 
-          props      (->> (:keys props [])
-                          (filter (comp simple-ident? name))
-                          (mapv (fn [k]
-                                  (if react-props?
-                                    (util/ident->prop k)
-                                    (name k)))))
-
+          props      []
           params     []
 
           [props params]
