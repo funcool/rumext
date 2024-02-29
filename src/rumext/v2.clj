@@ -145,20 +145,25 @@
           all-alias  (:as props)
           rst-alias  (or (:& props) (:rest props))
 
-          s-props    (->> (:keys props [])
-                          (filter (comp simple-ident? name)))
           k-props    (dissoc props :keys :as :& :rest)
           k-props    (->> (:keys props [])
                           (remove (comp simple-ident? name))
                           (map (fn [k] [k k]))
                           (into k-props))
 
-          props  (mapv name s-props)
-          params []
+          props      (->> (:keys props [])
+                          (filter (comp simple-ident? name))
+                          (mapv (fn [k]
+                                  (if react-props?
+                                    (util/ident->prop k)
+                                    (name k)))))
+
+          params     []
 
           [props params]
           (if (seq k-props)
             (reduce (fn [[props params] [ks kp]]
+                      ;; (prn "KKK" ks kp)
                       (let [kp (if react-props?
                                  (util/ident->prop kp)
                                  (name kp))]
