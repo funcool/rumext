@@ -1,4 +1,4 @@
-{:deps {metosin/malli {:mvn/version "0.14.0"}
+{:deps {metosin/malli {:mvn/version "0.16.0"}
         funcool/cuerdas {:mvn/version "2023.11.09-407"}
         cljs-bean/cljs-bean {:mvn/version "1.9.0"}}
  :paths ["src"]
@@ -8,11 +8,11 @@
    :extra-deps
    {com.bhauman/rebel-readline {:mvn/version "RELEASE"}
     funcool/okulary {:mvn/version "RELEASE"}
-    thheller/shadow-cljs {:mvn/version "RELEASE"}
+    thheller/shadow-cljs {:mvn/version "2.28.8"}
     org.clojure/tools.namespace {:mvn/version "RELEASE"}
     org.clojure/test.check {:mvn/version "RELEASE"}
     ;; org.clojure/tools.deps.alpha {:mvn/version "RELEASE"}
-    org.clojure/clojure {:mvn/version "1.11.1"}
+    org.clojure/clojure {:mvn/version "1.11.3"}
     }}
 
   :codox
@@ -33,5 +33,5 @@
    :main-opts ["-m" "antq.core"]}
 
   :build
-  {:extra-deps {io.github.clojure/tools.build {:git/tag "v0.8.1" :git/sha "7d40500"}}
+  {:extra-deps {io.github.clojure/tools.build {:git/tag "v0.10.3" :git/sha "15ead66"}}
    :ns-default build}}}
