@@ -422,16 +422,22 @@
                        :else
                        (assoc props :children (apply list 'cljs.core/array children)))
 
+              key   (:key props)
+              props (dissoc props :key)
+
               props (cond->> props
                       (not (::omit-key-transform mdata))
                       (into {} (map compile-prop))
 
                       :always
                       (compile-map-to-js))]
-
-          (if (> (count children) 1)
-            (list 'rumext.v2/jsxs tag props)
-            (list 'rumext.v2/jsx tag props)))
+          (if key
+            (if (> nchild 1)
+              (list 'rumext.v2/jsxs tag props key)
+              (list 'rumext.v2/jsx tag props key))
+            (if (> nchild 1)
+              (list 'rumext.v2/jsxs tag props)
+              (list 'rumext.v2/jsx tag props))))
 
         (let [props  (if (and (::allow-dynamic-transform mdata) (not jstag?))
                        (list 'rumext.v2.util/map->obj props)
@@ -439,16 +445,13 @@
               nchild (count children)]
           (cond
             (= 0 nchild)
-            (list 'rumext.v2/jsx tag props)
+            (list 'rumext.v2/create-element tag props)
 
             (= 1 nchild)
-            (list 'rumext.v2/jsx tag
-                  (list 'js* "{...~{}, children: ~{}}" props (first children)))
+            (list 'rumext.v2/create-element tag props (first children))
 
             :else
-            (list 'rumext.v2/jsxs tag
-                  (list 'js* "{...~{}, children: ~{}}" props
-                        (apply list 'cljs.core/array children))))))
+            (apply list 'rumext.v2/create-element tag props children))))
 
       (throw (ex-info "jsx: invalid props type" {:props props})))))
 

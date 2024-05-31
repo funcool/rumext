@@ -371,6 +371,8 @@
                  :else (throw (ex-info "Unexpected props" {:props props})))]
      (jsx klass props undefined))))
 
+(def ^function create-element react/createElement)
+
 ;; --- Higher-Order Components
 
 (defn memo
