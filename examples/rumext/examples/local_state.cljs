@@ -16,10 +16,13 @@
    ::mf/props :react
    ::mf/schema schema:label
    }
-  [{:keys [title n] :as props :rest others}]
-  (js/console.log "label:props" props)
-  (js/console.log "label:others" others)
-  (let [props (mf/spread-props others {:class "my-label"})]
+  [{:keys [class title n] :as props :rest others}]
+  (let [ref   (mf/use-var nil)
+        props (mf/spread-props others {:class (or class "my-label")})]
+
+    (mf/with-effect []
+      (reset! ref 1))
+
     [:> :div props
      [:span title ": " n]]))
 
@@ -33,7 +36,7 @@
                                 :n 0}
                      :counter2 {:title "Counter 2"
                                 :n 0}}))]
-    [:section {:class "counters"}
+    [:section {:class "counters" :style {:-webkit-border-radius "10px"}}
      [:hr]
      (let [{:keys [title n]} (:counter1 @local)]
        [:> label {:n n :title title :data-foobar 1 :on-click identity :id "foobar"}])
@@ -45,5 +48,5 @@
 (defonce root
   (mf/create-root (dom/getElement "local-state-1")))
 
-(defn mount! []
+(defn ^:after-load mount! []
   (mf/render! root (mf/element local-state #js {:title "Clicks count"})))

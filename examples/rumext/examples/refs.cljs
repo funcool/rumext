@@ -30,7 +30,8 @@
   [:div
    [:& textarea]])
 
-(def root (mf/create-root (dom/getElement "refs")))
+(defonce root
+  (mf/create-root (dom/getElement "refs")))
 
-(defn mount! []
+(defn ^:after-load mount! []
   (mf/render! root (mf/element refs)))

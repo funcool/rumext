@@ -14,7 +14,9 @@
 (mf/defc bit
   {::mf/wrap-props false}
   [{:keys [n b]}]
-  (mf/use-effect (mf/deps n b) #(swap! *bclock-renders inc))
+  (mf/with-effect [n b]
+    (swap! *bclock-renders inc))
+
   (let [color (mf/deref util/*color)]
     (if (bit-test n b)
       [:td.bclock-bit {:style {:background-color color}}]
@@ -91,8 +93,9 @@
        [:th {:col-span 8}
         [:& render-count {}]]]]]))
 
-(def root (mf/create-root (dom/getElement "binary-clock")))
+(defonce root
+  (mf/create-root (dom/getElement "binary-clock")))
 
-(defn mount! []
+(defn ^:after-load mount! []
   (mf/render! root (mf/element binary-clock)))
 

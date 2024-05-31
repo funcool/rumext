@@ -22,10 +22,13 @@
    [:span {:style {:color @util/*color}}
     (util/format-time ts)]])
 
-(def root1 (mf/create-root (dom/getElement "timer1")))
-(def root2 (mf/create-root (dom/getElement "timer2")))
+(defonce root1
+  (mf/create-root (dom/getElement "timer1")))
 
-(defn mount! []
+(defonce root2
+  (mf/create-root (dom/getElement "timer2")))
+
+(defn ^:after-load mount! []
   (mf/render! root1 (mf/jsx timer1 {}))
   (mf/render! root2 (mf/jsx timer2 #js  {:ts @util/*clock}))
   (add-watch util/*clock :timer-static

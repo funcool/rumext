@@ -27,13 +27,14 @@
    (for [y (range 0 util/board-height)]
      [:div.art-row {:key y}
       (for [x (range 0 util/board-width)]
-        ;; this is how one can specify React key for component
-        [:& cell {:key x :x x :y y}])])])
+        (let [props #js {:key x :x x :y y}]
+          ;; this is how one can specify React key for component
+          [:& cell ^js props]))])])
 
+(defonce root
+  (mf/create-root (dom/getElement "board")))
 
-(def root (mf/create-root (dom/getElement "board")))
-
-(defn mount! []
+(defn ^:after-load mount! []
   (mf/render! root (mf/element board-reactive))
   (js/setTimeout (fn []
                    (mf/render! root (mf/element board-reactive)))
