@@ -171,10 +171,12 @@
   ;; to a fast reduce outputting a JS array:
   (if (== 2 (count bindings))
     (let [[item coll] bindings]
-      `(reduce (fn [out-arr# ~item]
-                 (.push out-arr# ~(compile* body))
-                 out-arr#)
-               (cljs.core/array) ~coll))
+      (if (= 'js (:tag (meta coll)))
+        `(.map ~coll (fn [~item] ~(compile* body)))
+        `(reduce (fn [out-arr# ~item]
+                   (.push out-arr# ~(compile* body))
+                   out-arr#)
+                 (cljs.core/array) ~coll)))
     ;; Still optimize a little by giving React an array:
     (list 'cljs.core/into-array `(for ~bindings ~(compile* body)))))
 
