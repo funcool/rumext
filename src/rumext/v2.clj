@@ -195,9 +195,13 @@
            (cons (list 'js* "// ===== start props checking =====") nil)
            [`(let [res# (~validator-sym ~psym)]
                (when (some? res#)
-                 (let [res# (first res#)
-                       msg# (str ~(str "invalid props on component " (str cname) " ")
-                                 "('" (name (key res#)) "' " (val res#) ")\n")]
+                 (let [items# (reduce-kv (fn [result# k# v#]
+                                           (conj result# (str "  -> '" k# "' " v# "")))
+                                         []
+                                         res#)
+                       msg#   (str ~(str "invalid props on component " (str cname) "\n\n")
+                                   (str/join "\n" items#)
+                                   "\n")]
                    (throw (js/Error. msg#)))))]
            (cons (list 'js* "// ===== end props checking =====") nil)))
 
@@ -320,8 +324,7 @@
            [`(set! (.-displayName ~cname) ~(str cname))])
 
        ~(when-let [registry (::register meta)]
-          `(swap! ~registry (fn [state#] (assoc state# ~(::register-as meta (keyword (str cname))) ~cname))))
-       )))
+          `(swap! ~registry (fn [state#] (assoc state# ~(::register-as meta (keyword (str cname))) ~cname)))))))
 
 (defmacro with-memo
   "A convenience syntactic abstraction (macro) for `useMemo`"
@@ -479,4 +482,4 @@
                 (> (count rest) 1) (apply hash-map rest)
                 (= (count rest) 0) {}
                 :else              other)]
-     (hc/compile-to-js-spread target other hc/compile-prop)))
+    (hc/compile-to-js-spread target other hc/compile-prop)))

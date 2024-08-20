@@ -226,21 +226,21 @@
   [[_ v & cases]]
   `(case ~v
      ~@(doall (mapcat
-                (fn [[test hiccup]]
-                  (if hiccup
-                    [test (compile* hiccup)]
-                    [(compile* test)]))
-                (partition-all 2 cases)))))
+               (fn [[test hiccup]]
+                 (if hiccup
+                   [test (compile* hiccup)]
+                   [(compile* test)]))
+               (partition-all 2 cases)))))
 
 (defmethod compile-form "condp"
   [[_ f v & cases]]
   `(condp ~f ~v
      ~@(doall (mapcat
-                (fn [[test hiccup]]
-                  (if hiccup
-                    [test (compile* hiccup)]
-                    [(compile* test)]))
-                (partition-all 2 cases)))))
+               (fn [[test hiccup]]
+                 (if hiccup
+                   [test (compile* hiccup)]
+                   [(compile* test)]))
+               (partition-all 2 cases)))))
 
 (defmethod compile-form "cond"
   [[_ & clauses]]
@@ -310,9 +310,9 @@
   (cond
     (map? m)
     (reduce-kv
-      (fn [m k v]
-        (assoc m (compile-prop-key k) v))
-      {} m)
+     (fn [m k v]
+       (assoc m (compile-prop-key k) v))
+     {} m)
     ;; React native accepts :style [{:foo-bar ..} other-styles] so camcase those keys:
     (vector? m)
     (mapv compile-recursive-keys m)

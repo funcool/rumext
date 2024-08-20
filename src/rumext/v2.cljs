@@ -393,8 +393,8 @@
   (let [constructor
         (fn [props]
           (this-as this
-            (unchecked-set this "state" #js {})
-            (.call Component this props)))
+                   (unchecked-set this "state" #js {})
+                   (.call Component this props)))
 
         did-catch
         (fn [error info]
@@ -408,12 +408,12 @@
         render
         (fn []
           (this-as this
-            (let [state (unchecked-get this "state")
-                  props (unchecked-get this "props")
-                  error (unchecked-get state "error")]
-              (if error
-                (jsx fallback #js {:error error} undefined)
-                (jsx component props undefined)))))
+                   (let [state (unchecked-get this "state")
+                         props (unchecked-get this "props")
+                         error (unchecked-get state "error")]
+                     (if error
+                       (jsx fallback #js {:error error} undefined)
+                       (jsx component props undefined)))))
 
         _ (goog/inherits constructor Component)
         prototype (unchecked-get constructor "prototype")]

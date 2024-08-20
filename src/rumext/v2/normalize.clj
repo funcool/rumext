@@ -11,11 +11,11 @@
   "Removes all map entries where the value of the entry is empty."
   [m]
   (reduce
-    (fn [m k]
-      (let [v (get m k)]
-        (if (empty? v)
-          (dissoc m k) m)))
-    m (keys m)))
+   (fn [m k]
+     (let [v (get m k)]
+       (if (empty? v)
+         (dissoc m k) m)))
+   m (keys m)))
 
 (defn class-name
   [x]

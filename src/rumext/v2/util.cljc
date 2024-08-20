@@ -7,10 +7,10 @@
 (ns ^:no-doc rumext.v2.util
   "Runtime helpers"
   (:require
-   [malli.core :as m]
-   [malli.error :as me]
+   #?(:cljs [cljs-bean.core :refer [bean]])
    [cuerdas.core :as str]
-   #?(:cljs [cljs-bean.core :refer [bean]])))
+   [malli.core :as m]
+   [malli.error :as me]))
 
 (defn ident->prop
   "Compiles a keyword or symbol to string using react prop naming
@@ -141,17 +141,56 @@
            explainer (delay (m/explainer schema))]
        (fn [props]
          (let [props    (bean props
+                              :recursive true
                               :prop->key keyword
                               :key->prop (if react-props?
                                            react-key->prop
                                            default-key->prop))
-
                validate (deref validator)]
            (when-not ^boolean (^function validate props)
              (let [explainer (deref explainer)
                    explain   (^function explainer props)
-                   explain   (me/humanize explain)]
-               (reduce-kv (fn [result k v]
-                            (assoc result k (peek v)))
-                          explain
-                          explain))))))))
+                   explain   (me/humanize explain)
+
+                   process-kv
+                   (fn process-kv [prefix result k v]
+                     (let [nm (if (keyword? k)
+                                (name k)
+                                (str k))
+                           pk (if prefix
+                                (str prefix "." nm)
+                                nm)]
+                       (cond
+                         (and (vector? v) (every? vector? v))
+                         (let [data (into {} (map-indexed vector) v)]
+                           (reduce-kv (partial process-kv pk) result data))
+
+                         (and (vector? v) (every? map? v))
+                         (let [gdata (into {} (comp
+                                               (map :malli/error)
+                                               (map-indexed vector)
+                                               (filter second))
+                                           v)
+                               ndata (into {} (comp
+                                               (map #(dissoc % :malli/error))
+                                               (map-indexed vector))
+                                           v)
+
+                               result (reduce-kv (partial process-kv pk) result gdata)
+                               result (reduce-kv (partial process-kv pk) result ndata)]
+
+                           result)
+
+                         (and (vector? v) (every? string? v))
+                         (assoc result pk (peek v))
+
+                         (map? v)
+                         (reduce-kv (partial process-kv pk) result v)
+
+                         :else
+                         result)))
+
+                   result
+                   (reduce-kv (partial process-kv nil) {} explain)]
+
+               result)))))))
