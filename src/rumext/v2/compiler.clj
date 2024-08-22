@@ -47,9 +47,22 @@
               props (if (instance? clojure.lang.IObj props)
                       (vary-meta props assoc
                                  ::transform-props-keys true
-                                 ::transform-props-recursive true)
+                                 ::transform-props-recursive false)
                       props)]
           [tag props (drop 3 children)]))
+
+   :>> (fn [& [_ tag props :as children]]
+         (when (> 3 (count children))
+           (throw (ex-info "invalid params for `:>` handler, tag and props are mandatory"
+                           {:params children})))
+
+         (let [props (or props {})
+               props (if (instance? clojure.lang.IObj props)
+                       (vary-meta props assoc
+                                  ::transform-props-keys true
+                                  ::transform-props-recursive true)
+                       props)]
+           [tag props (drop 3 children)]))
 
    :& (fn [& [_ tag props :as children]]
         (when (> 2 (count children))
