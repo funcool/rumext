@@ -12,6 +12,20 @@
    [malli.core :as m]
    [malli.error :as me]))
 
+(defn ident->key
+  [k]
+  (let [nword (if (string? k) k (name k))]
+    (if (nil? (str/index-of nword "-"))
+      nword
+      (let [[first-word & words] (str/split nword #"-")
+            vendor? (str/starts-with? nword "-")
+            result  (-> (map str/capital words)
+                        (conj first-word)
+                        str/join)]
+        (if (str/starts-with? nword "-")
+          (str/capital result)
+          result)))))
+
 (defn ident->prop
   "Compiles a keyword or symbol to string using react prop naming
   convention"
@@ -24,16 +38,7 @@
       (str/starts-with? nword "data-") nword
       (str/starts-with? nword "aria-") nword
       :else
-      (if (nil? (str/index-of nword "-"))
-        nword
-        (let [[first-word & words] (str/split nword #"-")
-              vendor? (str/starts-with? nword "-")
-              result  (-> (map str/capital words)
-                          (conj first-word)
-                          str/join)]
-          (if (str/starts-with? nword "-")
-            (str/capital result)
-            result))))))
+      (ident->key nword))))
 
 #?(:cljs
    (defn obj->map

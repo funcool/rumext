@@ -44,20 +44,11 @@
                           {:params children})))
 
         (let [props (or props {})
-              props (vary-meta props assoc
-                               ::transform-props-keys true
-                               ::transform-props-recursive false)]
-          [tag props (drop 3 children)]))
-
-   :>> (fn [& [_ tag props :as children]]
-         (when (> 3 (count children))
-           (throw (ex-info "invalid params for `:>` handler, tag and props are mandatory"
-                           {:params children})))
-
-        (let [props (or props {})
-              props (vary-meta props assoc
-                               ::transform-props-keys true
-                               ::transform-props-recursive true)]
+              props (if (instance? clojure.lang.IObj props)
+                      (vary-meta props assoc
+                                 ::transform-props-keys true
+                                 ::transform-props-recursive true)
+                      props)]
           [tag props (drop 3 children)]))
 
    :& (fn [& [_ tag props :as children]]
@@ -326,6 +317,13 @@
     (util/ident->prop k)
     k))
 
+(defn compile-prop-inner-key
+  "Compiles a key to a react compatible key (eg: camelCase)"
+  [k]
+  (if (or (keyword? k) (symbol? k))
+    (util/ident->key k)
+    k))
+
 (defn- compile-style-value
   [m]
   (cond
@@ -361,8 +359,10 @@
 
 (defn compile-prop
   [[key val :as kvpair]]
-  (let [key (compile-prop-key key)
-        lev (or *transform-props-recursive* 1)]
+  (let [lev (or *transform-props-recursive* 1)
+        key (if (= lev 1)
+              (compile-prop-key key)
+              (compile-prop-inner-key key))]
     (cond
       (and (= lev 1)
            (= key "className"))
@@ -431,7 +431,7 @@
                  transform-props-keys true}
             :as params}]
 
-  (binding [*transform-props-recursive* (if transform-props-recursive 1 0)]
+  (binding [*transform-props-recursive* (if transform-props-recursive 1 nil)]
     (cond->> props
       (true? transform-props-keys)
       (into {} (map compile-prop))
