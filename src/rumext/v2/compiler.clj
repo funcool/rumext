@@ -15,11 +15,14 @@
   (:import
    cljs.tagged_literals.JSValue))
 
-(declare ^:private compile-to-js)
-(declare ^:private compile-map-to-js)
-(declare ^:private emit-jsx)
 (declare ^:private compile*)
+(declare ^:private compile-map-to-js)
+(declare ^:private compile-prop)
+(declare ^:private compile-to-js)
+(declare ^:private compile-vec-to-js)
+(declare ^:private emit-jsx)
 
+(def ^:dynamic *transform-props-recursive* nil)
 (def ^:dynamic *handlers* nil)
 
 (defn- js-value?
@@ -39,7 +42,23 @@
         (when (> 3 (count children))
           (throw (ex-info "invalid params for `:>` handler, tag and props are mandatory"
                           {:params children})))
-        [tag props (drop 3 children)])
+
+        (let [props (or props {})
+              props (vary-meta props assoc
+                               ::transform-props-keys true
+                               ::transform-props-recursive false)]
+          [tag props (drop 3 children)]))
+
+   :>> (fn [& [_ tag props :as children]]
+         (when (> 3 (count children))
+           (throw (ex-info "invalid params for `:>` handler, tag and props are mandatory"
+                           {:params children})))
+
+        (let [props (or props {})
+              props (vary-meta props assoc
+                               ::transform-props-keys true
+                               ::transform-props-recursive true)]
+          [tag props (drop 3 children)]))
 
    :& (fn [& [_ tag props :as children]]
         (when (> 2 (count children))
@@ -52,7 +71,8 @@
 
         (let [props (or props {})
               props (vary-meta props assoc
-                               ::omit-key-transform true
+                               ::transform-props-keys false
+                               ::transform-props-recursive false
                                ::allow-dynamic-transform true)]
           [tag props (drop 3 children)]))
 
@@ -137,7 +157,6 @@
     (apply compile-join-classes value)
 
     :else value))
-
 
 (defmulti compile-form
   "Pre-compile certain standard forms, where possible."
@@ -307,7 +326,7 @@
     (util/ident->prop k)
     k))
 
-(defn- compile-recursive-keys
+(defn- compile-style-value
   [m]
   (cond
     (map? m)
@@ -317,29 +336,52 @@
      {} m)
     ;; React native accepts :style [{:foo-bar ..} other-styles] so camcase those keys:
     (vector? m)
-    (mapv compile-recursive-keys m)
+    (mapv compile-style-value m)
 
     :else
     m))
 
+(defn compile-prop-value
+  [val]
+  (if (some? *transform-props-recursive*)
+    (binding [*transform-props-recursive* (inc *transform-props-recursive*)]
+      (cond
+        (map? val)
+        (->> val
+             (into {} (map compile-prop))
+             (compile-map-to-js))
+
+        (vector? val)
+        (->> val
+             (mapv compile-prop-value)
+             (compile-vec-to-js))
+
+        :else val))
+    val))
+
 (defn compile-prop
   [[key val :as kvpair]]
-  (let [key (compile-prop-key key)]
-    (case key
-      "className"
+  (let [key (compile-prop-key key)
+        lev (or *transform-props-recursive* 1)]
+    (cond
+      (and (= lev 1)
+           (= key "className"))
       [key (compile-class-attr-value val)]
 
-      "style"
+      (and (= lev 1)
+           (= key "style"))
       [key (-> val
-               (compile-recursive-keys)
+               (compile-style-value)
                (compile-map-to-js))]
 
-      "htmlFor"
+      (and (= lev 1)
+           (= key "htmlFor"))
       [key (if (keyword? val)
              (name val)
              val)]
 
-      [key val])))
+      :else
+      [key (compile-prop-value val)])))
 
 (defn compile-kv-to-js
   "A internal method helper for compile kv data structures"
@@ -354,7 +396,7 @@
      (vec (vals form))]))
 
 (defn compile-map-to-js
-  "Compile a statically known data sturcture, non-recursivelly to js
+  "Compile a statically known map data sturcture, non-recursivelly to js
   expression. Mainly used by macros for create js data structures at
   compile time."
   [form]
@@ -365,6 +407,37 @@
         (-> (apply list 'js* (str "{" keys "}") vals)
             (vary-meta assoc :tag 'object))))
     form))
+
+(defn compile-vec-to-js
+  "Compile a statically known map data sturcture, non-recursivelly to js
+  expression. Mainly used by macros for create js data structures at
+  compile time."
+  [form]
+  (if (vector? form)
+    (if (empty? form)
+      (list 'js* "[]")
+      (let [template (->> form
+                          (map (constantly "~{}"))
+                          (interpose ",")
+                          (apply str))]
+        (-> (apply list 'js* (str "[" template "]") form)
+            (vary-meta assoc :tag 'object))))
+    form))
+
+(defn compile-props-to-js
+  [props & {:keys [::transform-props-recursive
+                   ::transform-props-keys]
+            :or {transform-props-recursive false
+                 transform-props-keys true}
+            :as params}]
+
+  (binding [*transform-props-recursive* (if transform-props-recursive 1 0)]
+    (cond->> props
+      (true? transform-props-keys)
+      (into {} (map compile-prop))
+
+      :always
+      (compile-map-to-js))))
 
 (defn compile-to-js-spread
   [target other compile-prop]
@@ -426,13 +499,8 @@
 
               key   (:key props)
               props (dissoc props :key)
+              props (compile-props-to-js props mdata)]
 
-              props (cond->> props
-                      (not (::omit-key-transform mdata))
-                      (into {} (map compile-prop))
-
-                      :always
-                      (compile-map-to-js))]
           (if key
             (if (> nchild 1)
               (list 'rumext.v2/jsxs tag props key)
