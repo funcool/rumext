@@ -483,3 +483,10 @@
                 (= (count rest) 0) {}
                 :else              other)]
     (hc/compile-to-js-spread target other hc/compile-prop)))
+
+(defmacro js
+  "A helper for convert literal datastructures recursivelly into js
+  data structures at compile time."
+  [expr]
+  (binding [hc/*transform-props-recursive* 0]
+    (hc/compile-prop-value expr)))

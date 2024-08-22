@@ -124,7 +124,9 @@
 (defn- compile-join-classes
   "Joins strings space separated"
   ([] "")
-  ([& xs] (compile-concat (interpose " " xs) :safe? true)))
+  ([x] x)
+  ([x & xs]
+   (compile-concat (interpose " " (cons x xs)) :safe? true)))
 
 (defn- compile-class-attr-value
   [value]
@@ -400,29 +402,25 @@
   expression. Mainly used by macros for create js data structures at
   compile time."
   [form]
-  (if (map? form)
-    (if (empty? form)
-      (list 'js* "{}")
-      (let [[keys vals] (compile-kv-to-js form)]
-        (-> (apply list 'js* (str "{" keys "}") vals)
-            (vary-meta assoc :tag 'object))))
-    form))
+  (if (empty? form)
+    (list 'js* "{}")
+    (let [[keys vals] (compile-kv-to-js form)]
+      (-> (apply list 'js* (str "{" keys "}") vals)
+          (vary-meta assoc :tag 'object)))))
 
 (defn compile-vec-to-js
   "Compile a statically known map data sturcture, non-recursivelly to js
   expression. Mainly used by macros for create js data structures at
   compile time."
   [form]
-  (if (vector? form)
-    (if (empty? form)
-      (list 'js* "[]")
-      (let [template (->> form
-                          (map (constantly "~{}"))
-                          (interpose ",")
-                          (apply str))]
-        (-> (apply list 'js* (str "[" template "]") form)
-            (vary-meta assoc :tag 'object))))
-    form))
+  (if (empty? form)
+    (list 'js* "[]")
+    (let [template (->> form
+                        (map (constantly "~{}"))
+                        (interpose ",")
+                        (apply str))]
+      (-> (apply list 'js* (str "[" template "]") form)
+          (vary-meta assoc :tag 'object)))))
 
 (defn compile-props-to-js
   [props & {:keys [::transform-props-recursive
