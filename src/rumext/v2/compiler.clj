@@ -415,25 +415,29 @@
   expression. Mainly used by macros for create js data structures at
   compile time."
   [form]
-  (if (empty? form)
-    (list 'js* "{}")
-    (let [[keys vals] (compile-kv-to-js form)]
-      (-> (apply list 'js* (str "{" keys "}") vals)
-          (vary-meta assoc :tag 'object)))))
+  (if (map? form)
+    (if (empty? form)
+      (list 'js* "{}")
+      (let [[keys vals] (compile-kv-to-js form)]
+        (-> (apply list 'js* (str "{" keys "}") vals)
+            (vary-meta assoc :tag 'object))))
+    form))
 
 (defn compile-vec-to-js
   "Compile a statically known map data sturcture, non-recursivelly to js
   expression. Mainly used by macros for create js data structures at
   compile time."
   [form]
-  (if (empty? form)
-    (list 'js* "[]")
-    (let [template (->> form
-                        (map (constantly "~{}"))
-                        (interpose ",")
-                        (apply str))]
-      (-> (apply list 'js* (str "[" template "]") form)
-          (vary-meta assoc :tag 'object)))))
+  (if (vector? form)
+    (if (empty? form)
+      (list 'js* "[]")
+      (let [template (->> form
+                          (map (constantly "~{}"))
+                          (interpose ",")
+                          (apply str))]
+        (-> (apply list 'js* (str "[" template "]") form)
+            (vary-meta assoc :tag 'object))))
+    form))
 
 (defn compile-props-to-js
   [props & {:keys [::transform-props-recursive
