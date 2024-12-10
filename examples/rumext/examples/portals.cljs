@@ -1,22 +1,27 @@
 (ns rumext.examples.portals
-  #_(:require [rumext.core :as mx]
-            [rumext.examples.util :as util]))
+  (:require
+   [rumext.v2 :as mf]
+   [goog.dom :as dom]))
 
-;; (mx/defc portal
-;;   [*clicks]
-;;   [:div {:on-click (fn [_] (swap! *clicks inc))
-;;          :style { :user-select "none", :cursor "pointer" }}
-;;    "[ PORTAL Clicks: " @*clicks " ]"])
+(mf/defc portal*
+  {::mf/props :obj}
+  [{:keys [state]}]
+  [:div {:on-click (fn [_] (swap! state inc))
+         :style { :user-select "none", :cursor "pointer" }}
+   "[ PORTAL Clicks: " @state " ]"])
 
+(mf/defc portals*
+  []
+  (let [state (mf/use-state 0)]
+    [:div {:on-click (fn [_] (swap! state inc))
+           :style { :user-select "none", :cursor "pointer" }}
+     "[ ROOT Clicks: " @state " ]"
+     (mf/portal
+      (mf/html [:> portal* {:state state}])
+      (dom/getElement "portal-off-root"))]))
 
-;; (mx/defcs portals
-;;   {:mixins [(mx/local 0 ::*clicks)]}
-;;   [{*clicks ::*clicks}]
-;;   [:div {:on-click (fn [_] (swap! *clicks inc))
-;;          :style { :user-select "none", :cursor "pointer" }}
-;;    "[ ROOT Clicks: " @*clicks " ]"
-;;    (mx/portal (portal *clicks) (util/el "portal-off-root"))])
+(defonce root
+  (mf/create-root (dom/getElement "portals")))
 
-
-;; (defn mount! [el]
-;;   (mx/mount (portals) el))
+(defn ^:after-load mount! []
+  (mf/render! root (mf/element portals*)))

@@ -9,7 +9,7 @@
   (:require-macros [rumext.v2 :refer [defc fnc]])
   (:require
    ["react" :as react]
-   ["react-dom/client" :as rdom]
+   ["react-dom" :as rdom]
    ["react/jsx-runtime" :as jsxrt]
    [cljs.core :as c]
    [goog.functions :as gf]

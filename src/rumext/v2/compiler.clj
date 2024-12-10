@@ -39,7 +39,7 @@
 
 (def default-handlers
   {:> (fn [& [_ tag props :as children]]
-        (when (> 3 (count children))
+        (when (> 2 (count children))
           (throw (ex-info "invalid params for `:>` handler, tag and props are mandatory"
                           {:params children})))
 

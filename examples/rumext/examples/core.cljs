@@ -5,6 +5,7 @@
    [rumext.examples.local-state :as local-state]
    [rumext.examples.refs :as refs]
    [rumext.examples.controls :as controls]
+   [rumext.examples.portals :as portals]
    [rumext.examples.board :as board]
    ;; [rumext.examples.errors :as errors]
    ))
@@ -17,6 +18,7 @@
 (refs/mount!)
 (controls/mount!)
 (board/mount!)
+(portals/mount!)
 
 (defn main
   [& args]
