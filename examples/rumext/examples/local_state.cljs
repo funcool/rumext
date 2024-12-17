@@ -3,6 +3,7 @@
    [goog.dom :as dom]
    [malli.core :as m]
    [rumext.v2 :as mf]
+   [rumext.v2.util :as mfu]
    [rumext.examples.util :as util]))
 
 (def schema:label
@@ -11,11 +12,9 @@
    [:title string?]
    [:n number?]])
 
-(mf/defc label
+(mf/defc label*
   {::mf/memo true
-   ::mf/props :react
-   ::mf/schema schema:label
-   }
+   ::mf/schema schema:label}
   [{:keys [class title n] :as props :rest others}]
   (let [ref   (mf/use-var nil)
         props (mf/spread-props others {:class (or class "my-label")})]
@@ -36,12 +35,13 @@
                                 :n 0}
                      :counter2 {:title "Counter 2"
                                 :n 0}}))]
+
     [:section {:class "counters" :style {:-webkit-border-radius "10px"}}
      [:hr]
      (let [{:keys [title n]} (:counter1 @local)]
-       [:> label {:n n :title title :data-foobar 1 :on-click identity :id "foobar"}])
+       [:> label* {:n n :title title :data-foobar 1 :on-click identity :id "foobar"}])
      (let [{:keys [title n]} (:counter2 @local)]
-       [:> label {:title title :n n :on-click identity}])
+       [:> label* {:title title :n n :on-click identity}])
      [:button {:on-click #(swap! local update-in [:counter1 :n] inc)} "Increment Counter 1"]
      [:button {:on-click #(swap! local update-in [:counter2 :n] inc)} "Increment Counter 2"]]))
 

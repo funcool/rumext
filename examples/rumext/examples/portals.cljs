@@ -4,7 +4,6 @@
    [goog.dom :as dom]))
 
 (mf/defc portal*
-  {::mf/props :obj}
   [{:keys [state]}]
   [:div {:on-click (fn [_] (swap! state inc))
          :style { :user-select "none", :cursor "pointer" }}

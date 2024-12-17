@@ -160,7 +160,6 @@
           [props params]
           (if (seq k-props)
             (reduce (fn [[props params] [ks kp]]
-                      ;; (prn "KKK" ks kp)
                       (let [kp (if react-props?
                                  (util/ident->prop kp)
                                  (name kp))]
@@ -326,6 +325,11 @@
        ~(when-let [registry (::register meta)]
           `(swap! ~registry (fn [state#] (assoc state# ~(::register-as meta (keyword (str cname))) ~cname)))))))
 
+(defmacro deps
+  "A convenience macro version of mf/deps function"
+  [& params]
+  `(cljs.core/array ~@(map (fn [s] `(rumext.v2/adapt ~s)) params)))
+
 (defmacro with-memo
   "A convenience syntactic abstraction (macro) for `useMemo`"
   [deps & body]
@@ -442,51 +446,49 @@
                                                       [props#]
                                                       [:> (deref loadable#) props#])))))))))
 
-(defmacro spread
-  "A helper for create spread js object operations. Leaves the keys
-  untouched."
-  [target & [other :as rest]]
+(defmacro spread-object
+  "A helper for spread two js objects, adapting compile time known
+  keys to cameCase.
+
+  You can pass `:rumext.v2/transform false` on `other` metadata
+  for disable key casing transformation."
+  [target other]
   (assert (or (symbol? target)
               (map? target))
           "only symbols or maps accepted on target")
-  (assert (or (= (count rest) 0)
-              (and (= (count rest) 1)
-                   (or (symbol? other)
-                       (map? other)))
-              (and (even? (count rest))
-                   (or (keyword? other)
-                       (string? other))))
-          "only symbols, map or named parameters allowed for the spread")
-  (let [other (cond
-                (> (count rest) 1) (apply hash-map rest)
-                (= (count rest) 0) {}
-                :else              other)]
-    (hc/compile-to-js-spread target other identity)))
+
+  (assert (or (symbol? other)
+              (map? other))
+          "only symbols or map allowed for the spread")
+
+  (let [transform? (get (meta other) ::transform true)
+        compile-prop (if transform?
+                       (partial hc/compile-prop 2)
+                       identity)]
+    (hc/compile-to-js-spread target other compile-prop)))
 
 (defmacro spread-props
-  "A helper for create spread js object operations. Adapts compile
-  time known keys to the react props standard transformations."
-  [target & [other :as rest]]
+  "A helper for spread two js objects using react conventions for
+  compile time known props keys names."
+  [target other]
   (assert (or (symbol? target)
               (map? target))
           "only symbols or maps accepted on target")
-  (assert (or (= (count rest) 0)
-              (and (= (count rest) 1)
-                   (or (symbol? other)
-                       (map? other)))
-              (and (even? (count rest))
-                   (or (keyword? other)
-                       (string? other))))
-          "only symbols, map or named parameters allowed for the spread")
-  (let [other (cond
-                (> (count rest) 1) (apply hash-map rest)
-                (= (count rest) 0) {}
-                :else              other)]
-    (hc/compile-to-js-spread target other hc/compile-prop)))
 
-(defmacro js
-  "A helper for convert literal datastructures recursivelly into js
-  data structures at compile time."
-  [expr]
-  (binding [hc/*transform-props-recursive* 0]
-    (hc/compile-prop-value expr)))
+  (assert (or (symbol? other)
+              (map? other))
+          "only symbols or map allowed for the spread")
+
+  (hc/compile-to-js-spread target other hc/compile-prop))
+
+(defmacro props
+  "A helper for convert literal datastructures into js data
+  structures at compile time using react props convention."
+  [value]
+  (let [recursive? (get (meta value) ::recursive false)]
+    (hc/compile-props-to-js value ::hc/transform-props-recursive recursive?)))
+
+(defmacro object
+  [value]
+  (let [recursive? (get (meta value) ::recursive true)]
+    (hc/compile-coll-to-js value ::hc/transform-props-recursive recursive?)))

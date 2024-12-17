@@ -355,48 +355,49 @@
     m))
 
 (defn compile-prop-value
-  [val]
-  (if (some? *transform-props-recursive*)
-    (binding [*transform-props-recursive* (inc *transform-props-recursive*)]
-      (cond
-        (map? val)
-        (->> val
-             (into {} (map compile-prop))
-             (compile-map-to-js))
+  [level val]
+  (cond
+    (not *transform-props-recursive*)
+    val
 
-        (vector? val)
-        (->> val
-             (mapv compile-prop-value)
-             (compile-vec-to-js))
+    (map? val)
+    (->> val
+         (into {} (map (partial compile-prop (inc level))))
+         (compile-map-to-js))
 
-        :else val))
+    (vector? val)
+    (->> val
+         (mapv (partial compile-prop-value (inc level)))
+         (compile-vec-to-js))
+
+    :else
     val))
 
 (defn compile-prop
-  [[key val :as kvpair]]
-  (let [lev (or *transform-props-recursive* 1)
-        key (if (= lev 1)
-              (compile-prop-key key)
-              (compile-prop-inner-key key))]
-    (cond
-      (and (= lev 1)
-           (= key "className"))
-      [key (compile-class-attr-value val)]
+  ([prop] (compile-prop 1 prop))
+  ([level [key val :as kvpair]]
+   (let [key (if (= level 1)
+               (compile-prop-key key)
+               (compile-prop-inner-key key))]
+     (cond
+       (and (= level 1)
+            (= key "className"))
+       [key (compile-class-attr-value val)]
 
-      (and (= lev 1)
-           (= key "style"))
-      [key (-> val
-               (compile-style-value)
-               (compile-map-to-js))]
+       (and (= level 1)
+            (= key "style"))
+       [key (-> val
+                (compile-style-value)
+                (compile-map-to-js))]
 
-      (and (= lev 1)
-           (= key "htmlFor"))
-      [key (if (keyword? val)
-             (name val)
-             val)]
+       (and (= level 1)
+            (= key "htmlFor"))
+       [key (if (keyword? val)
+              (name val)
+              val)]
 
-      :else
-      [key (compile-prop-value val)])))
+       :else
+       [key (compile-prop-value level val)]))))
 
 (defn compile-kv-to-js
   "A internal method helper for compile kv data structures"
@@ -440,6 +441,8 @@
     form))
 
 (defn compile-props-to-js
+  "Trandform a props map literal to js object props. By default not
+  recursive."
   [props & {:keys [::transform-props-recursive
                    ::transform-props-keys]
             :or {transform-props-recursive false
@@ -449,10 +452,33 @@
   (binding [*transform-props-recursive* (if transform-props-recursive 1 nil)]
     (cond->> props
       (true? transform-props-keys)
-      (into {} (map compile-prop))
+      (into {} (map (partial compile-prop 1)))
 
       :always
       (compile-map-to-js))))
+
+(defn compile-coll-to-js
+  "Transform map or vector to js object or js array. Recursive by
+  default."
+  [coll & {:keys [::transform-props-recursive
+                  ::transform-props-keys]
+           :or {transform-props-recursive true
+                transform-props-keys true}
+           :as params}]
+  (binding [*transform-props-recursive* transform-props-recursive]
+    (cond
+      (map? coll)
+      (->> coll
+           (into {} (map (partial compile-prop 2)))
+           (compile-map-to-js))
+
+      (vector? coll)
+      (->> coll
+           (mapv (partial compile-prop-value 2))
+           (compile-vec-to-js))
+
+      :else
+      (throw (ex-info "only map or vectors allowed" {})))))
 
 (defn compile-to-js-spread
   [target other compile-prop]

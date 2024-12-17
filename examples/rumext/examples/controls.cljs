@@ -1,10 +1,10 @@
 (ns rumext.examples.controls
-  (:require [goog.dom :as dom]
-            [rumext.v2 :as mf]
-            [rumext.examples.util :as util]))
+  (:require
+   [goog.dom :as dom]
+   [rumext.v2 :as mf]
+   [rumext.examples.util :as util]))
 
-;; generic “atom editor” component
-(mf/defc input
+(mf/defc input*
   [{:keys [color] :as props}]
   (let [value (mf/deref color)]
     [:input {:type "text"
@@ -13,21 +13,21 @@
              :on-change #(reset! color (.. % -target -value))}]))
 
 ;; Raw top-level component, everything interesting is happening inside
-(mf/defc controls
+(mf/defc controls*
   [props]
   [:dl
    [:dt "Color: "]
    [:dd
-    [:& input {:color util/*color}]]
+    [:> input* {:color util/*color}]]
    ;; Binding another component to the same atom will keep 2 input boxes in sync
    [:dt "Clone: "]
    [:dd
-    (mf/jsx input #js {:color util/*color})]
+    (mf/jsx input* #js {:color util/*color})]
    [:dt "Color: "]
    [:dd {} (util/watches-count {:iref util/*color}) " watches"]
 
    [:dt "Tick: "]
-   [:dd [:& input {:color util/*speed}] " ms"]
+   [:dd [:> input* {:color util/*speed}] " ms"]
    [:dt "Time:"]
    [:dd {} (util/watches-count {:iref util/*clock}) " watches"]
    ])
@@ -36,5 +36,5 @@
   (mf/create-root (dom/getElement "controls")))
 
 (defn ^:after-load mount! []
-  (mf/render! root (mf/element controls)))
+  (mf/render! root (mf/element controls*)))
 

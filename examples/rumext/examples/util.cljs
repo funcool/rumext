@@ -23,12 +23,10 @@
 (mf/defc watches-count
   [{:keys [iref] :as props}]
   (let [state (mf/use-state 0)]
-    (mf/use-effect
-     (mf/deps iref)
-     (fn []
-       (let [sem (js/setInterval #(swap! state inc) 1000)]
-         #(do
-            (js/clearInterval sem)))))
+    (mf/with-effect [iref]
+      (let [sem (js/setInterval #(swap! state inc) 1000)]
+        #(do
+           (js/clearInterval sem))))
 
     [:span (.-size (.-watches ^js iref))]))
 

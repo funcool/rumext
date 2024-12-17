@@ -26,6 +26,14 @@
           (str/capital result)
           result)))))
 
+;; (defn- transform-prop-key
+;;   [s]
+;;   (let [result (js* "~{}.replace(\":\", \"-\").replace(/-./g, x=>x[1].toUpperCase())", s)]
+;;     (if ^boolean (gstr/startsWith s "-")
+;;       (gstr/capitalize result)
+;;       result)))
+
+
 (defn ident->prop
   "Compiles a keyword or symbol to string using react prop naming
   convention"
@@ -78,23 +86,33 @@
 
 #?(:cljs
    (defn map->props
-     [o]
-     (reduce-kv (fn [res k v]
-                  (let [v (if (keyword? v) (name v) v)
-                        k (cond
-                            (string? k)  k
-                            (keyword? k) (ident->prop k)
-                            :else        nil)]
+     ([o] (map->props o false))
+     ([o recursive?]
+      (let [level (if (true? recursive?) 1 recursive?)]
+        (reduce-kv (fn [res k v]
+                     (let [v (if (keyword? v) (name v) v)
+                           k (cond
+                               (string? k)  k
+                               (keyword? k) (if (and (int? level) (not= 1 level))
+                                              (ident->key k)
+                                              (ident->prop k))
+                               :else        nil)]
 
-                    (when (some? k)
-                      (let [v (if (and (= k "style") (map? v))
-                                (map->props v)
-                                v)]
-                        (unchecked-set res k v)))
+                       (when (some? k)
+                         (let [v (cond
+                                   (and (= k "style") (map? v))
+                                   (map->props v true)
 
-                    res))
-                #js {}
-                o)))
+                                   (and (int? level) (map? v))
+                                   (map->props v (inc level))
+
+                                   :else
+                                   v)]
+                           (unchecked-set res k v)))
+
+                       res))
+                   #js {}
+                   o)))))
 
 #?(:cljs
    (defn wrap-props
