@@ -373,6 +373,8 @@
 
 (def ^function create-element react/createElement)
 
+(def ^function element? react/isValidElement)
+
 ;; --- Higher-Order Components
 
 (defn memo
