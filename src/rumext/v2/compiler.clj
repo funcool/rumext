@@ -10,6 +10,7 @@
   (:require
    [clojure.core :as c]
    [clojure.string :as str]
+   [rumext.v2 :as-alias mf]
    [rumext.v2.normalize :as norm]
    [rumext.v2.util :as util])
   (:import
@@ -45,9 +46,11 @@
 
         (let [props (or props {})
               props (if (instance? clojure.lang.IObj props)
-                      (vary-meta props assoc
-                                 ::transform-props-keys true
-                                 ::transform-props-recursive false)
+                      (let [mdata (meta props)]
+                        (vary-meta props assoc
+                                   ::handler :>
+                                   ::transform-props-keys true
+                                   ::transform-props-recursive (get mdata ::mf/recursive true)))
                       props)]
           [tag props (drop 3 children)]))
 
@@ -59,6 +62,7 @@
          (let [props (or props {})
                props (if (instance? clojure.lang.IObj props)
                        (vary-meta props assoc
+                                  ::handler :>>
                                   ::transform-props-keys true
                                   ::transform-props-recursive true)
                        props)]
@@ -75,6 +79,7 @@
 
         (let [props (or props {})
               props (vary-meta props assoc
+                               ::handler :&
                                ::transform-props-keys false
                                ::transform-props-recursive false
                                ::allow-dynamic-transform true)]
@@ -441,7 +446,7 @@
     form))
 
 (defn compile-props-to-js
-  "Trandform a props map literal to js object props. By default not
+  "Transform a props map literal to js object props. By default not
   recursive."
   [props & {:keys [::transform-props-recursive
                    ::transform-props-keys]
@@ -449,7 +454,7 @@
                  transform-props-keys true}
             :as params}]
 
-  (binding [*transform-props-recursive* (if transform-props-recursive 1 nil)]
+  (binding [*transform-props-recursive* transform-props-recursive]
     (cond->> props
       (true? transform-props-keys)
       (into {} (map (partial compile-prop 1)))
