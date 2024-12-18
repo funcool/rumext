@@ -154,21 +154,28 @@
 
 ;; --- Hooks
 
-(defprotocol ^:no-doc IDepsAdapter
-  (^:no-doc adapt [o] "adapt dep if proceed"))
+(def ^:private adapt-sym
+  (js/Symbol "rumext:adapt-fn"))
 
-(extend-protocol IDepsAdapter
-  default
-  (adapt [o] o)
+(unchecked-set cljs.core/UUID
+               adapt-sym
+               (fn [o] (.-uuid ^cljs.core/UUID o)))
 
-  cljs.core.UUID
-  (adapt [o] (.toString ^js o))
+(unchecked-set cljs.core/Keyword
+               adapt-sym
+               (fn [o] (.toString ^js o)))
 
-  cljs.core.Keyword
-  (adapt [o] (.toString ^js o)))
+(unchecked-set cljs.core/Symbol
+               adapt-sym
+               (fn [o] (.toString ^js o)))
 
-;; "A convenience function that translates the list of arguments into a
-;; valid js array for use in the deps list of hooks.
+(defn adapt
+  [o]
+  (when (some? o)
+    (let [adapt-fn (unchecked-get o adapt-sym)]
+      (if ^boolean adapt-fn
+        (^function adapt-fn o)
+        o))))
 
 (defn deps
   "A helper for creating hook deps array, that handles some
