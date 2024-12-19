@@ -157,15 +157,15 @@
 (def ^:private adapt-sym
   (js/Symbol "rumext:adapt-fn"))
 
-(unchecked-set cljs.core/UUID
+(unchecked-set (.-prototype cljs.core/UUID)
                adapt-sym
                (fn [o] (.-uuid ^cljs.core/UUID o)))
 
-(unchecked-set cljs.core/Keyword
+(unchecked-set (.-prototype cljs.core/Keyword)
                adapt-sym
                (fn [o] (.toString ^js o)))
 
-(unchecked-set cljs.core/Symbol
+(unchecked-set (.-prototype cljs.core/Symbol)
                adapt-sym
                (fn [o] (.toString ^js o)))
 
