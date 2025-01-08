@@ -313,7 +313,7 @@
        ~@(when (and (::schema meta) *assert*)
            (let [validator-sym (with-meta (symbol (str cname "-validator"))
                                  {:tag 'function})]
-             [`(def ~validator-sym (rumext.v2.util/validator ~(::schema meta) ~react-props?))]))
+             [`(def ~validator-sym (rumext.v2.validation/validator ~(::schema meta) ~react-props?))]))
 
        (def ~cname ~docs ~(if (seq wrappers)
                             (reduce (fn [r fi] `(~fi ~r)) (prepare-render-fn ctx) wrappers)

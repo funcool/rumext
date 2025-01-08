@@ -15,6 +15,7 @@
    [cljs.core :as c]
    [goog.functions :as gf]
    [rumext.v2.util :as util]
+   [rumext.v2.validation]
    [shadow.lazy]))
 
 (def ^:const undefined (js* "(void 0)"))

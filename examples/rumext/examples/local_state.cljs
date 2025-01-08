@@ -9,13 +9,14 @@
 (def schema:label
   [:map {:title "label:props"}
    [:on-click {:optional true} fn?]
-   [:title string?]
+   [:my-id {:optional true} :keyword]
+   [:title :string]
    [:n number?]])
 
 (mf/defc label*
   {::mf/memo true
    ::mf/schema schema:label}
-  [{:keys [class title n] :as props :rest others}]
+  [{:keys [class title n my-id] :as props :rest others}]
   (let [ref   (mf/use-var nil)
         props (mf/spread-props others {:class (or class "my-label")})]
 
@@ -39,7 +40,7 @@
     [:section {:class "counters" :style {:-webkit-border-radius "10px"}}
      [:hr]
      (let [{:keys [title n]} (:counter1 @local)]
-       [:> label* {:n n :title title :data-foobar 1 :on-click identity :id "foobar"}])
+       [:> label* {:n n :my-id "should-be-keyword" :title title :data-foobar 1 :on-click identity :id "foobar"}])
      (let [{:keys [title n]} (:counter2 @local)]
        [:> label* {:title title :n n :on-click identity}])
      [:button {:on-click #(swap! local update-in [:counter1 :n] inc)} "Increment Counter 1"]
