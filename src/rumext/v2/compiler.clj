@@ -50,7 +50,7 @@
                         (vary-meta props assoc
                                    ::handler :>
                                    ::transform-props-keys true
-                                   ::transform-props-recursive (get mdata ::mf/recursive true)))
+                                   ::transform-props-recursive (get mdata ::mf/recursive false)))
                       props)]
           [tag props (drop 3 children)]))
 
