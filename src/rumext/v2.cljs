@@ -292,7 +292,7 @@
         snapshot  (use-fn #js [iref] #(c/deref iref))]
     (react/useSyncExternalStore subscribe get-state snapshot)))
 
-(deftype State [update-fn ref]
+(deftype State [update-fn value]
   c/IReset
   (-reset! [_ value]
     (^function update-fn value))
@@ -308,7 +308,7 @@
     (^function update-fn #(apply f % x y more)))
 
   c/IDeref
-  (-deref [_] (ref-val ref)))
+  (-deref [_] value))
 
 (defn use-state
   "A rumext variant of `useState`. Returns an object that implements
@@ -319,8 +319,7 @@
          ref       (useRef nil)
          value     (aget tmp 0)
          update-fn (aget tmp 1)]
-     (set-ref-val! ref value)
-     (use-memo #(State. update-fn ref)))))
+     (use-memo #js [value] #(State. update-fn value)))))
 
 (defn use-var
   "A rumext custom hook that uses `useRef` under the hood. Returns an
