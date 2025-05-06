@@ -2,8 +2,6 @@
 
 Rumext is a tool to build a web UI in ClojureScript.
 
-**TODO:** duda tonta, ¿por qué se importa rumext como `mf`?
-
 It's a thin wrapper on [React](https://react.dev/) >= 18, focused on
 performance and offering a Clojure-idiomatic interface.
 
@@ -23,7 +21,7 @@ attributes. Example:
   "Hello World"]
 ```
 
-The macro is smart enough to transform attribute names from lisp-case
+Macros are smart enough to transform attribute names from lisp-case
 to camelCase and renaming `:class` to `className`. So the compiled javacript
 code for this fragment could be something like:
 
@@ -46,7 +44,7 @@ And this is what will be rendered when the app is loaded in a browser:
 ```
 
 **WARNING**: it is mainly implemented to be used in
-[penpot](https://github.com/penpot/penpot) and released as separated project
+[Penpot](https://github.com/penpot/penpot) and released as separated project
 for conveniendce. Don't expect compromise for backwards compatibility beyond
 what the penpot project needs.
 
@@ -65,7 +63,8 @@ funcool/rumext
 
 The `defc` macro is the basic block of a Rumext UI. It's a lightweight utility
 that generates a React **function component** and adds some adaptations for it
-to be more convenient to ClojureScript code.
+to be more convenient to ClojureScript code, like camelCase conversions and
+reserved name changes as explained above.
 
 For example, this defines a React component:
 
@@ -73,18 +72,18 @@ For example, this defines a React component:
 (require '[rumext.v2 :as mf])
 
 (mf/defc title*
-  [{:keys [label] :as props}]
-  [:div {:class "title"} label])
+  [{:keys [label-text] :as props}]
+  [:div {:class "title"} label-text])
 ```
 
 The compiled javascript for this block will be similar to what would be
 obtained for this JSX block:
 
 ```js
-export default function title({label}) {
+export default function title({labelText}) {
   return (
     <div className="title">
-      {label}
+      {labelText}
     </div>
   );
 }
@@ -104,8 +103,12 @@ The component created this way can be mounted onto the DOM:
    [rumext.v2 :as mf]))
 
 (def root (mf/create-root (dom/getElement "app")))
-(mf/render! root (mf/element title* #js {:label "hello world"}))
+(mf/render! root (mf/element title* #js {:labelText "hello world"}))
 ```
+
+Note that when calling `mf/element` you need to give the attributes in the
+raw Javascript form. Automatic conversions occur only in the macros `mf/defc`
+and `[:>` (explained below).
 
 ## Reading component props & destructuring
 
@@ -123,39 +126,29 @@ book.
 Normally, Javascript objects cannot be destructured. But the `defc` macro
 implements a destructuring functionality, that is similar to what you can do
 with Clojure maps, but with small differences and convenient enhancements for
-making working with React props and idioms easy.
+making working with React props and idioms easy, like camelCase conversions
+as explained above.
 
 ```clojure
 (mf/defc title*
-  [{:keys [name] :as props}]
+  [{:keys [title-name] :as props}]
   (assert (object? props) "expected object")
-  (assert (string? name) "expected string")
-  (assert (= (unchecked-get props "name")
-             name)
-          "expected string")
-
-  [:label {:class "label"} name])
+  (assert (string? title-name) "expected string")
+  [:label {:class "label"} title-name])
 ```
 
-**TODO** write some explanation about accessing props without destructuring,
-differences between `unchecked-get`, `obj/get` and `.-`, and having default
-values for optional props (the `:or` construction does not work in `defc`
-props destructuring). Notify also that if you get the attributes outside
-the destructuring there are no transformations, and you need to be aware of
-camelCase and the like.
+### Default values
+
+Also like usual destructuring, you can give default values to properties by
+using the `:or` construct:
 
 ```clojure
 (mf/defc color-input*
-  {::mf/wrap-props false
-   ::mf/forward-ref true}
-  [props external-ref]
-  (let [value            (obj/get props "value")
-        on-change        (obj/get props "onChange")
-        on-blur          (obj/get props "onBlur")
-        on-focus         (obj/get props "onFocus")
-        select-on-focus? (d/nilv (unchecked-get props "selectOnFocus") true)
-        class            (d/nilv (unchecked-get props "className") "color-input")
+  [{:keys [value select-on-focus] :or {select-on-focus true} :as props}]
+  ...)
 ```
+
+### Rest props
 
 An additional idiom (specific to the Rumext component macro and not available
 in standard Clojure destructuring) is the ability to obtain an object with all
@@ -172,6 +165,52 @@ can be passed as-is to the next element.
   ;; See below for the meaning of `:>`
   [:> :label props name])
 ```
+
+### Reading props without destructuring
+
+Of course the destructure is optional. You can receive the complete `props`
+argument and read the properties later. But in this case you will not have
+the automatic conversions:
+
+```clojure
+(mf/defc color-input*
+  [props]
+  (let [value            (unchecked-get props "value")
+        on-change        (unchecked-get props "onChange")
+        on-blur          (unchecked-get props "onBlur")
+        on-focus         (unchecked-get props "onFocus")
+        select-on-focus? (or (unchecked-get props "selectOnFocus") true)
+        class            (or (unchecked-get props "className") "color-input")
+```
+
+The recommended way of reading `props` javascript objects is by using the
+Clojurescript core function `unchecked-get`. This is directly translated to
+Javascript `props["propName"]`. As Rumext is performance oriented, this is the
+most efficient way of reading props for the general case. Other methods like
+`obj/get` in Google Closure Library add extra safety checks, but in this case
+it's not necessary since the `props` attribute is guaranteed by React to have a
+value, although it can be an empty object.
+
+### Forwarding references
+
+In React there is a mechanism to set a reference to the rendered DOM element, if
+you need to manipulate it later. Also it's possible that a component may receive
+this reference and gives it to a inner element. This is called "forward referencing"
+and to do it in Rumext, you need to add the `forward-ref` metadata. Then, the
+reference will come in a second argument to the `defc` macro:
+
+```clojure
+(mf/defc wrapped-input*
+  {::mf/forward-ref true}
+  [props ref]
+  (let [...]
+    [:input {:style {...}
+             :ref ref
+             ...}]))
+```
+
+In React 19 this will not be necessary, since you will be able to pass the ref
+directly inside `props`. But Rumext currently only support React 18.
 
 ## Instantiating elements and custom components
 
@@ -532,17 +571,15 @@ the ability of atom to watch it.
 
 ## Higher-Order Components
 
-**TODO** tengo muchas dudas. ¿cuál es la diferencia entre usar mf/memo
-y el comportamiento por defecto de react? ¿por qué higher order?
+React allows to create a component that adapts or wraps another component
+to extend it and add additional functionality. Rumext includes a convenient
+mechanism for doing it: the `::mf/wrap` metadata.
 
-This is the way you extend/add additional functionality to a function
-component. Rumext exposes one:
+Currently Rumext exposes one such component:
 
 - `mf/memo`: analogous to `React.memo`, adds memoization to the
-  component based on props comparison.
-
-To use the higher-order components, you need to wrap the component
-manually or pass it as a special property in the metadata:
+  component based on props comparison. This allows to completely
+  avoid execution to the component function if props have not changed.
 
 ```clojure
 (mf/defc title*
@@ -561,7 +598,7 @@ can pass a custom comparator function as a second argument:
   [:div {:class "label"} name])
 ```
 
-For convenience, Rumext has a special metadata `::mf/memo` that
+For more convenience, Rumext has a special metadata `::mf/memo` that
 facilitates the general case for component props memoization. If you
 pass `true`, it will behave the same way as `::mf/wrap [mf/memo]` or
 `React.memo(Component)`. You also can pass a set of fields; in this
@@ -584,8 +621,8 @@ If you want to create your own higher-order component, you can use the
 
 ### Differences with RUM
 
-This project is originated as a friendly fork of
-[rum](https://github.com/tonsky/rum) for a personal use but it is
+This project was originated as a friendly fork of
+[rum](https://github.com/tonsky/rum) for a personal use but it later
 evolved to be a completly independent library that right now does not
 depend on it and probably no longer preserves any of the original
 code. In any case, many thanks to Tonksy for creating rum.
@@ -598,6 +635,15 @@ This is the list of the main differences:
   runtime thanks to **hicada**).
 - performance focused, with a goal to offer almost 0 runtime
   overhead on top of React.
+
+
+### Why the import alias ie `mf` in the examples?
+
+The usual convention of importing RUM project was to use `rum/defc` or
+`m/defc`. For Rumext the most straightforward abbreviation would have been
+`mx/defc`. But that preffix was already use for something else. So finally we
+choose `mf/defc`. But this is not mandatory, it's only a convention we follow
+in this manual and in Penpot.
 
 
 ### What is the legacy mode?
