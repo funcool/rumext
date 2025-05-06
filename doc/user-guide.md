@@ -21,8 +21,8 @@ attributes. Example:
   "Hello World"]
 ```
 
-Macros are smart enough to transform attribute names from lisp-case
-to camelCase and renaming `:class` to `className`. So the compiled javacript
+Macros are smart enough to transform attribute names from `lisp-case`
+to `camelCase` and renaming `:class` to `className`. So the compiled javacript
 code for this fragment could be something like:
 
 ```js
@@ -59,174 +59,30 @@ funcool/rumext
  :git/url "https://github.com/funcool/rumext.git"}
 ```
 
-## Creating a React component
-
-The `defc` macro is the basic block of a Rumext UI. It's a lightweight utility
-that generates a React **function component** and adds some adaptations for it
-to be more convenient to ClojureScript code, like camelCase conversions and
-reserved name changes as explained above.
-
-For example, this defines a React component:
-
-```clojure
-(require '[rumext.v2 :as mf])
-
-(mf/defc title*
-  [{:keys [label-text] :as props}]
-  [:div {:class "title"} label-text])
-```
-
-The compiled javascript for this block will be similar to what would be
-obtained for this JSX block:
-
-```js
-export default function title({labelText}) {
-  return (
-    <div className="title">
-      {labelText}
-    </div>
-  );
-}
-```
-
-**NOTE**: the `*` in the component name is a mandatory convention for proper
-visual distinction of React components and Clojure functions. It also enables
-the current defaults on how props are handled. If you don't use the `*` suffix,
-the component will behave in legacy mode (see the [FAQs](#faq) below).
-
-The component created this way can be mounted onto the DOM:
-
-```clojure
-(ns myname.space
-  (:require
-   [goog.dom :as dom]
-   [rumext.v2 :as mf]))
-
-(def root (mf/create-root (dom/getElement "app")))
-(mf/render! root (mf/element title* #js {:labelText "hello world"}))
-```
-
-Note that when calling `mf/element` you need to give the attributes in the
-raw Javascript form. Automatic conversions occur only in the macros `mf/defc`
-and `[:>` (explained below).
-
-## Reading component props & destructuring
-
-When React instantiates a function component, it passes a `props` parameter
-that is a map of the names and values of the attributes defined in the calling
-point.
-
-**IMPORTANT**: as you may have noticed in the example above (see the `#js`
-prefix), this parameter is a plain Javascript object, that is different from a
-Clojure plain map. In ClojureScript you can handle mutable JS objects with a
-specific API, and convert forth and back to Clojure maps. You can learn more
-about it in [ClojureScript Unraveled](https://funcool.github.io/clojurescript-unraveled/#javascript-objects)
-book.
-
-Normally, Javascript objects cannot be destructured. But the `defc` macro
-implements a destructuring functionality, that is similar to what you can do
-with Clojure maps, but with small differences and convenient enhancements for
-making working with React props and idioms easy, like camelCase conversions
-as explained above.
-
-```clojure
-(mf/defc title*
-  [{:keys [title-name] :as props}]
-  (assert (object? props) "expected object")
-  (assert (string? title-name) "expected string")
-  [:label {:class "label"} title-name])
-```
-
-### Default values
-
-Also like usual destructuring, you can give default values to properties by
-using the `:or` construct:
-
-```clojure
-(mf/defc color-input*
-  [{:keys [value select-on-focus] :or {select-on-focus true} :as props}]
-  ...)
-```
-
-### Rest props
-
-An additional idiom (specific to the Rumext component macro and not available
-in standard Clojure destructuring) is the ability to obtain an object with all
-non-destructured props with the `:rest` construct. This allows to extract the
-props that the component has control of and leave the rest in an object that
-can be passed as-is to the next element.
-
-```clojure
-(mf/defc title*
-  [{:keys [name] :rest props}]
-  (assert (object? props) "expected object")
-  (assert (nil? (unchecked-get props "name")) "no name in props")
-
-  ;; See below for the meaning of `:>`
-  [:> :label props name])
-```
-
-### Reading props without destructuring
-
-Of course the destructure is optional. You can receive the complete `props`
-argument and read the properties later. But in this case you will not have
-the automatic conversions:
-
-```clojure
-(mf/defc color-input*
-  [props]
-  (let [value            (unchecked-get props "value")
-        on-change        (unchecked-get props "onChange")
-        on-blur          (unchecked-get props "onBlur")
-        on-focus         (unchecked-get props "onFocus")
-        select-on-focus? (or (unchecked-get props "selectOnFocus") true)
-        class            (or (unchecked-get props "className") "color-input")
-```
-
-The recommended way of reading `props` javascript objects is by using the
-Clojurescript core function `unchecked-get`. This is directly translated to
-Javascript `props["propName"]`. As Rumext is performance oriented, this is the
-most efficient way of reading props for the general case. Other methods like
-`obj/get` in Google Closure Library add extra safety checks, but in this case
-it's not necessary since the `props` attribute is guaranteed by React to have a
-value, although it can be an empty object.
-
-### Forwarding references
-
-In React there is a mechanism to set a reference to the rendered DOM element, if
-you need to manipulate it later. Also it's possible that a component may receive
-this reference and gives it to a inner element. This is called "forward referencing"
-and to do it in Rumext, you need to add the `forward-ref` metadata. Then, the
-reference will come in a second argument to the `defc` macro:
-
-```clojure
-(mf/defc wrapped-input*
-  {::mf/forward-ref true}
-  [props ref]
-  (let [...]
-    [:input {:style {...}
-             :ref ref
-             ...}]))
-```
-
-In React 19 this will not be necessary, since you will be able to pass the ref
-directly inside `props`. But Rumext currently only support React 18.
-
 ## Instantiating elements and custom components
 
 ### Passing props
 
-As seen at [the beginning](#user-guide), when using the
-[Hiccup-like](https://github.com/weavejester/hiccup) syntax, you can create a HTML
-element with a keyword like `:div`, `:span` or `:p`. You can also specify a
-map of attributes, that are converted at compile time into a Javascript object
-(you do not need to add the `#js` prefix here). There are also some automatic
-transformations for convenience:
+As seen above, when using the [Hiccup-like](https://github.com/weavejester/hiccup)
+syntax, you can create a HTML element with a keyword like `:div`, `:span` or
+`:p`. You can also specify a map of attributes, that are converted at compile
+time into a Javascript object.
+
+**IMPORTANT**: a Javascript plain object is different from a Clojure plain map.
+In ClojureScript you can handle mutable JS objects with a specific API, and
+convert forth and back to Clojure maps. You can learn more about it in
+[ClojureScript Unraveled](https://funcool.github.io/clojurescript-unraveled/#javascript-objects)
+book.
+
+Rumext macros have some features to pass properties in a more convenient and
+Clojure idiomatic way. For example, when using the `[:div {...}]` syntax, you
+do not need to add the `#js` prefix, it's added automatically. There are also
+some automatic transformations of property names:
 
  * Names in `lisp-case` are transformed to `camelCase`.
  * Reserved names like `class` are transformed to React convention, like
    `className`.
- * Names already in camelCase are passed directly without transform.
+ * Names already in `camelCase` are passed directly without transform.
  * Properties that begin with `data-` and `aria-` are also passed directly.
  * Transforms are applied only to `:keyword` properties. You can also send
    string properties, that are not processed anyway.
@@ -309,7 +165,7 @@ An example of how it can be used and combined with `mf/spread`:
       [:> :label props name]]))
 ```
 
-The map, being a Clojure object, may be created elsewhere and passed
+The map, being a Clojure object, may also be created elsewhere and passed
 to `mf/props` as a variable:
 
 ```clojure
@@ -325,8 +181,8 @@ dynamic conversion on each render.
 
 ### Instantiating a custom component
 
-You can pass to `:>` macro the name of a custom component to create an instance
-of it:
+You can pass to `:>` macro the name of a custom component (see [below](#creating-a-react-custom-component))
+to create an instance of it:
 
 ```clojure
 (mf/defc my-label*
@@ -339,10 +195,155 @@ of it:
   [:> my-label* {:name "foobar" :on-click some-fn}])
 ```
 
-All considerations about property passing are the same as for basic HTML
-elements. In this example, as you can observe, the names are written in 
-`clojure-case`, and there are two compile-time conversions, one in the
-`[>` macro and another one in the property destructuring.
+## Creating a React custom component
+
+The `defc` macro is the basic block of a Rumext UI. It's a lightweight utility
+that generates a React **function component** and adds some adaptations for it
+to be more convenient to ClojureScript code, like `camelCase` conversions and
+reserved name changes as explained [above](#passing-props).
+
+For example, this defines a React component:
+
+```clojure
+(require '[rumext.v2 :as mf])
+
+(mf/defc title*
+  [{:keys [label-text] :as props}]
+  [:div {:class "title"} label-text])
+```
+
+The compiled javascript for this block will be similar to what would be
+obtained for this JSX block:
+
+```js
+export default function title({labelText}) {
+  return (
+    <div className="title">
+      {labelText}
+    </div>
+  );
+}
+```
+
+**NOTE**: the `*` in the component name is a mandatory convention for proper
+visual distinction of React components and Clojure functions. It also enables
+the current defaults on how props are handled. If you don't use the `*` suffix,
+the component will behave in legacy mode (see the [FAQs](#faq) below).
+
+The component created this way can be mounted onto the DOM:
+
+```clojure
+(ns myname.space
+  (:require
+   [goog.dom :as dom]
+   [rumext.v2 :as mf]))
+
+(def root (mf/create-root (dom/getElement "app")))
+(mf/render! root (mf/element title* #js {:labelText "hello world"}))
+```
+
+Note that when calling `mf/element` you need to give the attributes in the
+raw Javascript form, because this macro does not have automatic conversions.
+
+## Reading component props & destructuring
+
+When React instantiates a function component, it passes a `props` parameter
+that is a map of the names and values of the attributes defined in the calling
+point.
+
+Normally, Javascript objects cannot be destructured. But the `defc` macro
+implements a destructuring functionality, that is similar to what you can do
+with Clojure maps, but with small differences and convenient enhancements for
+making working with React props and idioms easy, like `camelCase` conversions
+as explained [above](#passing-props).
+
+```clojure
+(mf/defc title*
+  [{:keys [title-name] :as props}]
+  (assert (object? props) "expected object")
+  (assert (string? title-name) "expected string")
+  [:label {:class "label"} title-name])
+```
+
+If the component is called via the `[:>` macro (explained [above](#dynamic-element-names-and-attributes)),
+there will be two compile-time conversion, one when calling and another one when
+destructuring. In the Clojure code all names will be `lisp-case`, but if you
+inspect the generated Javascript code, you will see names in `camelCase`.
+
+### Default values
+
+Also like usual destructuring, you can give default values to properties by
+using the `:or` construct:
+
+```clojure
+(mf/defc color-input*
+  [{:keys [value select-on-focus] :or {select-on-focus true} :as props}]
+  ...)
+```
+
+### Rest props
+
+An additional idiom (specific to the Rumext component macro and not available
+in standard Clojure destructuring) is the ability to obtain an object with all
+non-destructured props with the `:rest` construct. This allows to extract the
+props that the component has control of and leave the rest in an object that
+can be passed as-is to the next element.
+
+```clojure
+(mf/defc title*
+  [{:keys [name] :rest props}]
+  (assert (object? props) "expected object")
+  (assert (nil? (unchecked-get props "name")) "no name in props")
+
+  ;; See below for the meaning of `:>`
+  [:> :label props name])
+```
+
+### Reading props without destructuring
+
+Of course the destructure is optional. You can receive the complete `props`
+argument and read the properties later. But in this case you will not have
+the automatic conversions:
+
+```clojure
+(mf/defc color-input*
+  [props]
+  (let [value            (unchecked-get props "value")
+        on-change        (unchecked-get props "onChange")
+        on-blur          (unchecked-get props "onBlur")
+        on-focus         (unchecked-get props "onFocus")
+        select-on-focus? (or (unchecked-get props "selectOnFocus") true)
+        class            (or (unchecked-get props "className") "color-input")
+```
+
+The recommended way of reading `props` javascript objects is by using the
+Clojurescript core function `unchecked-get`. This is directly translated to
+Javascript `props["propName"]`. As Rumext is performance oriented, this is the
+most efficient way of reading props for the general case. Other methods like
+`obj/get` in Google Closure Library add extra safety checks, but in this case
+it's not necessary since the `props` attribute is guaranteed by React to have a
+value, although it can be an empty object.
+
+### Forwarding references
+
+In React there is a mechanism to set a reference to the rendered DOM element, if
+you need to manipulate it later. Also it's possible that a component may receive
+this reference and gives it to a inner element. This is called "forward referencing"
+and to do it in Rumext, you need to add the `forward-ref` metadata. Then, the
+reference will come in a second argument to the `defc` macro:
+
+```clojure
+(mf/defc wrapped-input*
+  {::mf/forward-ref true}
+  [props ref]
+  (let [...]
+    [:input {:style {...}
+             :ref ref
+             ...}]))
+```
+
+In React 19 this will not be necessary, since you will be able to pass the ref
+directly inside `props`. But Rumext currently only support React 18.
 
 ## Props Checking
 
@@ -354,8 +355,6 @@ plain predicate checking. For this, we have the `mf/expect` macro that receives
 a Clojure set and throws an exception if any of the props in the set has not
 been given to the component:
 
-**TODO:** check if this is `mf/expect` or `mf/expect-props` (see `main.ui.workspace.sidebar.options.menus.layout-item/margin-section`).
-
 ```clojure
 (mf/defc button*
   {::mf/expect #{:name :on-click}}
@@ -364,7 +363,7 @@ been given to the component:
 ```
 
 The prop names obey the same rules as the destructuring so you should use the
-same names in destructuring.
+same names.
 
 Sometimes a simple existence check is not enough; for those cases, you can give
 `mf/expect` a map where keys are props and values are predicates:
@@ -394,7 +393,7 @@ mechanism for props:
   [:button {:on-click on-click} name])
 ```
 
-**NOTE**: The props checking obeys the `:elide-asserts` compiler
+**IMPORTANT**: The props checking obeys the `:elide-asserts` compiler
 option and by default, they will be removed in production builds if
 the configuration value is not changed explicitly.
 
@@ -407,8 +406,8 @@ interface.
 
 You can use both one and the other interchangeably, depending on which
 type of API you feel most comfortable with. The React hooks are exposed
-as they are in React, with the function name in camelCase, and the
-Rumext hooks use the lisp-case syntax.
+as they are in React, with the function name in `camelCase`, and the
+Rumext hooks use the `lisp-case` syntax.
 
 Only a subset of available hooks is documented here; please refer to
 the [React API reference
