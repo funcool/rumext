@@ -647,7 +647,7 @@ This is the list of the main differences:
   overhead on top of React.
 
 
-### Why the import alias ie `mf` in the examples?
+### Why the import alias is `mf` in the examples?
 
 The usual convention of importing RUM project was to use `rum/defc` or
 `m/defc`. For Rumext the most straightforward abbreviation would have been
