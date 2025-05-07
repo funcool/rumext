@@ -131,7 +131,7 @@ for example.
 There are a couple of utilities for managing dynamic attributes in a more
 convenient way.
 
-#### `mf/spread`
+#### `mf/spread-props`
 
 A macro that allows performing a merge between two props data structures using
 the JS spread operator (`{...props1, ...props2}`). This macro also performs
@@ -143,7 +143,7 @@ It is commonly used this way:
 (mf/defc my-label*
   [{:keys [name class on-click] :rest props}]
   (let [class (or class "my-label")
-        props (mf/spread props {:class class})]
+        props (mf/spread-props props {:class class})]
     [:span {:on-click on-click}
       [:> :label props name]]))
 ```
@@ -153,31 +153,31 @@ It is commonly used this way:
 A helper macro to create a Javascript props object from a Clojure map,
 applying name transformations.
 
-An example of how it can be used and combined with `mf/spread`:
+An example of how it can be used and combined with `mf/spread-props`:
 
 ```clojure
 (mf/defc my-label*
   [{:keys [name class on-click] :rest props}]
   (let [class (or class "my-label")
         new-props (mf/props {:class class})
-        all-props (mf/spread props new-props)]
+        all-props (mf/spread-props props new-props)]
     [:span {:on-click on-click}
       [:> :label props name]]))
 ```
 
-The map, being a Clojure object, may also be created elsewhere and passed
-to `mf/props` as a variable:
+
+#### `mf/map->props`
+
+In some cases you will need to make props from a dynamic Clojure object. You
+can use `mf/map->props` function for it, but be aware that it makes the
+conversion to Javascript and the names transformations in runtime, so it adds
+some overhead in each render. Consider it if performance is important.
 
 ```clojure
 (let [clj-props {:class "my-label"}
-      props (mf/props clj-props)]
+      props (mf/map->props clj-props)]
   [:> :label props name])
 ```
-
-But in this case, `props` binding will contain a plain js object converted
-dinamically from clojure map at runtime, by using the `clj->js` function. This
-should be avoided if performance is important because it adds the overhead of
-dynamic conversion on each render.
 
 ### Instantiating a custom component
 
@@ -190,7 +190,7 @@ to create an instance of it:
     [:span {:on-click on-click}
       [:> :label props name]])
 
-(mf/defc other-component
+(mf/defc other-component*
   []
   [:> my-label* {:name "foobar" :on-click some-fn}])
 ```
@@ -216,7 +216,7 @@ The compiled javascript for this block will be similar to what would be
 obtained for this JSX block:
 
 ```js
-export default function title({labelText}) {
+function title({labelText}) {
   return (
     <div className="title">
       {labelText}
@@ -239,11 +239,22 @@ The component created this way can be mounted onto the DOM:
    [rumext.v2 :as mf]))
 
 (def root (mf/create-root (dom/getElement "app")))
-(mf/render! root (mf/element title* #js {:labelText "hello world"}))
+(mf/render! root (mf/html [:> title* {:label-text "hello world"}]))
 ```
 
-Note that when calling `mf/element` you need to give the attributes in the
-raw Javascript form, because this macro does not have automatic conversions.
+Or you can use `mf/element`, but in this case you need to give the
+attributes in the raw Javascript form, because this macro does not have
+automatic conversions:
+
+```clojure
+(ns myname.space
+  (:require
+   [goog.dom :as dom]
+   [rumext.v2 :as mf]))
+
+(def root (mf/create-root (dom/getElement "app")))
+(mf/render! root (mf/element title* #js {:labelText "hello world"}))
+```
 
 ## Reading component props & destructuring
 
