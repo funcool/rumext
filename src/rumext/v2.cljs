@@ -5,7 +5,7 @@
 ;; Copyright (c) Andrey Antukh <niwi@niwi.nz>
 
 (ns rumext.v2
-  (:refer-clojure :exclude [ref deref])
+  (:refer-clojure :exclude [ref deref use])
   (:require-macros [rumext.v2 :refer [defc fnc]])
   (:require
    ["react" :as react]
