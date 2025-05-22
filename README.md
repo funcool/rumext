@@ -9,8 +9,8 @@ Add to `deps.edn`:
 ```clojure
 funcool/rumext
 {:git/tag "v2.21"
-:git/sha "1ac80d5"
-:git/url "https://github.com/funcool/rumext.git"}
+ :git/sha "a0d2aa9"
+ :git/url "https://github.com/funcool/rumext.git"}
 ```
 
 ## User Guide
