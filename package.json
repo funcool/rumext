@@ -3,9 +3,10 @@
   "version": "1.0.0",
   "description": "Simple and Decomplected UI library based on React.",
   "dependencies": {
+    "process": "^0.11.10",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "shadow-cljs": "3.0.5"
+    "shadow-cljs": "3.1.3"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

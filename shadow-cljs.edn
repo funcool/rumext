@@ -8,7 +8,14 @@
    :asset-path "/js"
    :modules {:main {:entries [rumext.examples.core]}}
    :compiler-options {:output-feature-set :es-next}
-   :release {:compiler-options {:pseudo-names false
-                                :pretty-print true}}
+
+   :js-options
+   {:entry-keys ["module" "browser" "main"]
+    :export-conditions ["module" "import", "browser" "require" "default"]}
+
+   :release
+   {:compiler-options
+    {:pseudo-names false
+     :pretty-print true}}
 
    }}}

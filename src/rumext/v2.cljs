@@ -155,6 +155,10 @@
 
 ;; --- Hooks
 
+(def ^function use
+  "The `react.use` helper"
+  react/use)
+
 (def ^:private adapt-sym
   (js/Symbol "rumext:adapt-fn"))
 

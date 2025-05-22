@@ -8,11 +8,10 @@
    :extra-deps
    {com.bhauman/rebel-readline {:mvn/version "RELEASE"}
     funcool/okulary {:mvn/version "RELEASE"}
-    thheller/shadow-cljs {:mvn/version "2.28.8"}
+    thheller/shadow-cljs {:mvn/version "RELEASE"}
     org.clojure/tools.namespace {:mvn/version "RELEASE"}
     org.clojure/test.check {:mvn/version "RELEASE"}
-    ;; org.clojure/tools.deps.alpha {:mvn/version "RELEASE"}
-    org.clojure/clojure {:mvn/version "1.11.3"}
+    org.clojure/clojure {:mvn/version "RELEASE"}
     }}
 
   :codox
@@ -22,7 +21,8 @@
     codox-theme-rdash/codox-theme-rdash {:mvn/version "RELEASE"}}}
 
   :shadow-cljs
-  {:main-opts ["-m" "shadow.cljs.devtools.cli"]}
+  {:main-opts ["-m" "shadow.cljs.devtools.cli"]
+   :jvm-opts ["--sun-misc-unsafe-memory-access=allow"]}
 
   :repl
   {:main-opts  ["-m" "rebel-readline.main"]}
