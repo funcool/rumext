@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "description": "Simple and Decomplected UI library based on React.",
   "dependencies": {
-    "react": "18.3.1",
-    "react-dom": "18.3.1",
-    "shadow-cljs": "2.28.20"
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "shadow-cljs": "3.0.5"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -20,5 +20,5 @@
     "url": "https://github.com/funcool/rumext/issues"
   },
   "homepage": "https://github.com/funcool/rumext#readme",
-  "packageManager": "yarn@4.2.2"
+  "packageManager": "yarn@4.9.1+sha512.f95ce356460e05be48d66401c1ae64ef84d163dd689964962c6888a9810865e39097a5e9de748876c2e0bf89b232d583c33982773e9903ae7a76257270986538"
 }
