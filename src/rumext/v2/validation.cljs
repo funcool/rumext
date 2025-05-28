@@ -60,6 +60,16 @@
     (str/camel k)
     (str k)))
 
+(defn- react-prop->lisp-key
+  [k]
+  (if (and (string? k) (not (str/includes? k "/")))
+    (cond
+      (= k "htmlFor") :for
+      (= k "className") :class
+      :else
+      (-> k str/kebab keyword))
+    k))
+
 (defn- prop->lisp-key
   [k]
   (if (and (string? k) (not (str/includes? k "/")))
@@ -89,12 +99,14 @@
         explainer (delay (m/explainer schema))
         decoder   (delay (m/decoder schema default-transformer))]
     (fn [props']
-      (let [props    (bean/->clj props'
-                                 :transform bean-transform
-                                 :prop->key prop->lisp-key
-                                 :key->prop (if react-props?
-                                              react-key->prop
-                                              identity-key->prop))
+
+      (let [props    (bean/bean props'
+                                :recursive true
+                                :transform bean-transform
+                                :prop->key react-prop->lisp-key
+                                :key->prop (if react-props?
+                                             react-key->prop
+                                             identity-key->prop))
 
             props    (@decoder props)
             validate (deref validator)]
