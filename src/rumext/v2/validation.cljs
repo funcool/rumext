@@ -102,7 +102,7 @@
 
       (let [props    (bean/bean props'
                                 :recursive true
-                                :transform bean-transform
+                                ;; :transform bean-transform
                                 :prop->key react-prop->lisp-key
                                 :key->prop (if react-props?
                                              react-key->prop
