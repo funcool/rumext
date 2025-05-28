@@ -7,25 +7,14 @@
 (ns ^:no-doc rumext.v2.validation
   "Runtime helpers"
   (:require
-   [cljs-bean.core :refer [bean]]
+   [cljs-bean.core :as bean]
    [cuerdas.core :as str]
    [rumext.v2.util :as util]
    [malli.core :as m]
    [malli.transform :as mt]
    [malli.error :as me]))
 
-(def default-registry m/default-registry)
 (def default-transformer mt/json-transformer)
-
-(defn- default-key->prop
-  [x]
-  (when (keyword? x)
-    (.-fqn ^cljs.core.Keyword x)))
-
-(defn- react-key->prop
-  [x]
-  (when (keyword? x)
-    (util/ident->prop x)))
 
 (defn process-explain-kv
   [prefix result k v]
@@ -65,18 +54,47 @@
       :else
       result)))
 
+(defn- camel-key->prop
+  [k]
+  (if (or (keyword? k) (symbol? k))
+    (str/camel k)
+    (str k)))
+
+(defn- prop->lisp-key
+  [k]
+  (if (and (string? k) (not (str/includes? k "/")))
+    (-> k str/kebab keyword)
+    k))
+
+(defn- react-key->prop
+  [x]
+  (when (simple-keyword? x)
+    (util/ident->prop x)))
+
+(defn- identity-key->prop
+  [x]
+  (when (keyword? x)
+    (.-fqn ^cljs.core.Keyword x)))
+
+(defn- bean-transform
+  [o]
+  (when ^boolean (util/plain-object? o)
+    (bean/->clj o
+                :prop->key prop->lisp-key
+                :key->prop camel-key->prop)))
+
 (defn ^:no-doc validator
   [schema react-props?]
   (let [validator (delay (m/validator schema))
         explainer (delay (m/explainer schema))
         decoder   (delay (m/decoder schema default-transformer))]
-    (fn [props]
-      (let [props    (bean props
-                           :recursive true
-                           :prop->key keyword
-                           :key->prop (if react-props?
-                                        react-key->prop
-                                        default-key->prop))
+    (fn [props']
+      (let [props    (bean/->clj props'
+                                 :transform bean-transform
+                                 :prop->key prop->lisp-key
+                                 :key->prop (if react-props?
+                                              react-key->prop
+                                              identity-key->prop))
 
             props    (@decoder props)
             validate (deref validator)]
