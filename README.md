@@ -181,8 +181,10 @@ conversion to Javascript and the names transformations in runtime, so it adds
 some overhead in each render. Consider it if performance is important.
 
 ```clojure
+(require '[rumext.v2.utils :as mfu])
+
 (let [clj-props {:class "my-label"}
-      props (mf/map->props clj-props)]
+      props (mfu/map->props clj-props)]
   [:> :label props name])
 ```
 
