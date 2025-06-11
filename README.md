@@ -97,6 +97,7 @@ some automatic transformations of property names:
 It's important to notice that this transformations are performed at compile time,
 having no impact in runtime performance.
 
+
 #### Dynamic element names and attributes
 
 There are times when we'll need the element name to be chosen dynamically or
@@ -155,6 +156,13 @@ It is commonly used this way:
       [:> :label props name]]))
 ```
 
+Very similar to `mf/spread-props` but without react flavored props
+transformations you have the `mf/spread-object`.
+
+In both cases, if both arguments are symbols, no transformation
+can be applied because is unknown the structure at compile time.
+
+
 ##### `mf/props`
 
 A helper macro to create a Javascript props object from a Clojure map,
@@ -173,12 +181,25 @@ An example of how it can be used and combined with `mf/spread-props`:
 ```
 
 
-##### `mf/map->props`
+##### `mf/object`
 
-In some cases you will need to make props from a dynamic Clojure object. You
-can use `mf/map->props` function for it, but be aware that it makes the
-conversion to Javascript and the names transformations in runtime, so it adds
-some overhead in each render. Consider it if performance is important.
+A helper macro for create javascript objects from clojure literals. It works recursiverlly.
+
+```clojure
+(mf/object {:a [1 2 3]})
+
+;; Is analogous to
+#js {:a #js [1 2 3]}
+```
+
+
+##### `mfu/map->props`
+
+In some cases you will need to make props from a dynamic Clojure
+object. You can use `mf/map->props` function for it, but be aware that
+it makes the conversion to Javascript and the names transformations in
+runtime, so it adds some overhead in each render. Consider not using
+it if performance is important.
 
 ```clojure
 (require '[rumext.v2.utils :as mfu])
@@ -187,6 +208,8 @@ some overhead in each render. Consider it if performance is important.
       props (mfu/map->props clj-props)]
   [:> :label props name])
 ```
+
+
 
 #### Instantiating a custom component
 
