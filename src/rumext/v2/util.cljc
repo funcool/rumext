@@ -31,8 +31,8 @@
   [nword]
   (let [nword (if (string? nword) nword (name nword))]
     (cond
-      (identical? nword "class") "className"
-      (identical? nword "for") "htmlFor"
+      (= nword "class") "className"
+      (= nword "for") "htmlFor"
       (str/starts-with? nword "--") nword
       (str/starts-with? nword "data-") nword
       (str/starts-with? nword "aria-") nword
