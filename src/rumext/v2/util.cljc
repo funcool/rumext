@@ -7,41 +7,32 @@
 (ns ^:no-doc rumext.v2.util
   "Runtime helpers"
   (:require
-   #?(:cljs [cljs-bean.core :refer [bean]])
+   #?(:cljs [cljs-bean.core :as bean])
    [cuerdas.core :as str]
    [malli.core :as m]
    [malli.error :as me]))
 
 (defn ident->key
-  [k]
-  (let [nword (if (string? k) k (name k))]
-    (if (nil? (str/index-of nword "-"))
+  [nword]
+  (let [nword (if (string? nword) nword (name nword))]
+    (cond
+      (nil? (str/index-of nword "-"))
       nword
-      (let [[first-word & words] (str/split nword #"-")
-            vendor? (str/starts-with? nword "-")
-            result  (-> (map str/capital words)
-                        (conj first-word)
-                        str/join)]
-        (if (str/starts-with? nword "-")
-          (str/capital result)
-          result)))))
 
-;; (defn- transform-prop-key
-;;   [s]
-;;   (let [result (js* "~{}.replace(\":\", \"-\").replace(/-./g, x=>x[1].toUpperCase())", s)]
-;;     (if ^boolean (gstr/startsWith s "-")
-;;       (gstr/capitalize result)
-;;       result)))
+      (str/starts-with? nword "-")
+      (-> nword str/camel str/capital)
 
+      :else
+      (str/camel nword))))
 
 (defn ident->prop
   "Compiles a keyword or symbol to string using react prop naming
   convention"
-  [k]
-  (let [nword (name k)]
+  [nword]
+  (let [nword (if (string? nword) nword (name nword))]
     (cond
-      (= "class" nword) "className"
-      (= "for" nword) "htmlFor"
+      (identical? nword "class") "className"
+      (identical? nword "for") "htmlFor"
       (str/starts-with? nword "--") nword
       (str/starts-with? nword "data-") nword
       (str/starts-with? nword "aria-") nword
@@ -131,3 +122,52 @@
    (defn symbol-for
      [v]
      (.for js/Symbol v)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; BEANS
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+#?(:cljs
+   (defn prop->key
+     [k]
+     (if (string? k)
+       (-> k str/kebab keyword))
+     k))
+
+#?(:cljs
+   (defn react-prop->key
+     [k]
+     (if (string? k)
+       (case k
+         "htmlFor" :for
+         "className" :class
+         (-> k str/kebab keyword))
+       k)))
+
+#?(:cljs
+   (defn- react-key->prop
+     [x]
+     (when (simple-keyword? x)
+       (ident->prop (name x)))))
+
+#?(:cljs
+   (defn- key->prop
+     [x]
+     (when (keyword? x)
+       (str/camel (.-fqn ^cljs.core.Keyword x)))))
+
+#?(:cljs
+   (defn object-bean
+     [o]
+     (bean/->clj o
+                 :prop->key prop->key
+                 :key->prop key->prop)))
+
+#?(:cljs
+   (defn props-bean
+     "A props specific bean that properly handles react props naming
+     conventions"
+     [o]
+     (bean/->clj o
+                 :prop->key react-prop->key
+                 :key->prop react-key->prop)))

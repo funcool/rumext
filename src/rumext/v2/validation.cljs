@@ -7,7 +7,6 @@
 (ns ^:no-doc rumext.v2.validation
   "Runtime helpers"
   (:require
-   [cljs-bean.core :as bean]
    [cuerdas.core :as str]
    [rumext.v2.util :as util]
    [malli.core :as m]
@@ -54,60 +53,13 @@
       :else
       result)))
 
-(defn- camel-key->prop
-  [k]
-  (if (or (keyword? k) (symbol? k))
-    (str/camel k)
-    (str k)))
-
-(defn- react-prop->lisp-key
-  [k]
-  (if (and (string? k) (not (str/includes? k "/")))
-    (cond
-      (= k "htmlFor") :for
-      (= k "className") :class
-      :else
-      (-> k str/kebab keyword))
-    k))
-
-(defn- prop->lisp-key
-  [k]
-  (if (and (string? k) (not (str/includes? k "/")))
-    (-> k str/kebab keyword)
-    k))
-
-(defn- react-key->prop
-  [x]
-  (when (simple-keyword? x)
-    (util/ident->prop x)))
-
-(defn- identity-key->prop
-  [x]
-  (when (keyword? x)
-    (.-fqn ^cljs.core.Keyword x)))
-
-(defn- bean-transform
-  [o]
-  (when ^boolean (util/plain-object? o)
-    (bean/->clj o
-                :prop->key prop->lisp-key
-                :key->prop camel-key->prop)))
-
 (defn ^:no-doc validator
-  [schema react-props?]
+  [schema]
   (let [validator (delay (m/validator schema))
         explainer (delay (m/explainer schema))
         decoder   (delay (m/decoder schema default-transformer))]
-    (fn [props']
-
-      (let [props    (bean/bean props'
-                                :recursive true
-                                ;; :transform bean-transform
-                                :prop->key react-prop->lisp-key
-                                :key->prop (if react-props?
-                                             react-key->prop
-                                             identity-key->prop))
-
+    (fn [props]
+      (let [props    (util/props-bean props)
             props    (@decoder props)
             validate (deref validator)]
         (when-not ^boolean (^function validate props)
