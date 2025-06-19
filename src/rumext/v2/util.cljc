@@ -133,8 +133,8 @@
    (defn prop->key
      [k]
      (if (string? k)
-       (-> k str/kebab keyword))
-     k))
+       (-> k str/kebab keyword)
+       k)))
 
 #?(:cljs
    (defn react-prop->key
