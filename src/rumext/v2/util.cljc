@@ -64,31 +64,33 @@
    (defn map->props
      ([o] (map->props o false))
      ([o recursive?]
-      (let [level (if (true? recursive?) 1 recursive?)]
-        (reduce-kv (fn [res k v]
-                     (let [v (if (keyword? v) (name v) v)
-                           k (cond
-                               (string? k)  k
-                               (keyword? k) (if (and (int? level) (not= 1 level))
-                                              (ident->key k)
-                                              (ident->prop k))
-                               :else        nil)]
+      (if (object? o)
+        o
+        (let [level (if (true? recursive?) 1 recursive?)]
+          (reduce-kv (fn [res k v]
+                       (let [v (if (keyword? v) (name v) v)
+                             k (cond
+                                 (string? k)  k
+                                 (keyword? k) (if (and (int? level) (not= 1 level))
+                                                (ident->key k)
+                                                (ident->prop k))
+                                 :else        nil)]
 
-                       (when (some? k)
-                         (let [v (cond
-                                   (and (= k "style") (map? v))
-                                   (map->props v true)
+                         (when (some? k)
+                           (let [v (cond
+                                     (and (= k "style") (map? v))
+                                     (map->props v true)
 
-                                   (and (int? level) (map? v))
-                                   (map->props v (inc level))
+                                     (and (int? level) (map? v))
+                                     (map->props v (inc level))
 
-                                   :else
-                                   v)]
-                           (unchecked-set res k v)))
+                                     :else
+                                     v)]
+                             (unchecked-set res k v)))
 
-                       res))
-                   #js {}
-                   o)))))
+                         res))
+                     #js {}
+                     o))))))
 
 #?(:cljs
    (defn wrap-props
