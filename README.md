@@ -139,7 +139,10 @@ for example.
 There are a couple of utilities for managing dynamic attributes in a more
 convenient way.
 
+
 ##### `mf/spread-props`
+
+Or shorter alias: `mf/spread`
 
 A macro that allows performing a merge between two props data structures using
 the JS spread operator (`{...props1, ...props2}`). This macro also performs
@@ -209,7 +212,24 @@ it if performance is important.
   [:> :label props name])
 ```
 
+##### `mfu/bean`
 
+A helper that allows create a proxy object from javascript object that
+has the same semantics as clojure map and clojure vectors. Allows
+handle clojure and javascript parameters in a transparent way.
+
+```clojure
+(require '[rumext.v2.utils :as mfu])
+
+(mf/defc my-select*
+  [{:keys [options] :rest props}]
+  (let [options (mfu/bean options)
+        ;; from here, options looks like a clojure vector
+        ;; independently if it passed as clojure vector
+        ;; or js array.
+        ]
+    [:select ...]))
+```
 
 #### Instantiating a custom component
 

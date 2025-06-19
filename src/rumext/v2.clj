@@ -481,6 +481,11 @@
 
   (hc/compile-to-js-spread target other hc/compile-prop))
 
+(defmacro spread
+  "A shorter alias for spread props"
+  [target other]
+  `(spread-props ~target ~other))
+
 (defmacro props
   "A helper for convert literal datastructures into js data
   structures at compile time using react props convention."

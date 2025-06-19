@@ -159,7 +159,7 @@
        (str/camel (.-fqn ^cljs.core.Keyword x)))))
 
 #?(:cljs
-   (defn object-bean
+   (defn bean
      [o]
      (bean/->clj o
                  :prop->key prop->key
