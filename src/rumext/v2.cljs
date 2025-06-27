@@ -371,7 +371,7 @@
   ([klass props]
    (let [props (cond
                  (object? props) ^js props
-                 (map? props) (util/map->props props)
+                 (map? props) (util/map->obj props)
                  :else (throw (ex-info "Unexpected props" {:props props})))]
      (jsx klass props undefined))))
 

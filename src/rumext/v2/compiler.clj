@@ -556,7 +556,7 @@
               (list 'rumext.v2/jsx tag props))))
 
         (let [props  (if (and (::allow-dynamic-transform mdata) (not jstag?))
-                       (list 'rumext.v2.util/map->props props)
+                       (list 'rumext.v2.util/map->obj props)
                        props)
               nchild (count children)]
           (cond

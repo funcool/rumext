@@ -61,6 +61,21 @@
                       (.-prototype js/Object)))))
 
 #?(:cljs
+   (defn map->obj
+     [o]
+     (cond
+       (plain-object? o)
+       o
+
+       (map? o)
+       (let [m #js {}]
+         (run! (fn [[k v]] (unchecked-set m (name k) v)) o)
+         m)
+
+       :else
+       (throw (ex-info "unable to create obj" {:data o})))))
+
+#?(:cljs
    (defn map->props
      ([o] (map->props o false))
      ([o recursive?]
