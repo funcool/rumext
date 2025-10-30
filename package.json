@@ -4,8 +4,8 @@
   "description": "Simple and Decomplected UI library based on React.",
   "dependencies": {
     "process": "^0.11.10",
-    "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
   },
   "scripts": {
     "watch": "clojure -M:dev:shadow-cljs watch examples"

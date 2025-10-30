@@ -125,6 +125,10 @@
   "The `react.useEffect` hook function"
   react/useEffect)
 
+(def ^function useEffectEvent
+  "The `react.useEffectEvent` hook function"
+  react/useEffectEvent)
+
 (def ^function useInsertionEffect
   "The react.useInsertionEffect` hook function"
   react/useInsertionEffect)
@@ -208,6 +212,10 @@
 (def ^function use-id
   "A lisp-case alias fro `useId` hook function"
   react/useId)
+
+(def ^function use-effect-event
+  "A lisp-case alias for `useEffectEvent` hook function"
+  react/useEffectEvent)
 
 (def ^function start-transition
   "An alias for react.startTransition function"
@@ -507,5 +515,3 @@
                     args (js-arguments)]
                 (when (some? f)
                   (.apply f args)))))))
-
-
