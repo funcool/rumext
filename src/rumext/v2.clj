@@ -25,6 +25,24 @@
   [body]
   (hc/compile body))
 
+(defn- without-qualified
+  [data]
+  (reduce-kv (fn [data k _]
+               (if (qualified-keyword? k)
+                 (dissoc data k)
+                 data))
+             data
+             data))
+
+(defn- without-nils
+  [data]
+  (reduce-kv (fn [data k v]
+               (if (nil? v)
+                 (dissoc data k)
+                 data))
+             data
+             data))
+
 (defn parse-defc
   [args]
   (loop [r {}
@@ -45,14 +63,21 @@
           (recur (assoc r :args v) (inc s) (first n) (rest n))
           (throw (ex-info "Invalid macro definition: expected component args vector" {})))
 
-      (let [psym (with-meta (gensym "props-") {:tag 'js})]
+      (let [psym  (with-meta (gensym "props-") {:tag 'js})
+            meta  (get r :meta)
+            fmeta (-> (without-qualified meta)
+                      (assoc :doc (some-> r :doc str))
+                      (assoc :lazy-loadable (get meta ::lazy-load))
+                      (assoc :private (get meta ::private))
+                      (without-nils))]
+
         {:cname  (:cname r)
-         :docs   (str (:doc r))
          :props  (first (:args r))
          :params (into [psym] (rest (:args r)))
          :body   (cons v n)
          :psym   psym
-         :meta   (:meta r)}))))
+         :fmeta  fmeta
+         :meta   meta}))))
 
 (defn- wrap-props?
   [{:keys [cname meta]}]
@@ -250,7 +275,7 @@
       f)))
 
 (defn- resolve-wrappers
-  [{:keys [cname docs meta] :as ctx}]
+  [{:keys [cname meta] :as ctx}]
   (let [wrappers     (or (::wrap meta) (:wrap meta) [])
         react-props? (react-props? ctx)
         memo         (::memo meta)]
@@ -303,21 +328,19 @@
   "A macro for defining component functions. Look the user guide for
   understand how to use it."
   [& args]
-  (let [{:keys [cname docs meta] :as ctx} (parse-defc args)
+  (let [{:keys [cname fmeta meta] :as ctx} (parse-defc args)
         wrappers     (resolve-wrappers ctx)
         react-props? (react-props? ctx)
-        cname        (if (::private meta)
-                       (vary-meta cname assoc :private true)
-                       cname)]
+        cname        (with-meta cname fmeta)]
     `(do
        ~@(when (and (::schema meta) react-props? *assert*)
            (let [validator-sym (with-meta (symbol (str cname "-validator"))
                                  {:tag 'function})]
              [`(def ~validator-sym (rumext.v2.validation/validator ~(::schema meta)))]))
 
-       (def ~cname ~docs ~(if (seq wrappers)
-                            (reduce (fn [r fi] `(~fi ~r)) (prepare-render-fn ctx) wrappers)
-                            (prepare-render-fn ctx)))
+       (def ~cname ~(if (seq wrappers)
+                      (reduce (fn [r fi] `(~fi ~r)) (prepare-render-fn ctx) wrappers)
+                      (prepare-render-fn ctx)))
 
        ~@(when-not (production-build?)
            [`(set! (.-displayName ~cname) ~(str cname))])
@@ -436,6 +459,7 @@
                          (.then (shadow.lazy/load loadable#)
                                 (fn [component#]
                                   (cljs.core/js-obj "default" component#))))))
+
     `(let [loadable# (shadow.lazy/loadable ~ns-sym)]
        (rumext.v2/lazy (fn []
                          (.then (shadow.lazy/load loadable#)
