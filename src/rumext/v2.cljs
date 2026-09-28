@@ -215,12 +215,114 @@
 
 (def noop (constantly nil))
 
+;; --- Update Scheduler
+
+;; The active update scheduler state, or nil when disabled
+(def ^:private scheduler nil)
+
+(defn- in-effect?
+  [s]
+  (and (some? s) (pos? (unchecked-get s "depth"))))
+
+(defn- reset-rounds
+  [s epoch]
+  (when (= epoch (unchecked-get s "epoch"))
+    (unchecked-set s "epoch" (inc epoch))
+    (unchecked-set s "resetting" false)
+    (unchecked-set s "rounds" 0)
+    (unchecked-set s "tripped" false)))
+
+(defn- schedule-reset
+  "Resets the round count on the next frame or task, whichever comes
+  first; a loop chained through microtasks gets neither."
+  [s]
+  (unchecked-set s "resetting" true)
+  (let [epoch (unchecked-get s "epoch")]
+    (js/setTimeout #(reset-rounds s epoch) 0)
+    (when (exists? js/requestAnimationFrame)
+      (js/requestAnimationFrame #(reset-rounds s epoch)))))
+
+(defn- flush-updates
+  [s]
+  (unchecked-set s "scheduled" false)
+  (let [queue (unchecked-get s "queue")]
+    (unchecked-set s "queue" #js [])
+    (.forEach ^js queue (fn [f] (^function f)))))
+
+(defn- schedule-flush
+  "Delivers the queued updates in a microtask, or in the next task once
+  `max-rounds` is exceeded, calling `on-trip` once per run."
+  [s]
+  (when-not ^boolean (unchecked-get s "scheduled")
+    (unchecked-set s "scheduled" true)
+    (unchecked-set s "rounds" (inc (unchecked-get s "rounds")))
+    (when-not ^boolean (unchecked-get s "resetting")
+      (schedule-reset s))
+    (if (> (unchecked-get s "rounds") (unchecked-get s "maxRounds"))
+      (do
+        (when-not ^boolean (unchecked-get s "tripped")
+          (unchecked-set s "tripped" true)
+          (when-let [on-trip (unchecked-get s "onTrip")]
+            (^function on-trip {:rounds (unchecked-get s "rounds")})))
+        (js/setTimeout #(flush-updates s) 0))
+      (js/queueMicrotask #(flush-updates s)))))
+
+(defn- enqueue-update
+  [s f]
+  (.push ^js (unchecked-get s "queue") f)
+  (schedule-flush s))
+
+(defn- run-in-effect
+  [s f]
+  (unchecked-set s "depth" (inc (unchecked-get s "depth")))
+  (try
+    (^function f)
+    (finally
+      (unchecked-set s "depth" (dec (unchecked-get s "depth"))))))
+
+(defn- run-effect
+  "Runs an effect body and returns its cleanup fn, both inside the
+  effect scope when the scheduler is enabled."
+  [f]
+  (if-let [s scheduler]
+    (let [r (run-in-effect s f)]
+      (if (fn? r) #(run-in-effect s r) noop))
+    (let [r (^function f)]
+      (if (fn? r) r noop))))
+
+(defn set-update-scheduler
+  "Enables the update scheduler with an options map, or disables it
+  with nil.
+
+  Store notifications from `deref` and `use-state` updates made while an
+  effect body or cleanup runs are queued and delivered together in a
+  microtask, so the commit that ran the effect ends without urgent work
+  pending. Other updates are delivered right away.
+
+  Options:
+  - `:max-rounds` (default 25): delivery rounds allowed without a frame
+    or a new task in between; past it, delivery moves to the next task.
+  - `:on-trip`: called with `{:rounds n}` when a run exceeds
+    `:max-rounds`."
+  [opts]
+  (set! scheduler
+        (when (some? opts)
+          #js {:depth 0
+               :queue #js []
+               :scheduled false
+               :rounds 0
+               :epoch 0
+               :resetting false
+               :tripped false
+               :maxRounds (get opts :max-rounds 25)
+               :onTrip (get opts :on-trip)})))
+
 (defn use-effect
   "A rumext variant of the `useEffect` hook function with order of
   arguments inverted"
   ([f] (use-effect #js [] f))
   ([deps f]
-   (useEffect #(let [r (^function f)] (if (fn? r) r noop)) deps)))
+   (useEffect #(run-effect f) deps)))
 
 (defn use-insertion-effect
   "A rumext variant of the `useInsertionEffect` hook function with order
@@ -234,7 +336,7 @@
   of arguments inverted"
   ([f] (use-layout-effect #js [] f))
   ([deps f]
-   (useLayoutEffect #(let [r (^function f)] (if (fn? r) r noop)) deps)))
+   (useLayoutEffect #(run-effect f) deps)))
 
 (defn use-ssr-effect
   "An EXPERIMENTAL use-effect version that detects if we are in a NON
@@ -289,27 +391,50 @@
         subscribe (use-fn #js [iref key]
                           (fn [listener-fn]
                             (unchecked-set state "current" (c/deref iref))
-                            (add-watch iref key (fn [_ _ _ newv]
-                                                  (unchecked-set state "current" newv)
-                                                  (^function listener-fn)))
-                            #(remove-watch iref key)))
+                            (let [;; [queued? unsubscribed?] of the queued notification
+                                  flags  #js [false false]
+                                  notify (fn []
+                                           (aset flags 0 false)
+                                           (when-not ^boolean (aget flags 1)
+                                             (unchecked-set state "current" (c/deref iref))
+                                             (^function listener-fn)))]
+                              (add-watch iref key (fn [_ _ _ newv]
+                                                    (let [s scheduler]
+                                                      (if ^boolean (in-effect? s)
+                                                        (when-not ^boolean (aget flags 0)
+                                                          (aset flags 0 true)
+                                                          (enqueue-update s notify))
+                                                        (do
+                                                          (unchecked-set state "current" newv)
+                                                          (^function listener-fn))))))
+                              (fn []
+                                (aset flags 1 true)
+                                (remove-watch iref key)))))
         snapshot  (use-fn #js [iref] #(c/deref iref))]
     (react/useSyncExternalStore subscribe get-state snapshot)))
+
+(defn- set-state
+  "Calls a `useState` setter, queued by the scheduler inside an effect."
+  [update-fn value]
+  (let [s scheduler]
+    (if ^boolean (in-effect? s)
+      (enqueue-update s #(^function update-fn value))
+      (^function update-fn value))))
 
 (deftype State [update-fn value]
   c/IReset
   (-reset! [_ value]
-    (^function update-fn value))
+    (set-state update-fn value))
 
   c/ISwap
   (-swap! [self f]
-    (^function update-fn f))
+    (set-state update-fn f))
   (-swap! [self f x]
-    (^function update-fn #(f % x)))
+    (set-state update-fn #(f % x)))
   (-swap! [self f x y]
-    (^function update-fn #(f % x y)))
+    (set-state update-fn #(f % x y)))
   (-swap! [self f x y more]
-    (^function update-fn #(apply f % x y more)))
+    (set-state update-fn #(apply f % x y more)))
 
   c/IDeref
   (-deref [_] value))
@@ -412,26 +537,44 @@
          [:> component props])))))
 
 (defn throttle
-  "A higher-order component that throttles the rendering"
+  "A higher-order component that throttles the rendering.
+
+  Renders new props right away when the last render is at least `ms`
+  old; otherwise keeps the previous props and renders the latest ones
+  from a timer, inside a transition."
   [component ms]
   (fnc throttle
     {::wrap-props false}
     [props]
-    (let [tmp       (useState props)
-          state     (aget tmp 0)
-          set-state (aget tmp 1)
+    (let [;; Props and time of the last committed render
+          last-ref     (useRef nil)
+          last         (ref-val last-ref)
+          set-tick     (aget (useState 0) 1)
 
-          ref       (useRef false)
-          render    (useMemo
-                     #(gf/throttle
-                       (fn [v]
-                         (when-not ^boolean (ref-val ref)
-                           (^function set-state v)))
-                       ms)
-                     #js [])]
-      (useEffect #(^function render props) #js [props])
-      (useEffect #(fn [] (set-ref-val! ref true)) #js [])
-      [:> component state])))
+          throttled?   (and (some? last)
+                            (not (identical? props (unchecked-get last "props")))
+                            (< (- (js/Date.now) (unchecked-get last "time")) ms))
+
+          render-props (if throttled? (unchecked-get last "props") props)]
+
+      (useLayoutEffect
+       (fn []
+         (when-not (identical? render-props (some-> (ref-val last-ref) (unchecked-get "props")))
+           (set-ref-val! last-ref #js {:props render-props :time (js/Date.now)}))
+         undefined))
+
+      (useEffect
+       (fn []
+         (if ^boolean throttled?
+           (let [elapsed (- (js/Date.now) (unchecked-get (ref-val last-ref) "time"))
+                 timer   (js/setTimeout
+                          #(start-transition (fn [] (^function set-tick inc)))
+                          (max 0 (- ms elapsed)))]
+             #(js/clearTimeout timer))
+           noop))
+       #js [props throttled?])
+
+      [:> component render-props])))
 
 (defn check-props
   "Utility function to use with `memo'`.
